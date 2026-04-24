@@ -23,14 +23,14 @@ import { HeroPhotoCarousel } from './HeroPhotoCarousel';
  *   7. Particle drift — subtle floating dust motes over the photo
  */
 export function HeroFeatureCard() {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLAnchorElement>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [tilt, setTilt] = useState({
     rotX: 0, rotY: 0, glowX: 50, glowY: 50, active: false,
   });
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
