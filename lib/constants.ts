@@ -126,7 +126,7 @@ export const FALLBACK_EXPERTS = [
     yearsExperience: 5,
     clientsTrained: 1000,
     location: 'Hyderabad',
-    photoUrl: null as string | null, // Drop file at /public/experts/krishna.jpg
+    photoUrl: '/experts/krishna.jpg' as string | null,
     stat: { num: '1000+', label: 'Clients Treated' },
     bioLong: [
       'Krishna plays a critical role in ensuring that every PURE X client moves efficiently, recovers effectively, and trains consistently without setbacks. As the Physiotherapist, he brings a proactive, prevention-first approach that is deeply integrated into the PURE X training system.',
@@ -261,7 +261,7 @@ export const FALLBACK_EXPERTS = [
     ],
     yearsExperience: 7,
     location: 'London',
-    photoUrl: null as string | null, // Drop file at /public/experts/paula-konasionok.jpg
+    photoUrl: '/experts/paula-konasionok.jpg' as string | null,
     stat: { num: 'UK', label: 'CIMSPA Certified' },
     bioLong: [
       'Paula Konasionok is an internationally certified Personal Trainer and nutrition-accredited professional, bringing a high-performance, athlete-focused approach to training at PURE X. With her CIMSPA endorsement, she strengthens the brand\'s global credibility and elevates the standard of coaching delivery across both individual and performance-based programmes.',
