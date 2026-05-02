@@ -128,10 +128,10 @@ export default function PrivacyPage() {
               <p>
                 Contact{' '}
                 <a
-                  href="mailto:hello@purex.fit"
+                  href="mailto:contact.teampurex@gmail.com"
                   className="text-accent hover:underline"
                 >
-                  hello@purex.fit
+                  contact.teampurex@gmail.com
                 </a>{' '}
                 to exercise any of these rights. We respond within 30 days.
               </p>
@@ -164,7 +164,7 @@ export default function PrivacyPage() {
 
             <Section title="8. International Users">
               <p>
-                We operate from Hyderabad (India) and London (UK). Data may be processed
+                We operate from India and the UK. Data may be processed
                 in either jurisdiction. We apply the stricter protection standard (UK GDPR
                 / India DPDP Act) across all users.
               </p>
@@ -184,10 +184,10 @@ export default function PrivacyPage() {
                 <br />
                 <strong className="text-text">Email:</strong>{' '}
                 <a
-                  href="mailto:hello@purex.fit"
+                  href="mailto:contact.teampurex@gmail.com"
                   className="text-accent hover:underline"
                 >
-                  hello@purex.fit
+                  contact.teampurex@gmail.com
                 </a>
                 <br />
                 <strong className="text-text">Data Protection Officer:</strong> Siva
@@ -216,7 +216,7 @@ export default function PrivacyPage() {
             href="/book"
             className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover transition-colors"
           >
-            Book a Consultation
+            Get Started
             <ArrowRight size={14} />
           </Link>
         </div>

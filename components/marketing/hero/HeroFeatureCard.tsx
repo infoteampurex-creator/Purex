@@ -289,23 +289,15 @@ export function HeroFeatureCard() {
         />
 
         {/* ═══ LAYER 5 — Top credentials tag ═══ */}
+        {/* ═══ LAYER 5 — Top role tag ═══ */}
         <div
-          className="absolute top-5 left-5 right-5 flex items-start justify-between gap-3"
+          className="absolute top-4 left-4 right-4 md:top-5 md:left-5 md:right-5 flex items-start justify-end gap-2"
           style={{
             transform: `translateZ(${tilt.active ? 30 : 15}px)`,
             transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
-          <div className="inline-flex items-center gap-1.5 bg-bg/60 backdrop-blur-md border border-accent/40 text-accent px-3 py-1.5 rounded-full">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent" />
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] font-bold">
-              Training Today
-            </span>
-          </div>
-          <div className="inline-flex items-center bg-bg/60 backdrop-blur-md border border-border px-2.5 py-1 rounded-full">
+          <div className="inline-flex items-center bg-bg/60 backdrop-blur-md border border-border px-2 py-1 md:px-2.5 rounded-full flex-shrink-0">
             <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">
               PT Head
             </span>
@@ -314,41 +306,41 @@ export function HeroFeatureCard() {
 
         {/* ═══ LAYER 6 — Name, title, stats, CTA (furthest forward) ═══ */}
         <div
-          className="absolute left-5 right-5 bottom-5 md:left-6 md:right-6 md:bottom-6"
+          className="absolute left-4 right-4 bottom-4 md:left-6 md:right-6 md:bottom-6"
           style={{
             transform: `translateZ(${tilt.active ? 60 : 30}px)`,
             transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
-          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-1.5">
+          <div className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-1.5">
             Siva Reddy · Head Coach
           </div>
           <h3
-            className="font-display font-bold text-xl md:text-2xl tracking-tight leading-[1] text-white mb-2"
+            className="font-display font-bold text-lg sm:text-xl md:text-2xl tracking-tight leading-[1.1] text-white mb-2"
             style={{ textShadow: '0 4px 30px rgba(0,0,0,0.7)' }}
           >
-            Train with the <span className="text-accent">architect</span>.
+            Meet your <span className="text-accent">coach</span>.
           </h3>
           <p
-            className="text-xs text-white/85 leading-snug mb-3 max-w-[32ch]"
+            className="text-[11px] md:text-xs text-white/85 leading-snug mb-2.5 md:mb-3 max-w-[32ch]"
             style={{ textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}
           >
-            ICN Gold medalist. 40kg transformation. 100+ clients.
+            ICN Gold medalist. HYROX Pro Athlete. 300+ clients coached.
           </p>
 
-          {/* Stat row — reduced to 2 chips */}
-          <div className="flex gap-2 mb-3 flex-wrap">
-            <StatChip num="40kg" label="Lost" />
+          {/* Stat row — hide on smallest screens to save space */}
+          <div className="hidden sm:flex gap-2 mb-3 flex-wrap">
+            <StatChip num="HYROX" label="Pro Athlete" />
             <StatChip num="ICN" label="Gold" />
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/70 font-bold">
+            <div className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.18em] text-white/70 font-bold">
               Book session →
             </div>
             <div
               className={cn(
-                'w-12 h-12 rounded-full border flex items-center justify-center transition-all duration-300',
+                'w-10 h-10 md:w-12 md:h-12 rounded-full border flex items-center justify-center transition-all duration-300',
                 tilt.active
                   ? 'bg-accent border-accent text-bg scale-110'
                   : 'bg-bg/40 backdrop-blur-md border-white/30 text-white'
@@ -357,7 +349,8 @@ export function HeroFeatureCard() {
                 boxShadow: tilt.active ? '0 0 40px rgba(198,255,61,0.6)' : 'none',
               }}
             >
-              <ArrowUpRight size={20} strokeWidth={2.5} />
+              <ArrowUpRight size={18} strokeWidth={2.5} className="md:hidden" />
+              <ArrowUpRight size={20} strokeWidth={2.5} className="hidden md:block" />
             </div>
           </div>
         </div>

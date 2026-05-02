@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, Activity, Stethoscope, Dumbbell } from 'lucide-react';
@@ -46,18 +47,18 @@ export function Hero() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
               </span>
-              Integrated Health Coaching · Hyderabad & London
+              Integrated Health Coaching · India & UK
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-              className="font-display font-semibold text-display-xl leading-[0.98] tracking-tight mb-5 md:mb-7 max-w-[16ch]"
+              className="font-display font-semibold text-display-xl leading-[1.1] tracking-tight mb-5 md:mb-7 max-w-[16ch]"
             >
               Train for <span className="text-text">Life</span>.{' '}
               <span className="block md:inline">
-                Not Just <DissolvingWord word="Aesthetics." />
+                Not Just <DissolvingWord words={['Aesthetics.', 'Looks.', 'Show.', 'Vanity.']} />
               </span>
             </motion.h1>
 
@@ -67,7 +68,7 @@ export function Hero() {
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
               className="text-base md:text-lg text-text-muted leading-relaxed max-w-[52ch] mb-6 md:mb-8"
             >
-              PURE X is the only coaching platform where your trainer, doctor, physiotherapist, athletic coach, and mental performance specialist work from one coordinated plan. No shortcuts. No guesswork. Just measurable, sustainable transformation.
+              PURE X is the only coaching platform where your trainer, doctor, physiotherapist, athletic coach, and mental health specialist work from one coordinated plan. No shortcuts. No guesswork. Just measurable, sustainable transformation.
             </motion.p>
 
             {/* Credibility badges row */}
@@ -78,7 +79,8 @@ export function Hero() {
               className="flex flex-wrap gap-2 mb-8 md:mb-10"
             >
               <SpecBadge icon={Stethoscope} label="Medically Supervised" />
-              <SpecBadge icon={Activity} label="HYROX & IRONMAN" />
+              <SpecBadge icon={Activity} label="Lifestyle Built" />
+              <SpecBadge icon={Dumbbell} label="Performance Driven" />
               <SpecBadge icon={Dumbbell} label="Physio Integrated" />
             </motion.div>
 
@@ -94,11 +96,6 @@ export function Hero() {
                   <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link href="/book">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                  Book a Consultation
-                </Button>
-              </Link>
             </motion.div>
 
             {/* Trust signals */}
@@ -109,9 +106,9 @@ export function Hero() {
               className="mt-10 md:mt-14 pt-8 border-t border-border/60 grid grid-cols-3 gap-6 max-w-md"
             >
               <div>
-                <div className="font-display font-bold text-2xl md:text-3xl text-accent tracking-tight">2,847</div>
+                <div className="font-display font-bold text-2xl md:text-3xl text-accent tracking-tight">1000+</div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted mt-1">
-                  Transformations
+                  Transformed
                 </div>
               </div>
               <div>
@@ -182,43 +179,100 @@ function SpecBadge({
  * Uses Framer Motion's keyframe animation (no infinite repeat). After the animation
  * completes, the letters stay at opacity 0.
  */
-function DissolvingWord({ word }: { word: string }) {
-  const letters = word.split('');
-  const initialDelay = 1.0; // Grace period before dissolve starts
-  const dissolveDelay = 0.28; // Stagger between letters
-  const dissolveDuration = 0.9; // Per-letter fade duration
+/**
+ * Cycles through multiple words with a dissolve-out, materialize-in animation.
+ * Each word lives ~3s on screen, then dissolves letter-by-letter while sparkles
+ * burst, then the next word fades in.
+ */
+function DissolvingWord({ words }: { words: string[] }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const wordHoldMs = 3200; // how long a word stays visible before dissolving
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIdx((idx) => (idx + 1) % words.length);
+    }, wordHoldMs);
+    return () => clearInterval(interval);
+  }, [words.length]);
 
   return (
-    <span className="relative inline-block text-text-muted" aria-label={word}>
+    <span className="relative inline-block" aria-label={words[activeIdx]}>
+      {words.map((word, wordIdx) => (
+        <SingleDissolvingWord
+          key={`${word}-${wordIdx}`}
+          word={word}
+          isActive={wordIdx === activeIdx}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * One word in the cycle. Renders absolutely positioned so all words stack
+ * on top of each other; only the active one is visible.
+ */
+function SingleDissolvingWord({
+  word,
+  isActive,
+}: {
+  word: string;
+  isActive: boolean;
+}) {
+  const letters = word.split('');
+  const dissolveDelay = 0.28;
+  const dissolveDuration = 0.9;
+
+  // Hold the word fully opaque for ~2s before dissolving letter-by-letter.
+  // After dissolve, snap back to invisible until next active.
+  const holdBeforeDissolve = 1.6;
+
+  return (
+    <span
+      className="inline-block text-text-muted"
+      aria-hidden={!isActive}
+      style={{
+        position: isActive ? 'relative' : 'absolute',
+        top: 0,
+        left: 0,
+        opacity: isActive ? 1 : 0,
+        pointerEvents: 'none',
+      }}
+    >
       {letters.map((char, i) => {
-        const letterStart = initialDelay + i * dissolveDelay;
-        // Randomized-but-deterministic wobble values per letter (no re-renders)
-        const xDrift = ((i * 7) % 5) - 2; // -2..2 px horizontal drift
-        const yDrift = -10 - ((i * 3) % 6); // -10..-15 px upward drift
+        const letterStart = holdBeforeDissolve + i * dissolveDelay;
+        const xDrift = ((i * 7) % 5) - 2;
+        const yDrift = -10 - ((i * 3) % 6);
 
         return (
-          <span key={`${char}-${i}`} className="relative inline-block" aria-hidden>
+          <span
+            key={`${char}-${i}-${isActive ? 'on' : 'off'}`}
+            className="relative inline-block"
+          >
             <motion.span
               initial={{ opacity: 1, y: 0, x: 0, filter: 'blur(0px)' }}
-              animate={{
-                opacity: 0,
-                y: yDrift,
-                x: xDrift,
-                filter: 'blur(3px)',
-              }}
+              animate={
+                isActive
+                  ? {
+                      opacity: [1, 1, 0],
+                      y: [0, 0, yDrift],
+                      x: [0, 0, xDrift],
+                      filter: ['blur(0px)', 'blur(0px)', 'blur(3px)'],
+                    }
+                  : { opacity: 0 }
+              }
               transition={{
-                delay: letterStart,
-                duration: dissolveDuration,
-                ease: [0.4, 0, 0.6, 1], // ease-in-out
+                duration: dissolveDuration + holdBeforeDissolve,
+                times: [0, holdBeforeDissolve / (dissolveDuration + holdBeforeDissolve), 1],
+                delay: i * dissolveDelay * 0.1,
+                ease: [0.4, 0, 0.6, 1],
               }}
               className="inline-block"
               style={{ willChange: 'transform, opacity, filter' }}
             >
               {char}
             </motion.span>
-
-            {/* Sparkle burst when this letter dissolves */}
-            <Sparkles letterIndex={i} startAt={letterStart + 0.15} />
+            {isActive && <Sparkles letterIndex={i} startAt={letterStart + 0.15} />}
           </span>
         );
       })}

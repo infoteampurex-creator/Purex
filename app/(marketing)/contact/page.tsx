@@ -213,14 +213,14 @@ ${message}`;
 
               <LocationCard
                 flag="🇮🇳"
-                city="Hyderabad"
+                city="India"
                 country="India"
                 description="Primary training hub. In-person sessions, medical screening, physiotherapy, and programme delivery."
                 focus="Training · Medical · Rehab"
               />
               <LocationCard
                 flag="🇬🇧"
-                city="London"
+                city="UK"
                 country="United Kingdom"
                 description="Performance coaching, mental health support, operations, and global client coordination."
                 focus="Performance · Mental · Operations"
@@ -270,7 +270,7 @@ ${message}`;
                 href="/book"
                 className="inline-flex items-center gap-2 h-12 px-7 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
               >
-                Book a Consultation
+                Get Started
                 <ArrowRight size={16} />
               </Link>
             </div>

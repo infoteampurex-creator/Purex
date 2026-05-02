@@ -5,8 +5,8 @@ import { ExpertCard } from './ExpertCard';
 
 export function ExpertsGrid() {
   // Split experts by location
-  const indiaTeam = FALLBACK_EXPERTS.filter((e) => e.location === 'Hyderabad');
-  const ukTeam = FALLBACK_EXPERTS.filter((e) => e.location === 'London');
+  const indiaTeam = FALLBACK_EXPERTS.filter((e) => e.location === 'India');
+  const ukTeam = FALLBACK_EXPERTS.filter((e) => e.location === 'UK');
 
   return (
     <section id="experts" className="py-20 md:py-28">
@@ -20,8 +20,8 @@ export function ExpertsGrid() {
               <span className="text-accent">One plan.</span>
             </h2>
             <p className="mt-4 text-base text-text-muted max-w-xl leading-relaxed">
-              A coordinated team across two cities — not a solo trainer. Hyderabad handles
-              training, medical, and rehab. London handles performance coaching, mental
+              A coordinated team across two countries — not a solo trainer. India handles
+              training, medical, and rehab. UK handles performance coaching, mental
               health, and founder oversight.
             </p>
           </div>
@@ -37,7 +37,6 @@ export function ExpertsGrid() {
         {/* INDIA TEAM */}
         <LocationHeader
           flag="🇮🇳"
-          city="Hyderabad"
           country="India"
           tagline="Training · Medical · Rehab"
         />
@@ -50,7 +49,6 @@ export function ExpertsGrid() {
         {/* UK TEAM */}
         <LocationHeader
           flag="🇬🇧"
-          city="London"
           country="United Kingdom"
           tagline="Performance · Mental Health · Operations"
         />
@@ -66,26 +64,21 @@ export function ExpertsGrid() {
 
 function LocationHeader({
   flag,
-  city,
   country,
   tagline,
 }: {
   flag: string;
-  city: string;
   country: string;
   tagline: string;
 }) {
   return (
     <div className="flex items-center gap-3 mb-5 md:mb-7">
-      {/* Flag + city chip */}
+      {/* Flag + country chip */}
       <div className="inline-flex items-center gap-2 bg-bg-card border border-border rounded-full px-3 py-1.5">
         <span className="text-sm leading-none">{flag}</span>
         <MapPin size={11} className="text-accent" strokeWidth={2.5} />
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-text font-bold">
-          {city}
-        </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">
-          · {country}
+          {country}
         </span>
       </div>
 

@@ -266,13 +266,13 @@ export default async function ExpertProfilePage({ params }: PageProps) {
                 Ready to work with {expert.name.split(' ')[0]}?
               </h3>
               <p className="text-text-muted mb-7 max-w-md mx-auto">
-                Book a consultation and start your transformation with the right expert.
+                Get started and begin your transformation with the right expert.
               </p>
               <Link
                 href="/book"
                 className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
               >
-                Book a Consultation
+                Get Started
                 <ArrowRight size={16} />
               </Link>
             </div>

@@ -30,7 +30,7 @@ export function Footer() {
           <div>
             <div className="eyebrow mb-4">Get in Touch</div>
             <ul className="space-y-2.5 text-sm">
-              <li><Link href="/book" className="text-text-muted hover:text-text transition-colors">Book Consultation</Link></li>
+              <li><Link href="/book" className="text-text-muted hover:text-text transition-colors">Get Started</Link></li>
               <li><Link href="/contact" className="text-text-muted hover:text-text transition-colors">Contact</Link></li>
               <li><Link href="/faq" className="text-text-muted hover:text-text transition-colors">FAQ</Link></li>
               <li>

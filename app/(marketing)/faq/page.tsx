@@ -146,7 +146,7 @@ export default function FaqPage() {
                 href="/book"
                 className="inline-flex items-center gap-2 h-12 px-7 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
               >
-                Book a Consultation
+                Get Started
                 <ArrowRight size={16} />
               </Link>
             </div>

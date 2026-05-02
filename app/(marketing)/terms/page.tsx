@@ -52,7 +52,7 @@ export default function TermsPage() {
             <Section title="1. Who We Are">
               <p>
                 PURE X is an integrated health and fitness coaching platform with teams in
-                Hyderabad (India) and London (United Kingdom). We provide personal
+                India and the United Kingdom. We provide personal
                 training, physiotherapy, medical consultation, mental health support, and
                 nutrition guidance as one coordinated service.
               </p>
@@ -135,10 +135,10 @@ export default function TermsPage() {
               <p>
                 Cancel anytime in-app or by emailing{' '}
                 <a
-                  href="mailto:hello@purex.fit"
+                  href="mailto:contact.teampurex@gmail.com"
                   className="text-accent hover:underline"
                 >
-                  hello@purex.fit
+                  contact.teampurex@gmail.com
                 </a>
                 . Medical pauses (injury, illness, pregnancy) are honoured with written
                 medical evidence — your subscription freezes at no additional cost until
@@ -218,10 +218,10 @@ export default function TermsPage() {
                 <br />
                 <strong className="text-text">Email:</strong>{' '}
                 <a
-                  href="mailto:hello@purex.fit"
+                  href="mailto:contact.teampurex@gmail.com"
                   className="text-accent hover:underline"
                 >
-                  hello@purex.fit
+                  contact.teampurex@gmail.com
                 </a>
               </p>
             </Section>
@@ -240,7 +240,7 @@ export default function TermsPage() {
             href="/book"
             className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover transition-colors"
           >
-            Book a Consultation
+            Get Started
             <ArrowRight size={14} />
           </Link>
         </div>

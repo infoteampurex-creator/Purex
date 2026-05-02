@@ -169,7 +169,7 @@ const PROGRAM_DETAILS: Record<
         icon: Activity,
         label: '1-on-1 Performance Training',
         description:
-          'In-person sessions with Siva Reddy (Hyderabad) or Paula Konasionok (London). Technique, progression, intensity.',
+          'In-person sessions with Siva Reddy (India) or Paula Konasionok (UK). Technique, progression, intensity.',
       },
       {
         icon: Flame,
@@ -385,7 +385,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
                   href="/book"
                   className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
                 >
-                  Book a Consultation
+                  Get Started
                   <ArrowRight size={16} />
                 </Link>
                 <a
@@ -634,7 +634,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
                 href="/book"
                 className="inline-flex items-center gap-2 h-12 px-7 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
               >
-                Book a Consultation
+                Get Started
                 <ArrowRight size={16} />
               </Link>
             </div>

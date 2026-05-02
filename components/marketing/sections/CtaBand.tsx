@@ -79,7 +79,7 @@ export function CtaBand() {
           <div className="flex items-center gap-2.5">
             <div className="w-1.5 h-1.5 bg-accent rounded-full" />
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted">
-              Hyderabad · London · Online
+              India · UK · Online
             </span>
           </div>
         </div>

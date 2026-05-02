@@ -5,7 +5,7 @@ import { VisionMissionAim } from '@/components/marketing/sections/VisionMissionA
 export const metadata: Metadata = {
   title: 'The Team · PURE X',
   description:
-    'Meet the six specialists behind PURE X — doctors, physiotherapists, trainers, and mental health consultants working as one unified system across Hyderabad and London.',
+    'Meet the six specialists behind PURE X — doctors, physiotherapists, trainers, and mental health consultants working as one unified system across India and UK.',
 };
 
 export default function ExpertsPage() {

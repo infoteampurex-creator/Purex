@@ -64,7 +64,7 @@ export function Nav() {
             </Link>
             <Link href="/book" className="hidden md:inline-flex">
               <Button variant="primary" size="sm">
-                Book a Consultation
+                Get Started
               </Button>
             </Link>
             <button
@@ -118,7 +118,7 @@ export function Nav() {
               </Link>
               <Link href="/book" onClick={() => setDrawerOpen(false)}>
                 <Button variant="primary" size="lg" className="w-full">
-                  Book a Consultation
+                  Get Started
                 </Button>
               </Link>
             </div>

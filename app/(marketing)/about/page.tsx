@@ -218,7 +218,7 @@ export default function AboutPage() {
             <PillarCard
               icon={<Users size={20} />}
               title="Global Access"
-              body="Hyderabad and London. Clients from anywhere in the world connect with the right specialist at the right time."
+              body="India and UK. Clients from anywhere in the world connect with the right specialist at the right time."
             />
           </div>
         </div>
@@ -280,7 +280,7 @@ export default function AboutPage() {
                 href="/book"
                 className="inline-flex items-center gap-2 h-12 px-6 md:px-7 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
               >
-                Book a Consultation
+                Get Started
                 <ArrowRight size={16} />
               </Link>
             </div>

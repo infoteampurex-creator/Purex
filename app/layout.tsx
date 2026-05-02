@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     default: `${BRAND.name} — ${BRAND.tagline}`,
     template: `%s · ${BRAND.name}`,
   },
-  description: 'Premium integrated health coaching. Trainer, doctor, physio, and athletic coach working from one coordinated plan. HYROX and IRONMAN specialists. Hyderabad and London.',
+  description: 'Premium integrated health coaching. Trainer, doctor, physio, and athletic coach working from one coordinated plan. HYROX and IRONMAN specialists. India and UK.',
   metadataBase: new URL('https://purex.fit'),
   openGraph: {
     title: `${BRAND.name} — ${BRAND.tagline}`,

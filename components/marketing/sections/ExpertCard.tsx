@@ -31,8 +31,7 @@ export function ExpertCard({ expert }: { expert: Expert }) {
   return (
     <Link
       href={`/experts/${expert.slug}`}
-      className="group relative block overflow-hidden rounded-xl bg-bg-card border border-border hover:border-accent/50 transition-all duration-500 hover:-translate-y-1"
-      style={{ aspectRatio: '4/5' }}
+      className="group relative block overflow-hidden rounded-xl bg-bg-card border border-border hover:border-accent/50 transition-all duration-500 hover:-translate-y-1 aspect-[3/4] sm:aspect-[4/5]"
     >
       {/* ═══ LAYER 1 — Photo fills entire card ═══ */}
       <div className="absolute inset-0 overflow-hidden bg-bg-elevated">
@@ -41,7 +40,7 @@ export function ExpertCard({ expert }: { expert: Expert }) {
             src={expert.photoUrl}
             alt={expert.name}
             fill
-            sizes="(max-width: 768px) 50vw, 33vw"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="object-cover object-[center_top] transition-transform duration-700 group-hover:scale-105"
           />
         ) : (
@@ -73,7 +72,7 @@ export function ExpertCard({ expert }: { expert: Expert }) {
               }}
             />
             <div className="absolute bottom-[42%] left-1/2 -translate-x-1/2 z-10">
-              <span className="font-display font-black text-5xl text-white/95 leading-none tracking-tight drop-shadow-lg">
+              <span className="font-display font-black text-3xl sm:text-5xl text-white/95 leading-none tracking-tight drop-shadow-lg">
                 {initials}
               </span>
             </div>
@@ -86,34 +85,34 @@ export function ExpertCard({ expert }: { expert: Expert }) {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'linear-gradient(180deg, rgba(10,12,9,0.05) 0%, transparent 35%, rgba(10,12,9,0.4) 70%, rgba(10,12,9,0.92) 100%)',
+            'linear-gradient(180deg, rgba(10,12,9,0.05) 0%, transparent 35%, rgba(10,12,9,0.55) 65%, rgba(10,12,9,0.95) 100%)',
         }}
       />
 
-      {/* ═══ LAYER 3 — Role tag (top-right) ═══ */}
-      <div className="absolute top-3.5 right-3.5 z-10">
-        <span className="inline-flex items-center bg-bg/70 backdrop-blur-xl border border-accent/40 text-accent px-2.5 py-1 rounded-full font-mono text-[10px] uppercase tracking-[0.14em] font-bold">
+      {/* ═══ LAYER 3 — Role tag (top-right, hidden on mobile to avoid overlap) ═══ */}
+      <div className="hidden sm:block absolute top-3 right-3 z-10 max-w-[55%]">
+        <span className="inline-flex items-center bg-bg/70 backdrop-blur-xl border border-accent/40 text-accent px-2 py-1 rounded-full font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] font-bold leading-none whitespace-nowrap overflow-hidden text-ellipsis">
           {expert.shortRole}
         </span>
       </div>
 
-      {/* ═══ LAYER 4 — Name + title only (bottom overlay) ═══ */}
-      <div className="absolute inset-x-0 bottom-0 p-4 md:p-5 z-10">
+      {/* ═══ LAYER 4 — Name + title (bottom overlay) ═══ */}
+      <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 md:p-5 z-10">
         <h3
-          className="font-display font-semibold text-lg md:text-xl tracking-tight leading-tight text-white"
+          className="font-display font-semibold text-sm sm:text-lg md:text-xl tracking-tight leading-tight text-white line-clamp-2"
           style={{ textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}
         >
           {expert.name}
         </h3>
         <p
-          className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-white/75 font-medium"
+          className="mt-1 font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.12em] sm:tracking-[0.14em] text-white/75 font-medium line-clamp-2"
           style={{ textShadow: '0 1px 8px rgba(0,0,0,0.8)' }}
         >
           {expert.title}
         </p>
 
-        {/* Arrow button — sits alone, no stat crowding it */}
-        <div className="flex justify-end mt-3 pt-3 border-t border-white/10">
+        {/* Arrow button — hidden on tiny mobile, visible sm+ */}
+        <div className="hidden sm:flex justify-end mt-3 pt-3 border-t border-white/10">
           <div className="w-8 h-8 flex items-center justify-center rounded-full bg-bg/40 backdrop-blur-md border border-white/20 text-white/80 group-hover:bg-accent group-hover:border-accent group-hover:text-bg transition-all">
             <ArrowUpRight size={13} />
           </div>
