@@ -292,6 +292,67 @@ const PROGRAM_DETAILS: Record<
     recommendedFor:
       'Committed couples with shared goals. HYROX Doubles competitors. Partners who transform together.',
   },
+  'enduro': {
+    heroTagline:
+      'Built for the long event. Whether HYROX, IRONMAN, or hybrid race ambitions — Enduro is the most demanding programme PURE X offers.',
+    whoFor: [
+      'You\'re training for HYROX (any division) and want race-day ready protocols',
+      'You\'re prepping for IRONMAN, a marathon, or a long endurance event',
+      'You want to develop into a hybrid athlete — strength + endurance',
+      'You\'ve outgrown standard fitness coaching and need specialist race prep',
+    ],
+    whatYouGet: [
+      {
+        icon: Trophy,
+        label: 'HYROX Race Prep',
+        description:
+          'Direct guidance from Siva Jampana (HYROX Pro Doubles competitor). Sled push protocols, ski erg pacing, wall ball strategy — the full event toolkit.',
+      },
+      {
+        icon: Activity,
+        label: 'IRONMAN-Style Conditioning',
+        description:
+          'Periodised swim-bike-run integration where applicable. Brick sessions. Pacing strategy. Long-event nutrition. The full distance preparation.',
+      },
+      {
+        icon: Flame,
+        label: 'Hybrid Performance',
+        description:
+          'Strength and endurance trained as one system, not opposing forces. Powerlifting foundations + Zone 2 cardio + race-specific conditioning.',
+      },
+      {
+        icon: Stethoscope,
+        label: 'Medical Supervision',
+        description:
+          'Cardiovascular screening, blood work review, training load monitoring. We rule out red flags before race day, not after.',
+      },
+      {
+        icon: Brain,
+        label: 'Mental Performance',
+        description:
+          'Race-day visualisation, anxiety management, pacing discipline. Amber\'s mental health expertise applied to athletic performance.',
+      },
+      {
+        icon: Users,
+        label: 'Full Specialist Team',
+        description:
+          'Trainer, doctor, physio, athletic coach, mental health consultant — coordinated weekly. The most integrated coaching you\'ll find.',
+      },
+    ],
+    weeklyRhythm: [
+      'Mon — Strength + power (compound lifts)',
+      'Tue — Race-specific conditioning (HYROX or sport-specific)',
+      'Wed — Zone 2 endurance (60-90 min)',
+      'Thu — Skill + technique work, mobility focus',
+      'Fri — Strength + plyometrics',
+      'Sat — Long brick or simulation session',
+      'Sun — Recovery + 45-min progress call',
+    ],
+    differentiator:
+      'Enduro is the only programme in India where a HYROX Pro Doubles athlete designs your race prep — and a doctor, physio, and mental health consultant work alongside him from day one.',
+    recommendedFor:
+      'HYROX athletes (any division), IRONMAN aspirants, marathon runners, and hybrid athletes who want specialist coaching beyond what general PT can provide.',
+  },
 };
 
 // ─── Next.js dynamic route boilerplate ───────────────────────────────

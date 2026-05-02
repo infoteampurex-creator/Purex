@@ -7,7 +7,7 @@ import { ProgramsGrid } from '@/components/marketing/sections/ProgramsGrid';
 export const metadata: Metadata = {
   title: 'Programs & Pricing · PURE X',
   description:
-    'Four plans to match your level — Foundation, Core, Elite, and Elite Couple. Start with clarity, progress through consistency, finish as an athlete.',
+    'Five programmes to match your level — Foundation, Core, Elite, Elite Couple, and our signature Enduro race-prep programme. Start with clarity, progress through consistency, finish as an athlete.',
 };
 
 const COMPARISON_FEATURES = [
@@ -20,7 +20,7 @@ const COMPARISON_FEATURES = [
   { label: 'AI chat support',          foundation: false, core: true,  elite: true,  couple: true },
   { label: 'Streaks & challenges',     foundation: false, core: true,  elite: true,  couple: true },
   { label: '1-on-1 training',          foundation: false, core: false, elite: true,  couple: true },
-  { label: 'HYROX / Ironman prep',     foundation: false, core: false, elite: true,  couple: true },
+  { label: 'Race prep (basic)',        foundation: false, core: false, elite: true,  couple: true },
   { label: 'Outdoor sessions',         foundation: false, core: false, elite: true,  couple: true },
   { label: 'Mental Health access',     foundation: false, core: false, elite: true,  couple: true },
   { label: 'Doubles race prep',        foundation: false, core: false, elite: false, couple: true },
@@ -132,6 +132,20 @@ export default function ProgramsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-5 p-4 rounded-xl border border-accent/25 bg-accent/[0.05]">
+              <div className="flex items-start gap-3">
+                <Sparkles size={14} className="text-accent flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                <p className="text-xs md:text-sm text-text-muted leading-relaxed">
+                  <span className="text-accent font-bold">Enduro</span> is our specialist
+                  race-prep programme for HYROX, IRONMAN, and hybrid athletes. It sits
+                  outside the standard tier comparison —{' '}
+                  <Link href="/programs/enduro" className="text-accent hover:underline font-medium">
+                    see the full Enduro page
+                  </Link>{' '}
+                  for race-day protocols, hybrid programming, and pro-athlete coaching.
+                </p>
+              </div>
             </div>
           </div>
         </div>

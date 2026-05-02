@@ -232,6 +232,7 @@ export const FALLBACK_PROGRAMS = [
     priceSuffix: '',
     durationMonths: 1,
     isFeatured: false,
+    isPremium: false,
     inclusions: [
       'Client profiling — goals, lifestyle, health',
       'Personalised workout plan',
@@ -254,6 +255,7 @@ export const FALLBACK_PROGRAMS = [
     priceSuffix: '/month',
     durationMonths: 3,
     isFeatured: true,
+    isPremium: false,
     inclusions: [
       'Everything in Foundation',
       'Doctor consultation',
@@ -277,6 +279,7 @@ export const FALLBACK_PROGRAMS = [
     priceSuffix: '/month',
     durationMonths: 6,
     isFeatured: false,
+    isPremium: false,
     inclusions: [
       'Everything in Core',
       '1-on-1 performance training',
@@ -300,6 +303,7 @@ export const FALLBACK_PROGRAMS = [
     priceSuffix: '/month',
     durationMonths: 4,
     isFeatured: false,
+    isPremium: false,
     inclusions: [
       'Joint training sessions (3-4 per week)',
       'Individual physio and doctor consultations',
@@ -309,6 +313,32 @@ export const FALLBACK_PROGRAMS = [
       'Monthly couples performance review',
       'Shared progress tracking',
       'Access to PURE X community events',
+    ],
+  },
+  {
+    slug: 'enduro',
+    name: 'Enduro',
+    tag: 'Race Prep',
+    tagline: 'For HYROX, IRONMAN, and hybrid athletes built for the long event.',
+    description:
+      'A specialist programme for athletes preparing for HYROX, IRONMAN, and other endurance events. Combines structured periodisation, race-specific conditioning, and the lived experience of HYROX Pro Doubles competitors. The most demanding programme PURE X offers — and the most rewarding.',
+    priceInr: 24999,
+    priceDisplay: '₹24,999',
+    priceSuffix: '/month',
+    durationMonths: 4,
+    isFeatured: false,
+    isPremium: true,
+    inclusions: [
+      'Structured race-day preparation (HYROX or IRONMAN)',
+      'Periodised training cycles with taper protocols',
+      'Strength + endurance hybrid programming',
+      'Movement screening + injury prevention',
+      'Direct access to Siva Jampana (HYROX Pro Doubles)',
+      'Race-day strategy session and equipment check',
+      'Mental performance coaching with Amber',
+      'Recovery and nutrition optimised for race demands',
+      'Weekly performance reviews with the full team',
+      '1-on-1 coaching across all 6 specialists',
     ],
   },
 ] as const;

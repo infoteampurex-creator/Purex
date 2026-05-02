@@ -3,8 +3,8 @@ import { PactCounterStrip } from '@/components/marketing/sections/PactCounterStr
 import { VisionMissionAim } from '@/components/marketing/sections/VisionMissionAim';
 import { ExpertsGrid } from '@/components/marketing/sections/ExpertsGrid';
 import { ProgramsGrid } from '@/components/marketing/sections/ProgramsGrid';
-import { HyroxSection } from '@/components/marketing/sections/HyroxSection';
-import { IronmanSection } from '@/components/marketing/sections/IronmanSection';
+// HyroxSection + IronmanSection content has been consolidated into the
+// Enduro program detail page (/programs/enduro). Removed from homepage.
 import { InActionGallery as _InActionGallery } from '@/components/marketing/sections/InActionGallery';
 // ^ Imported but not rendered — InAction section hidden until photo refresh.
 //   To restore: replace `_InActionGallery` import name with `InActionGallery`
@@ -22,8 +22,6 @@ export default function HomePage() {
       <VisionMissionAim />
       <ExpertsGrid />
       <ProgramsGrid />
-      <HyroxSection />
-      <IronmanSection />
       {/* <InActionGallery /> — hidden until photo refresh */}
       <TransformationGallery />
       <TestimonialStrip />
