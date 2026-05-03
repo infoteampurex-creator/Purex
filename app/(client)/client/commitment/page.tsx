@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { ArrowLeft, Calendar, Flame, Target, Heart, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Flame, Target, Heart, CheckCircle2, ArrowRight } from 'lucide-react';
 import { getMockClientPact, COMMITMENT_MILESTONES } from '@/lib/data/commitment';
 import { cn } from '@/lib/cn';
 
@@ -10,13 +10,99 @@ export const metadata: Metadata = {
 
 export default function CommitmentPage() {
   const pact = getMockClientPact();
+
+  // No pact signed yet — show empty state encouraging them to start
+  if (!pact) {
+    return (
+      <main className="bg-bg text-text min-h-screen">
+        <div className="container-safe py-8 md:py-12 max-w-3xl">
+          <Link
+            href="/client/dashboard"
+            className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted hover:text-accent transition-colors mb-6"
+          >
+            <ArrowLeft size={12} />
+            Back to dashboard
+          </Link>
+
+          <div className="rounded-2xl bg-bg-card border border-accent/30 p-8 md:p-12 relative overflow-hidden">
+            <div
+              aria-hidden
+              className="absolute -top-20 -right-20 w-64 h-64 rounded-full pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle, rgba(198, 255, 61, 0.15) 0%, transparent 70%)',
+              }}
+            />
+
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-4">
+                <Flame size={12} strokeWidth={2.5} />
+                The 100-Day Commitment
+              </div>
+
+              <h1 className="font-display font-semibold text-3xl md:text-5xl tracking-tight leading-[1.1] mb-4">
+                Make the pact.
+                <br />
+                <span className="text-accent">Become someone else.</span>
+              </h1>
+
+              <p className="text-base md:text-lg text-text-muted leading-relaxed mb-8 max-w-2xl">
+                The 100-Day Commitment is your signed promise to your future self —
+                witnessed by your coach. You set the goal, the pledge, and the
+                non-negotiables. We hold the line for 100 days.
+              </p>
+
+              <div className="grid sm:grid-cols-3 gap-4 mb-10">
+                <Pillar
+                  number="01"
+                  title="Set the goal"
+                  text="Define what you'll have achieved on Day 100. Be specific."
+                />
+                <Pillar
+                  number="02"
+                  title="Sign the pledge"
+                  text="Write your promise in your own words. We'll witness it."
+                />
+                <Pillar
+                  number="03"
+                  title="Show up daily"
+                  text="Track training, recovery, and nutrition. Never zero days."
+                />
+              </div>
+
+              <div className="rounded-xl border border-accent/40 bg-accent/5 p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="font-display font-semibold text-lg md:text-xl tracking-tight mb-1">
+                      Ready to commit?
+                    </div>
+                    <p className="text-sm text-text-muted">
+                      Talk to your coach to begin your pact.
+                    </p>
+                  </div>
+                  <Link
+                    href="/book"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover transition-colors"
+                  >
+                    Get Started
+                    <ArrowRight size={14} strokeWidth={2.5} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Pact exists — show full progress page
   const daysLeft = 100 - pact.metrics.currentDay;
   const progressPercent = (pact.metrics.currentDay / 100) * 100;
 
   return (
     <main className="bg-bg text-text min-h-screen">
       <div className="container-safe py-8 md:py-12 max-w-4xl">
-        {/* Back link */}
         <Link
           href="/client/dashboard"
           className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted hover:text-accent transition-colors mb-6"
@@ -55,7 +141,6 @@ export default function CommitmentPage() {
               {daysLeft} days remaining · Reveal Day {pact.endDate}
             </div>
 
-            {/* Big progress bar */}
             <div className="relative mb-4">
               <div className="h-3 rounded-full bg-bg-elevated overflow-hidden">
                 <div
@@ -95,7 +180,6 @@ export default function CommitmentPage() {
               </div>
             </div>
 
-            {/* Milestone labels */}
             <div className="relative h-5 pointer-events-none">
               {COMMITMENT_MILESTONES.map((m) => {
                 const passed = pact.metrics.currentDay >= m.day;
@@ -127,27 +211,24 @@ export default function CommitmentPage() {
             The Pact
           </div>
 
-          {/* Goal */}
           <div className="mb-8 pb-6 border-b border-border-soft">
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold mb-2">
               Your Goal
             </div>
             <p className="font-display font-semibold text-xl md:text-2xl leading-[1.3] text-white">
-              "{pact.goalStatement}"
+              &ldquo;{pact.goalStatement}&rdquo;
             </p>
           </div>
 
-          {/* Pledge */}
           <div className="mb-8 pb-6 border-b border-border-soft">
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold mb-2">
               Your Pledge
             </div>
             <p className="font-display italic text-lg md:text-xl leading-[1.4] text-accent">
-              "{pact.pledge}"
+              &ldquo;{pact.pledge}&rdquo;
             </p>
           </div>
 
-          {/* Commitments */}
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold mb-4">
               Your Commitments
@@ -181,11 +262,10 @@ export default function CommitmentPage() {
         <div className="rounded-2xl bg-bg-card border border-border p-6 md:p-8">
           <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-5">
             <Heart size={12} strokeWidth={2.5} />
-            Signed & Witnessed
+            Signed &amp; Witnessed
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Your signature */}
             <div>
               <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-text-muted font-bold mb-2">
                 Your Signature
@@ -210,7 +290,6 @@ export default function CommitmentPage() {
               </div>
             </div>
 
-            {/* Witnessed by */}
             <div>
               <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-text-muted font-bold mb-2">
                 Witnessed By
@@ -224,7 +303,7 @@ export default function CommitmentPage() {
                     {pact.witnessName}
                   </div>
                   <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-accent font-bold mt-1">
-                    Co-Founder & PT Head · PURE X
+                    Co-Founder &amp; PT Head · PURE X
                   </div>
                 </Link>
               </div>
@@ -234,15 +313,32 @@ export default function CommitmentPage() {
             </div>
           </div>
 
-          {/* Motivation footer */}
           <div className="mt-8 pt-6 border-t border-border-soft text-center">
             <p className="font-display italic text-base md:text-lg text-text-muted max-w-xl mx-auto">
-              "You are not starting a diet. You are becoming someone else."
+              &ldquo;You are not starting a diet. You are becoming someone else.&rdquo;
             </p>
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+function Pillar({
+  number,
+  title,
+  text,
+}: {
+  number: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-bg/40 p-5">
+      <div className="font-mono text-xs text-accent font-bold mb-2">{number}</div>
+      <div className="font-display font-semibold text-base mb-1.5">{title}</div>
+      <p className="text-xs text-text-muted leading-relaxed">{text}</p>
+    </div>
   );
 }
 
@@ -256,7 +352,7 @@ function Commitment({
   label: string;
 }) {
   const percent = Math.min((value / target) * 100, 100);
-  const onTrack = percent >= (value === 0 ? 0 : 30); // simple heuristic
+  const onTrack = percent >= (value === 0 ? 0 : 30);
 
   return (
     <div className="rounded-xl bg-bg/40 border border-border-soft p-4">

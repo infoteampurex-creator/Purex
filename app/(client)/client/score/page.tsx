@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { ArrowLeft, Info, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Info, TrendingUp, TrendingDown, Minus, Activity, ArrowRight } from 'lucide-react';
 import { getMockClientScore, statusLabel, statusColor } from '@/lib/data/score';
 import { ScoreTrendChart } from '@/components/client/ScoreTrendChart';
 
@@ -10,6 +10,84 @@ export const metadata: Metadata = {
 
 export default function ScorePage() {
   const score = getMockClientScore();
+
+  // No score data yet — show empty state explaining what the score is
+  if (!score) {
+    return (
+      <main className="bg-bg text-text min-h-screen">
+        <div className="container-safe py-8 md:py-12 max-w-3xl">
+          <Link
+            href="/client/dashboard"
+            className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted hover:text-accent transition-colors mb-6"
+          >
+            <ArrowLeft size={12} />
+            Back to dashboard
+          </Link>
+
+          <div className="rounded-2xl bg-bg-card border border-accent/30 p-8 md:p-12 relative overflow-hidden">
+            <div
+              aria-hidden
+              className="absolute -top-20 -right-20 w-64 h-64 rounded-full pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle, rgba(125, 211, 255, 0.15) 0%, transparent 70%)',
+              }}
+            />
+
+            <div className="relative">
+              <div
+                className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] font-bold mb-4"
+                style={{ color: '#7dd3ff' }}
+              >
+                <Activity size={12} strokeWidth={2.5} />
+                The PURE X Score
+              </div>
+
+              <h1 className="font-display font-semibold text-3xl md:text-5xl tracking-tight leading-[1.1] mb-4">
+                One number.
+                <br />
+                <span style={{ color: '#7dd3ff' }}>Five pillars.</span>
+              </h1>
+
+              <p className="text-base md:text-lg text-text-muted leading-relaxed mb-8 max-w-2xl">
+                Your daily 0–100 score blends Training, Recovery, Mental Health,
+                Nutrition, and Medical adherence into a single number that tells
+                you if you&rsquo;re on track. It builds automatically as you log data.
+              </p>
+
+              <div className="grid sm:grid-cols-3 gap-4 mb-10">
+                <Pillar number="01" title="Log daily" text="Workouts, sleep, mood, meals — your coach assigns what to track." />
+                <Pillar number="02" title="See the score" text="A single number 0–100, plus a delta vs your 7-day average." />
+                <Pillar number="03" title="Adjust together" text="Your coach sees the same data and tunes your plan accordingly." />
+              </div>
+
+              <div className="rounded-xl border p-5 md:p-6" style={{ borderColor: 'rgba(125, 211, 255, 0.4)', background: 'rgba(125, 211, 255, 0.05)' }}>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="font-display font-semibold text-lg md:text-xl tracking-tight mb-1">
+                      Start logging
+                    </div>
+                    <p className="text-sm text-text-muted">
+                      Your dashboard will populate as you log daily.
+                    </p>
+                  </div>
+                  <Link
+                    href="/client/dashboard"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-full font-semibold text-sm transition-colors"
+                    style={{ background: '#7dd3ff', color: '#0a0c09' }}
+                  >
+                    Go to dashboard
+                    <ArrowRight size={14} strokeWidth={2.5} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const totalStatus =
     score.total >= 90 ? 'peak' :
     score.total >= 80 ? 'strong' :
@@ -225,5 +303,23 @@ export default function ScorePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function Pillar({
+  number,
+  title,
+  text,
+}: {
+  number: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-bg/40 p-5">
+      <div className="font-mono text-xs font-bold mb-2" style={{ color: '#7dd3ff' }}>{number}</div>
+      <div className="font-display font-semibold text-base mb-1.5">{title}</div>
+      <p className="text-xs text-text-muted leading-relaxed">{text}</p>
+    </div>
   );
 }
