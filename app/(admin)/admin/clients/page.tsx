@@ -9,7 +9,11 @@ import {
   StatusBadge,
 } from '@/components/admin/AdminTable';
 import { Avatar } from '@/components/admin/Avatar';
-import { MOCK_CLIENTS } from '@/lib/data/admin-mock';
+import { type AdminClient } from '@/lib/data/admin-mock';
+
+// MOCK_CLIENTS removed for production — clients table not yet wired to Supabase.
+// Admin panel shows empty state until real client management is implemented.
+const MOCK_CLIENTS: AdminClient[] = [];
 import { getMockAdminScores, statusColor, scoreStatus } from '@/lib/data/score';
 
 export const metadata = { title: 'Admin · Clients' };

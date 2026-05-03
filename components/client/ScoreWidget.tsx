@@ -7,15 +7,52 @@ import { statusColor, statusLabel } from '@/lib/data/score';
 import { cn } from '@/lib/cn';
 
 interface ScoreWidgetProps {
-  score: PureXScore;
+  score: PureXScore | null;
 }
 
 /**
  * Compact daily PURE X Score widget.
- * Shows the single 0-100 number, 7-day delta, and 5 pillar mini-bars.
- * Clicks through to the full /client/score page.
+ * If no score data exists yet, shows an inviting empty state.
  */
 export function ScoreWidget({ score }: ScoreWidgetProps) {
+  // Empty state — score not yet calculated
+  if (!score) {
+    return (
+      <Link
+        href="/client/score"
+        className="group relative block rounded-2xl bg-bg-card border border-border hover:border-accent/40 transition-all duration-500 overflow-hidden p-6 md:p-8"
+      >
+        <div className="flex flex-col md:flex-row md:items-center gap-5">
+          <div
+            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: 'rgba(125, 211, 255, 0.1)',
+              border: '1px solid rgba(125, 211, 255, 0.3)',
+              color: '#7dd3ff',
+            }}
+          >
+            <Activity size={22} strokeWidth={2} />
+          </div>
+          <div className="flex-1">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] font-bold mb-1.5" style={{ color: '#7dd3ff' }}>
+              PURE X Score
+            </div>
+            <h3 className="font-display font-semibold text-lg md:text-xl tracking-tight leading-tight mb-1">
+              Your score will appear here
+            </h3>
+            <p className="text-sm text-text-muted leading-relaxed">
+              Once you start logging training, recovery, and nutrition, your daily 0-100 score builds automatically.
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.22em] font-bold group-hover:gap-2 transition-all flex-shrink-0" style={{ color: '#7dd3ff' }}>
+            Learn more
+            <ArrowRight size={11} strokeWidth={2.5} />
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
   const totalStatus = score.total >= 90
     ? 'peak'
     : score.total >= 80

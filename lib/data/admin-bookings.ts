@@ -1,28 +1,22 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { FALLBACK_EXPERTS } from '@/lib/constants';
-import {
-  MOCK_BOOKINGS,
-  type AdminBooking,
-} from '@/lib/data/admin-mock';
+import { type AdminBooking } from '@/lib/data/admin-mock';
 
 /**
  * Read bookings from Supabase for the admin panel.
  *
- * Strategy:
+ * Production behaviour:
  *   - Attempt Supabase query
- *   - If it succeeds and returns rows → map to AdminBooking[] and return
- *   - If it succeeds but returns empty → merge real + mock (show both so
- *     empty-DB admins still see a functional demo panel)
- *   - If it fails (no creds, auth issue, etc.) → fall back to mock only
+ *   - Return real rows when present
+ *   - Return EMPTY array (with source label) when DB is empty or unreachable
  *
- * This means: the admin panel is always useful, whether DB is live or not.
- * Real leads (once they arrive) appear at the top of the list automatically.
+ * Demo data is no longer mixed into the panel — admins always see truth.
  */
 
 interface FetchResult {
   bookings: AdminBooking[];
-  source: 'supabase' | 'supabase+mock' | 'mock' | 'error-fallback';
+  source: 'supabase' | 'mock' | 'error-fallback';
   error?: string;
 }
 
@@ -43,7 +37,7 @@ export async function getAdminBookings(): Promise<FetchResult> {
 
     if (error) {
       return {
-        bookings: MOCK_BOOKINGS,
+        bookings: [],
         source: 'error-fallback',
         error: error.message,
       };
@@ -51,17 +45,16 @@ export async function getAdminBookings(): Promise<FetchResult> {
 
     const real: AdminBooking[] = (rows ?? []).map(supabaseRowToAdminBooking);
 
-    // If we have real data, show only real data (admins want truth)
+    // If we have real data, show real data; otherwise empty.
     if (real.length > 0) {
       return { bookings: real, source: 'supabase' };
     }
 
-    // If the DB is genuinely empty, show mock data so the panel isn't
-    // a ghost town during development
-    return { bookings: MOCK_BOOKINGS, source: 'mock' };
+    // DB is reachable but empty — show empty state, NOT demo data.
+    return { bookings: [], source: 'mock' };
   } catch (err) {
     return {
-      bookings: MOCK_BOOKINGS,
+      bookings: [],
       source: 'error-fallback',
       error: err instanceof Error ? err.message : 'Unknown Supabase error',
     };

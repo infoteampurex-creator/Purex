@@ -7,17 +7,54 @@ import { COMMITMENT_MILESTONES } from '@/lib/data/commitment';
 import { cn } from '@/lib/cn';
 
 interface CommitmentWidgetProps {
-  pact: CommitmentPact;
+  pact: CommitmentPact | null;
 }
 
 /**
  * Always-visible widget on the client dashboard showing 100-day progress.
  *
- * Renders a full-width horizontal progress bar with 4 milestone markers,
- * current day counter, streak percentage, and a direct link to the
- * detailed pact page.
+ * If the client hasn't signed a pact yet, shows an inviting empty state
+ * pointing to the pact creation flow.
  */
 export function CommitmentWidget({ pact }: CommitmentWidgetProps) {
+  // Empty state — no pact signed yet
+  if (!pact) {
+    return (
+      <Link
+        href="/client/commitment"
+        className="group relative block rounded-2xl bg-bg-card border border-border hover:border-accent/40 transition-all duration-500 overflow-hidden p-6 md:p-8"
+      >
+        <div className="flex flex-col md:flex-row md:items-center gap-5">
+          <div
+            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: 'rgba(198, 255, 61, 0.1)',
+              border: '1px solid rgba(198, 255, 61, 0.3)',
+              color: '#c6ff3d',
+            }}
+          >
+            <Flame size={22} strokeWidth={2} />
+          </div>
+          <div className="flex-1">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-1.5">
+              100-Day Commitment
+            </div>
+            <h3 className="font-display font-semibold text-lg md:text-xl tracking-tight leading-tight mb-1">
+              Ready to make the pact?
+            </h3>
+            <p className="text-sm text-text-muted leading-relaxed">
+              Sign a 100-day commitment to your future self. Witnessed by your coach.
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold group-hover:gap-2 transition-all flex-shrink-0">
+            Begin pact
+            <ArrowRight size={11} strokeWidth={2.5} />
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
   const progressPercent = (pact.metrics.currentDay / 100) * 100;
   const streakColor =
     pact.metrics.streakPercent >= 85

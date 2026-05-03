@@ -123,7 +123,14 @@ export function calculateTotal(pillars: Record<PillarKey, number>): number {
 }
 
 // ─── Mock data generator for client ───────────────────────────────────
-export function getMockClientScore(): PureXScore {
+export function getMockClientScore(): PureXScore | null {
+  // Returns null until a real client has logged scoring data.
+  // Previously generated demo scores around 78/100 — removed for production.
+  return null;
+}
+
+// Old internals kept (unused) for reference if we restore demo mode.
+function _unusedDemoScore(): PureXScore {
   // Today's pillar scores (plausible for a Day-27 client on track)
   const todayPillars: Record<PillarKey, number> = {
     training: 82,

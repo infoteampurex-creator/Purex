@@ -19,9 +19,10 @@ export function PactCounterStrip() {
     },
     {
       icon: Users,
-      value: 23,
-      label: '100 Club Graduates',
+      value: 60,
+      label: 'Transformations',
       color: '#7dd3ff',
+      suffix: '+',
     },
     {
       icon: Calendar,
@@ -72,6 +73,7 @@ export function PactCounterStrip() {
                       style={{ color: stat.color }}
                     >
                       {stat.value.toLocaleString()}
+                      {'suffix' in stat && stat.suffix}
                     </span>
                     {/* Live pulse */}
                     <span className="relative flex h-1.5 w-1.5">

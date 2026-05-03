@@ -79,47 +79,10 @@ export const COMMITMENT_MILESTONES = [
 ] as const;
 
 // ─── Mock active pact for the client dashboard ────────────────────────
-export function getMockClientPact(): CommitmentPact {
-  // Simulate a pact signed 27 days ago
-  const today = new Date();
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 27);
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + 99); // Day 100 is endDate
-
-  return {
-    id: 'pact-arjun-001',
-    clientId: 'c1',
-    clientName: 'Arjun M.',
-    goalStatement:
-      'Complete HYROX Open in under 80 minutes. Lose 6kg. Build the discipline my younger self never had.',
-    pledge:
-      'I am not starting a diet. I am becoming someone else — the person my future children will look up to.',
-    commitments: {
-      workoutSessions: 80,
-      nutritionLogs: 700,
-      weeklyCalls: 14,
-      physioCheckIns: 8,
-      minStreakPercent: 80,
-    },
-    witnessName: 'Siva Reddy',
-    witnessSlug: 'siva-reddy',
-    signatureDataUrl: null,
-    startDate: startDate.toISOString().slice(0, 10),
-    endDate: endDate.toISOString().slice(0, 10),
-    signedAt: startDate.toISOString(),
-    status: 'active',
-    metrics: {
-      currentDay: 27,
-      daysComplete: 27,
-      streakPercent: 89,
-      workoutsLogged: 22,
-      nutritionDaysLogged: 25,
-      callsCompleted: 4,
-      physioCheckInsCompleted: 2,
-      baselinePhotoUrl: null,
-    },
-  };
+export function getMockClientPact(): CommitmentPact | null {
+  // Returns null until a real pact is created.
+  // Previously returned demo data for "Arjun M." Day 27 — removed for production.
+  return null;
 }
 
 // ─── Mock admin view of multiple active pacts ─────────────────────────

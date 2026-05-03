@@ -15,29 +15,30 @@ import {
   AdminTableCell,
   StatusBadge,
 } from '@/components/admin/AdminTable';
-import { MOCK_CLIENTS, relativeTime } from '@/lib/data/admin-mock';
+import { relativeTime } from '@/lib/data/admin-mock';
 import { getAdminBookings } from '@/lib/data/admin-bookings';
 
 export const metadata = { title: 'Admin · Overview' };
 
 export default async function AdminDashboardPage() {
-  const { bookings } = await getAdminBookings();
+  const { bookings, source } = await getAdminBookings();
 
-  // Derived stats
-  const newLeads = bookings.filter((b) => b.status === 'new').length;
-  const scheduledThisWeek = bookings.filter(
+  // Real-data only when source is supabase. Mock fallback = empty stats.
+  const realBookings = source === 'supabase' ? bookings : [];
+
+  // Derived stats — all real Supabase counts now (no mock client counts)
+  const newLeads = realBookings.filter((b) => b.status === 'new').length;
+  const scheduledThisWeek = realBookings.filter(
     (b) => b.status === 'scheduled'
   ).length;
-  const activeClients = MOCK_CLIENTS.filter((c) => c.status === 'active').length;
-  const onboardingClients = MOCK_CLIENTS.filter(
-    (c) => c.status === 'onboarding'
-  ).length;
+  const activeClients = 0; // Will populate when clients table is wired
+  const onboardingClients = 0;
 
   // Latest bookings
-  const recentBookings = bookings.slice(0, 5);
+  const recentBookings = realBookings.slice(0, 5);
 
   // Today's schedule
-  const todayBookings = bookings.filter(
+  const todayBookings = realBookings.filter(
     (b) => b.status === 'scheduled' && b.scheduledDatetime
   ).slice(0, 3);
 

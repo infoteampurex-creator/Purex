@@ -14,12 +14,16 @@ import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { Avatar } from '@/components/admin/Avatar';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import {
-  MOCK_CLIENTS,
+  type AdminClient,
   getClientBookings,
   getMockClientPhotos,
   SUGGESTED_APPS,
   INTERNAL_ACTIONS,
 } from '@/lib/data/admin-mock';
+
+// MOCK_CLIENTS stubbed — real clients table not wired yet.
+// Detail page will 404 for any id until that's implemented.
+const MOCK_CLIENTS: AdminClient[] = [];
 import {
   getClientTasksLive,
   getClientLogsLive,

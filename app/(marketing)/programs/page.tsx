@@ -7,24 +7,22 @@ import { ProgramsGrid } from '@/components/marketing/sections/ProgramsGrid';
 export const metadata: Metadata = {
   title: 'Programs & Pricing · PURE X',
   description:
-    'Five programmes to match your level — Foundation, Core, Elite, Elite Couple, and our signature Enduro race-prep programme. Start with clarity, progress through consistency, finish as an athlete.',
+    'Four programmes to match your level — Foundation, Core, Elite, and our signature Pure Enduro race-prep programme. Start with clarity, progress through consistency, finish as an athlete.',
 };
 
 const COMPARISON_FEATURES = [
-  { label: 'Personalised plan',        foundation: true,  core: true,  elite: true,  couple: true },
-  { label: 'Weight tracking',          foundation: true,  core: true,  elite: true,  couple: true },
-  { label: 'Progress call',            foundation: 'Once', core: 'Weekly', elite: 'Weekly', couple: 'Weekly' },
-  { label: 'App tracking (full)',      foundation: false, core: true,  elite: true,  couple: true },
-  { label: 'Doctor consultation',      foundation: false, core: true,  elite: true,  couple: true },
-  { label: 'Physio assessment',        foundation: false, core: true,  elite: true,  couple: true },
-  { label: 'AI chat support',          foundation: false, core: true,  elite: true,  couple: true },
-  { label: 'Streaks & challenges',     foundation: false, core: true,  elite: true,  couple: true },
-  { label: '1-on-1 training',          foundation: false, core: false, elite: true,  couple: true },
-  { label: 'Race prep (basic)',        foundation: false, core: false, elite: true,  couple: true },
-  { label: 'Outdoor sessions',         foundation: false, core: false, elite: true,  couple: true },
-  { label: 'Mental Health access',     foundation: false, core: false, elite: true,  couple: true },
-  { label: 'Doubles race prep',        foundation: false, core: false, elite: false, couple: true },
-  { label: 'Both partners included',   foundation: false, core: false, elite: false, couple: true },
+  { label: 'Personalised plan',        foundation: true,  core: true,  elite: true },
+  { label: 'Weight tracking',          foundation: true,  core: true,  elite: true },
+  { label: 'Progress call',            foundation: 'Once', core: 'Weekly', elite: 'Weekly' },
+  { label: 'App tracking (full)',      foundation: false, core: true,  elite: true },
+  { label: 'Doctor consultation',      foundation: false, core: true,  elite: true },
+  { label: 'Physio assessment',        foundation: false, core: true,  elite: true },
+  { label: 'AI chat support',          foundation: false, core: true,  elite: true },
+  { label: 'Streaks & challenges',     foundation: false, core: true,  elite: true },
+  { label: '1-on-1 training',          foundation: false, core: false, elite: true },
+  { label: 'Race prep (basic)',        foundation: false, core: false, elite: true },
+  { label: 'Outdoor sessions',         foundation: false, core: false, elite: true },
+  { label: 'Mental Health access',     foundation: false, core: false, elite: true },
 ];
 
 export default function ProgramsPage() {
@@ -107,12 +105,6 @@ export default function ProgramsPage() {
                         ₹19,999/mo
                       </div>
                     </th>
-                    <th className="p-4 md:p-5 text-center">
-                      <div className="font-display font-semibold text-sm md:text-base">Couple</div>
-                      <div className="font-mono text-[10px] text-accent font-bold mt-1">
-                        ₹29,999/mo
-                      </div>
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -127,7 +119,6 @@ export default function ProgramsPage() {
                       <Cell value={row.foundation} />
                       <Cell value={row.core} highlight />
                       <Cell value={row.elite} />
-                      <Cell value={row.couple} />
                     </tr>
                   ))}
                 </tbody>
