@@ -10,8 +10,7 @@ import { cn } from '@/lib/cn';
 const navLinks = [
   { href: '/experts', label: 'Experts' },
   { href: '/programs', label: 'Programs' },
-  { href: '/#hyrox', label: 'HYROX' },
-  { href: '/#ironman', label: 'IRONMAN' },
+  { href: '/programs/enduro', label: 'Pure Enduro' },
   { href: '/transformations', label: 'Stories' },
   { href: '/faq', label: 'FAQ' },
 ];

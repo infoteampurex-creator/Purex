@@ -63,7 +63,7 @@ export function VisionMissionAim() {
             Why PURE X exists
             <span className="inline-block w-4 h-px bg-accent" />
           </div>
-          <h2 className="font-display font-bold text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight leading-[1.05]">
+          <h2 className="font-display font-semibold text-3xl sm:text-4xl md:text-5xl tracking-tight leading-[1.15]">
             Built on a <span className="text-accent">vision</span>.
             <br />
             Driven by a <span className="text-accent">mission</span>.

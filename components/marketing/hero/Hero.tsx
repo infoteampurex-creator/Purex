@@ -106,7 +106,7 @@ export function Hero() {
               className="mt-10 md:mt-14 pt-8 border-t border-border/60 grid grid-cols-3 gap-6 max-w-md"
             >
               <div>
-                <div className="font-display font-bold text-2xl md:text-3xl text-accent tracking-tight">1000+</div>
+                <div className="font-display font-bold text-2xl md:text-3xl text-accent tracking-tight">60+</div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted mt-1">
                   Transformed
                 </div>
