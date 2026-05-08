@@ -25,7 +25,7 @@ import {
   type DailyPlan,
   type PlannedExercise,
   EMPTY_DAILY_PLAN,
-} from '@/lib/data/daily-plan';
+} from '@/lib/data/daily-plan-types';
 
 interface EditDailyPlanModalProps {
   open: boolean;

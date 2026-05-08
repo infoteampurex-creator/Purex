@@ -1,0 +1,91 @@
+/**
+ * Pure types + constants shared between the server fetcher
+ * (lib/data/daily-plan.ts) and client components (modals, cards).
+ *
+ * This module MUST stay free of `'server-only'` and any imports that
+ * touch `next/headers`, cookies, or the Supabase server client — it
+ * gets bundled into client components.
+ */
+
+export interface PlannedExercise {
+  id: string;
+  exerciseName: string;
+  targetMuscle: string | null;
+  sets: number | null;
+  reps: string | null;
+  targetWeightKg: number | null;
+  restSeconds: number | null;
+  tempo: string | null;
+  rpeTarget: number | null;
+  trainerInstruction: string | null;
+  exerciseOrder: number;
+}
+
+export interface DailyActuals {
+  steps: number | null;
+  sleepHours: number | null;
+  waterGlasses: number | null;
+  weightKg: number | null;
+  caloriesConsumed: number | null;
+  proteinG: number | null;
+  workoutCompleted: boolean;
+}
+
+export interface DailyPlan {
+  // Workout
+  workoutId: string | null;
+  workoutName: string | null;
+  workoutType: string | null;
+  targetMuscleGroup: string | null;
+  trainerNotes: string | null;
+  nextDayInstructions: string | null;
+
+  // Targets
+  stepsTarget: number | null;
+  sleepTargetHours: number | null;
+  waterTarget: number | null;
+  caloriesTarget: number | null;
+  proteinTargetG: number | null;
+  cardioTargetMinutes: number | null;
+  targetWeightKg: number | null;
+
+  // Recovery
+  recoveryGoal: string | null;
+  mobilityGoal: string | null;
+
+  // Planned exercises (ordered by exercise_order)
+  exercises: PlannedExercise[];
+
+  // What the client has logged so far for this date.
+  actuals: DailyActuals;
+}
+
+export const EMPTY_ACTUALS: DailyActuals = {
+  steps: null,
+  sleepHours: null,
+  waterGlasses: null,
+  weightKg: null,
+  caloriesConsumed: null,
+  proteinG: null,
+  workoutCompleted: false,
+};
+
+export const EMPTY_DAILY_PLAN: DailyPlan = {
+  workoutId: null,
+  workoutName: null,
+  workoutType: null,
+  targetMuscleGroup: null,
+  trainerNotes: null,
+  nextDayInstructions: null,
+  stepsTarget: null,
+  sleepTargetHours: null,
+  waterTarget: null,
+  caloriesTarget: null,
+  proteinTargetG: null,
+  cardioTargetMinutes: null,
+  targetWeightKg: null,
+  recoveryGoal: null,
+  mobilityGoal: null,
+  exercises: [],
+  actuals: EMPTY_ACTUALS,
+};

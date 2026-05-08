@@ -45,7 +45,7 @@ import {
 import { StatusBadge } from './AdminTable';
 import { LogMetricsModal } from './LogMetricsModal';
 import { EditDailyPlanModal } from './EditDailyPlanModal';
-import { type DailyPlan } from '@/lib/data/daily-plan';
+import { type DailyPlan } from '@/lib/data/daily-plan-types';
 import { PhotoUpload } from './PhotoUpload';
 import { cn } from '@/lib/cn';
 
