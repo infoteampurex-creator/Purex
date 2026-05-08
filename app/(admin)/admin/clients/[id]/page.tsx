@@ -6,12 +6,11 @@ import {
   Phone,
   Calendar,
   User,
-  Edit3,
   MessageCircle,
 } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
-import { Avatar } from '@/components/admin/Avatar';
+import { EditClientButton } from '@/components/admin/EditClientButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import {
   getClientBookings,
@@ -26,8 +25,14 @@ import {
   getClientLogsLive,
   getClientWorkoutsLive,
 } from '@/lib/data/client-live';
+import { FALLBACK_PROGRAMS } from '@/lib/constants';
 
 export const metadata = { title: 'Admin · Client Detail' };
+
+function planSlugFromName(name: string | undefined): string | null {
+  if (!name) return null;
+  return FALLBACK_PROGRAMS.find((p) => p.name === name)?.slug ?? null;
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -144,10 +149,16 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
                 WhatsApp
               </a>
             )}
-            <button className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-border text-xs font-medium hover:border-accent/50 hover:text-accent transition-colors">
-              <Edit3 size={12} />
-              Edit
-            </button>
+            <EditClientButton
+              clientId={client.id}
+              initial={{
+                fullName: client.fullName,
+                phone: client.phone,
+                planSlug: planSlugFromName(client.activePlan),
+                coachSlug: client.assignedCoachSlug,
+                status: client.status,
+              }}
+            />
           </div>
         </div>
       </div>
