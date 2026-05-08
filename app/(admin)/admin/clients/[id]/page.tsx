@@ -14,16 +14,13 @@ import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { Avatar } from '@/components/admin/Avatar';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import {
-  type AdminClient,
   getClientBookings,
   getMockClientPhotos,
   SUGGESTED_APPS,
   INTERNAL_ACTIONS,
 } from '@/lib/data/admin-mock';
-
-// MOCK_CLIENTS stubbed — real clients table not wired yet.
-// Detail page will 404 for any id until that's implemented.
-const MOCK_CLIENTS: AdminClient[] = [];
+import { getAdminClientById } from '@/lib/data/admin-clients';
+import { getDailyPlan } from '@/lib/data/daily-plan';
 import {
   getClientTasksLive,
   getClientLogsLive,
@@ -38,14 +35,17 @@ interface PageProps {
 
 export default async function AdminClientDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const client = MOCK_CLIENTS.find((c) => c.id === id);
+  const client = await getAdminClientById(id);
   if (!client) notFound();
 
+  const today = new Date().toISOString().slice(0, 10);
+
   // Live data with graceful fallback to mock
-  const [tasksRes, logsRes, workoutsRes] = await Promise.all([
+  const [tasksRes, logsRes, workoutsRes, dailyPlan] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
     getClientWorkoutsLive(client.id),
+    getDailyPlan(client.id, today),
   ]);
 
   const tasks = tasksRes.rows;
@@ -160,6 +160,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         photos={photos}
         suggestedApps={SUGGESTED_APPS}
         internalActions={INTERNAL_ACTIONS}
+        initialDailyPlan={dailyPlan}
       />
     </>
   );

@@ -44,6 +44,8 @@ import {
 } from '@/lib/actions/client-tracking';
 import { StatusBadge } from './AdminTable';
 import { LogMetricsModal } from './LogMetricsModal';
+import { EditDailyPlanModal } from './EditDailyPlanModal';
+import { type DailyPlan } from '@/lib/data/daily-plan';
 import { PhotoUpload } from './PhotoUpload';
 import { cn } from '@/lib/cn';
 
@@ -58,6 +60,7 @@ interface Props {
   photos: AdminClientPhotoSet[];
   suggestedApps: AdminSuggestedApp[];
   internalActions: AdminInternalAction[];
+  initialDailyPlan?: DailyPlan | null;
 }
 
 export function ClientDetailTabs({
@@ -69,9 +72,11 @@ export function ClientDetailTabs({
   photos,
   suggestedApps,
   internalActions,
+  initialDailyPlan,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('progress');
   const [logModalOpen, setLogModalOpen] = useState(false);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
 
   const tabs: { id: TabId; label: string; icon: typeof Activity; count?: number }[] = [
     { id: 'progress', label: 'Progress', icon: Activity },
@@ -122,7 +127,11 @@ export function ClientDetailTabs({
       {/* Tab content */}
       <div className="min-h-[400px]">
         {activeTab === 'progress' && (
-          <ProgressTab logs={logs} onLogMetrics={() => setLogModalOpen(true)} />
+          <ProgressTab
+            logs={logs}
+            onLogMetrics={() => setLogModalOpen(true)}
+            onEditPlan={() => setPlanModalOpen(true)}
+          />
         )}
         {activeTab === 'tasks' && <TasksTab tasks={tasks} clientId={client.id} />}
         {activeTab === 'workouts' && <WorkoutsTab workouts={workouts} clientId={client.id} />}
@@ -150,6 +159,15 @@ export function ClientDetailTabs({
         clientName={client.fullName}
         clientId={client.id}
       />
+
+      {/* Edit daily plan modal */}
+      <EditDailyPlanModal
+        open={planModalOpen}
+        onClose={() => setPlanModalOpen(false)}
+        clientName={client.fullName}
+        clientId={client.id}
+        initialPlan={initialDailyPlan ?? null}
+      />
     </div>
   );
 }
@@ -158,9 +176,11 @@ export function ClientDetailTabs({
 function ProgressTab({
   logs,
   onLogMetrics,
+  onEditPlan,
 }: {
   logs: AdminClientDailyLog[];
   onLogMetrics: () => void;
+  onEditPlan: () => void;
 }) {
   const today = logs[0];
   const yesterday = logs[1];
@@ -173,13 +193,22 @@ function ProgressTab({
           title="No progress logs yet"
           description="This client hasn't logged any metrics."
         />
-        <button
-          onClick={onLogMetrics}
-          className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors"
-        >
-          <Plus size={14} />
-          Log first metrics
-        </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <button
+            onClick={onEditPlan}
+            className="inline-flex items-center justify-center gap-2 h-11 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors"
+          >
+            <Plus size={14} />
+            Set today&apos;s plan
+          </button>
+          <button
+            onClick={onLogMetrics}
+            className="inline-flex items-center justify-center gap-2 h-11 rounded-full border border-border text-sm font-semibold hover:border-accent transition-colors"
+          >
+            <Plus size={14} />
+            Log first metrics
+          </button>
+        </div>
       </div>
     );
   }
@@ -190,6 +219,23 @@ function ProgressTab({
 
   return (
     <div className="space-y-6">
+      {/* Plan toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={onEditPlan}
+          className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors"
+        >
+          <Plus size={14} strokeWidth={2.5} />
+          Edit today&apos;s plan
+        </button>
+        <button
+          onClick={onLogMetrics}
+          className="inline-flex items-center gap-2 h-10 px-4 rounded-full border border-border text-sm font-medium hover:border-accent transition-colors"
+        >
+          Log metrics
+        </button>
+      </div>
+
       {/* Today's snapshot */}
       <div>
         <SectionHeader title="Today's Snapshot" subtitle={today.logDate} />

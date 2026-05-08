@@ -49,6 +49,32 @@ interface ExpertRow {
   name: string;
 }
 
+function profileToAdminClient(
+  p: ProfileRow,
+  plan: PlanRow | undefined,
+  expert: ExpertRow | undefined
+): AdminClient {
+  const coachName = expert?.name;
+  const coachSlug =
+    expert?.slug ?? FALLBACK_EXPERTS.find((e) => e.name === coachName)?.slug;
+
+  return {
+    id: p.id,
+    fullName: p.full_name ?? p.first_name ?? p.email,
+    email: p.email,
+    phone: p.phone ?? undefined,
+    avatarUrl: p.avatar_url ?? undefined,
+    activePlan: plan?.plan_name,
+    planTier: plan?.plan_tier ?? undefined,
+    planStartDate: plan?.start_date ?? undefined,
+    assignedCoachName: coachName,
+    assignedCoachSlug: coachSlug,
+    status: plan?.status ?? 'onboarding',
+    totalBookings: 0,
+    joinedAt: p.created_at,
+  };
+}
+
 export async function getAdminClients(): Promise<FetchResult> {
   try {
     const supabase = await createClient();
@@ -115,30 +141,7 @@ export async function getAdminClients(): Promise<FetchResult> {
       const expert = plan?.assigned_expert_id
         ? expertById.get(plan.assigned_expert_id)
         : undefined;
-
-      // If expert table not seeded, try matching by slug from FALLBACK_EXPERTS
-      // (no slug stored on the plan row, so this only kicks in when the
-      // experts table has the row).
-      const coachName = expert?.name;
-      const coachSlug =
-        expert?.slug ??
-        FALLBACK_EXPERTS.find((e) => e.name === coachName)?.slug;
-
-      return {
-        id: p.id,
-        fullName: p.full_name ?? p.first_name ?? p.email,
-        email: p.email,
-        phone: p.phone ?? undefined,
-        avatarUrl: p.avatar_url ?? undefined,
-        activePlan: plan?.plan_name,
-        planTier: plan?.plan_tier ?? undefined,
-        planStartDate: plan?.start_date ?? undefined,
-        assignedCoachName: coachName,
-        assignedCoachSlug: coachSlug,
-        status: plan?.status ?? 'onboarding',
-        totalBookings: 0,
-        joinedAt: p.created_at,
-      };
+      return profileToAdminClient(p, plan, expert);
     });
 
     return { clients, source: 'supabase' };
@@ -148,5 +151,55 @@ export async function getAdminClients(): Promise<FetchResult> {
       source: 'error-fallback',
       error: err instanceof Error ? err.message : 'Unknown Supabase error',
     };
+  }
+}
+
+/**
+ * Fetch a single client by profile id. Returns null if not found, the
+ * profile is a trainer, or the role isn't 'user'.
+ */
+export async function getAdminClientById(
+  id: string
+): Promise<AdminClient | null> {
+  try {
+    const supabase = await createClient();
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select(
+        'id, email, full_name, first_name, phone, avatar_url, role, is_trainer, created_at'
+      )
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !profile) return null;
+    const p = profile as ProfileRow;
+    if (p.role !== 'user' || p.is_trainer) return null;
+
+    const { data: planRow } = await supabase
+      .from('client_plans')
+      .select(
+        'client_id, plan_name, plan_tier, start_date, status, assigned_expert_id, created_at'
+      )
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const plan = (planRow as PlanRow | null) ?? undefined;
+
+    let expert: ExpertRow | undefined;
+    if (plan?.assigned_expert_id) {
+      const { data: expertRow } = await supabase
+        .from('experts')
+        .select('id, slug, name')
+        .eq('id', plan.assigned_expert_id)
+        .maybeSingle();
+      expert = (expertRow as ExpertRow | null) ?? undefined;
+    }
+
+    return profileToAdminClient(p, plan, expert);
+  } catch {
+    return null;
   }
 }
