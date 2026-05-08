@@ -260,7 +260,7 @@ const PROGRAM_DETAILS: Record<
         icon: Brain,
         label: 'Mental Performance',
         description:
-          'Race-day visualisation, anxiety management, pacing discipline. Amber\'s mental health expertise applied to athletic performance.',
+          'Race-day visualisation, anxiety management, pacing discipline. Mental performance protocols applied to athletic performance.',
       },
       {
         icon: Users,

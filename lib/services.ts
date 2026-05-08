@@ -295,18 +295,6 @@ export const FALLBACK_SERVICES: Service[] = [
     formTemplateId: 'discovery-call',
   },
   {
-    id: 'svc-mental-consult',
-    expertSlug: 'amber-jasari',
-    name: 'Mental Wellbeing Session',
-    description:
-      'Confidential session with Amber focused on emotional resilience, stress management, and mind-body connection.',
-    format: 'online',
-    durationMinutes: 50,
-    priceDisplay: '£70',
-    isConsultation: true,
-    formTemplateId: 'discovery-call',
-  },
-  {
     id: 'svc-ops-discovery',
     expertSlug: 'siva-jampana',
     name: '30-min Ops & Programme Fit Call',

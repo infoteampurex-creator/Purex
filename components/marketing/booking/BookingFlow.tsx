@@ -421,7 +421,7 @@ export function BookingFlow({ preselectedExpertSlug }: BookingFlowProps) {
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+91 98765 43210"
+                        placeholder="+91 98765 43210 / +44 77 1234 5678"
                         error={errors.phone}
                       />
                       <FieldError message={errors.phone} />
@@ -461,7 +461,7 @@ export function BookingFlow({ preselectedExpertSlug }: BookingFlowProps) {
                       )}
                     </div>
                     <span className="text-sm text-text-muted leading-relaxed">
-                      I agree to be contacted about this booking by phone, WhatsApp, or email, and I&rsquo;ve read the{' '}
+                      I agree to be contacted about this booking by WhatsApp or email, and I&rsquo;ve read the{' '}
                       <a href="/privacy" className="text-accent hover:underline">
                         privacy policy
                       </a>

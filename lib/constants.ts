@@ -1,7 +1,7 @@
 export const BRAND = {
   name: 'PURE X',
   tagline: 'Train for Life. Not Just Aesthetics.',
-  whatsapp: '+919999999999', // replace with real number
+  whatsapp: '+447778899345',
   email: 'contact.teampurex@gmail.com', // public-facing email
   internalEmail: 'info.teampurex@gmail.com', // internal/admin notifications
   locations: ['India', 'UK'],
@@ -152,40 +152,6 @@ export const FALLBACK_EXPERTS = [
     responsibilities: [],
   },
   {
-    slug: 'amber-jasari',
-    name: 'Amber Jasari',
-    title: 'Mental Health Consultant',
-    shortRole: 'Mental',
-    bioShort:
-      'UK-based, UK-trained mental health consultant. Trauma-informed, person-centred care that brings the mind-body connection into every PURE X plan.',
-    credentials: [
-      'CPBAB Certified',
-      'Trained Mental Health First Aider',
-      'Therapeutic Psychology & Counselling',
-      'UK Mental Health System Experience',
-      'Qualified Mental Health Support Worker',
-    ],
-    specialisms: [
-      'Emotional Resilience',
-      'Stress & Anxiety Management',
-      'Trauma-Informed Care',
-      'Mind-Body Integration',
-      'Lifestyle Imbalance Support',
-      'Young People & Additional Needs',
-    ],
-    yearsExperience: 4,
-    location: 'UK',
-    photoUrl: '/experts/amber-jasari.jpg',
-    stat: { num: 'UK', label: 'UK Trained' },
-    bioLong: [
-      'Amber Jasari brings a vital dimension to the PURE X ecosystem — mental and emotional well-being. Based in London, she has completed her education in the United Kingdom, where mental health care is highly prioritised and structured around evidence-based, person-centred practices.',
-      'With a background in Therapeutic Psychology and Counselling, Amber offers a compassionate and supportive space for individuals looking to improve their mental and overall well-being. Her approach is rooted in holistic health and integrative psychotherapy, focusing on the connection between the mind and body.',
-      'She works closely with clients to help them build emotional resilience, navigate personal challenges, and create meaningful, lasting change in their lives. Amber is CPBAB certified and a trained Mental Health First Aider and First Aider, with hands-on experience in mental health nursing support and working as a qualified mental health support worker.',
-      'She follows a trauma-informed, inclusive, and person-centred approach, ensuring that every client feels understood, respected, and supported. Her goal is to create a calm, safe, and non-judgmental environment where clients feel empowered to explore their thoughts and emotions at their own pace — building awareness, confidence, and long-term emotional resilience.',
-    ],
-    responsibilities: [],
-  },
-  {
     slug: 'paula-konasionok',
     name: 'Paula Konasionok',
     title: 'Athlete Trainer',
@@ -311,7 +277,7 @@ export const FALLBACK_PROGRAMS = [
       'Movement screening + injury prevention',
       'Direct access to Siva Jampana (HYROX Pro Doubles)',
       'Race-day strategy session and equipment check',
-      'Mental performance coaching with Amber',
+      'Race-day visualisation and mental preparation protocols',
       'Recovery and nutrition optimised for race demands',
       'Weekly performance reviews with the full team',
       '1-on-1 coaching across all 6 specialists',

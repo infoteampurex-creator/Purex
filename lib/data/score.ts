@@ -230,8 +230,8 @@ function pillarInsight(
       peak: 'Mental state is rock solid. Use this for the hardest sessions.',
       strong: 'Feeling strong. Journal one win tonight.',
       steady: 'Mood is neutral. A 15-min walk outdoors will lift it.',
-      watch: 'Stress markers elevated — Amber can help. Book in.',
-      risk: 'Mental resilience needs attention. Reach out to Amber today.',
+      watch: 'Stress markers elevated — flag this with your coach today.',
+      risk: 'Mental resilience needs attention. Reach out to your coach today.',
     },
     nutrition: {
       peak: 'Protein, hydration, and logging are all on point.',

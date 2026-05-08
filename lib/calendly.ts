@@ -34,10 +34,6 @@ export const CALENDLY_URLS: Record<string, CalendlyConfig> = {
     url: 'https://calendly.com/purex-paula/30min',
     title: 'Book with Paula Konasionok',
   },
-  'amber-jasari': {
-    url: 'https://calendly.com/purex-amber/30min',
-    title: 'Book with Amber Jasari',
-  },
   'siva-jampana': {
     url: 'https://calendly.com/purex-siva-jampana/30min',
     title: 'Discovery call with Siva Jampana',
