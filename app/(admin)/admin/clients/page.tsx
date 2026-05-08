@@ -10,18 +10,16 @@ import {
 } from '@/components/admin/AdminTable';
 import { Avatar } from '@/components/admin/Avatar';
 import { AddClientButton } from '@/components/admin/AddClientButton';
-import { type AdminClient } from '@/lib/data/admin-mock';
-
-// MOCK_CLIENTS removed for production — clients table not yet wired to Supabase.
-// Admin panel shows empty state until real client management is implemented.
-const MOCK_CLIENTS: AdminClient[] = [];
+import { getAdminClients } from '@/lib/data/admin-clients';
 import { getMockAdminScores, statusColor, scoreStatus } from '@/lib/data/score';
 
 export const metadata = { title: 'Admin · Clients' };
 
-export default function AdminClientsPage() {
-  const active = MOCK_CLIENTS.filter((c) => c.status === 'active');
-  const onboarding = MOCK_CLIENTS.filter((c) => c.status === 'onboarding');
+export default async function AdminClientsPage() {
+  const { clients } = await getAdminClients();
+
+  const active = clients.filter((c) => c.status === 'active');
+  const onboarding = clients.filter((c) => c.status === 'onboarding');
 
   // Map client name → PURE X score (for demo; real app would use clientId)
   const scoreByName: Record<string, { score: number; delta: number; trend: 'up' | 'down' | 'flat' }> = {};
@@ -30,12 +28,12 @@ export default function AdminClientsPage() {
   });
 
   const planCounts = {
-    fit_check: MOCK_CLIENTS.filter((c) => c.planTier === 'fit_check').length,
-    online_live: MOCK_CLIENTS.filter((c) => c.planTier === 'online_live').length,
-    personal_transformation: MOCK_CLIENTS.filter(
+    fit_check: clients.filter((c) => c.planTier === 'fit_check').length,
+    online_live: clients.filter((c) => c.planTier === 'online_live').length,
+    personal_transformation: clients.filter(
       (c) => c.planTier === 'personal_transformation'
     ).length,
-    elite_couple: MOCK_CLIENTS.filter((c) => c.planTier === 'elite_couple').length,
+    elite_couple: clients.filter((c) => c.planTier === 'elite_couple').length,
   };
 
   return (
@@ -71,7 +69,7 @@ export default function AdminClientsPage() {
         />
         <AdminStatCard
           label="Total Active"
-          value={MOCK_CLIENTS.length}
+          value={clients.length}
           sublabel="All plans combined"
           icon={<Users size={18} strokeWidth={2} />}
           accent="sky"
@@ -80,7 +78,7 @@ export default function AdminClientsPage() {
 
       <AdminTable
         headers={['Name', 'Contact', 'Plan', 'Coach', 'Score', 'Day', 'Last Check-in', 'Status']}
-        isEmpty={MOCK_CLIENTS.length === 0}
+        isEmpty={clients.length === 0}
         empty={
           <>
             <div className="font-display font-semibold text-lg mb-2">No clients yet</div>
@@ -90,7 +88,7 @@ export default function AdminClientsPage() {
           </>
         }
       >
-        {MOCK_CLIENTS.map((c) => (
+        {clients.map((c) => (
           <AdminTableRow key={c.id}>
             <AdminTableCell>
               <Link

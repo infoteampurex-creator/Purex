@@ -1,38 +1,41 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Copy, MessageCircle, UserPlus, X } from 'lucide-react';
 import { FALLBACK_EXPERTS, FALLBACK_PROGRAMS, BRAND } from '@/lib/constants';
 import { cn } from '@/lib/cn';
+import { createClientFromAdmin } from '@/lib/actions/clients';
 
 interface AddClientModalProps {
   open: boolean;
   onClose: () => void;
 }
 
+type CopyKind = 'password' | 'message' | 'email';
+
 /**
- * Stub "Add Client" flow — no email infrastructure required.
+ * "Add Client" flow — admin-driven account creation.
  *
  * Trainer enters: email, first name, plan, assigned coach.
- * Modal generates a shareable signup link with those values pre-filled,
- * and an opinionated WhatsApp message for the trainer to send.
- *
- * When the client clicks the signup link, our existing /signup form
- * picks up the query params and pre-fills the email + sets up
- * the assignment AFTER they confirm their account.
- *
- * NOTE: This is the now-version. When Resend SMTP is configured and the
- * SUPABASE_SERVICE_ROLE_KEY is in Vercel, this will be replaced with a
- * proper auth.admin.inviteUserByEmail() flow that sends a real invite.
+ * Server action creates the auth user (email pre-confirmed, no email
+ * sent), writes profile + plan rows, and returns a temp password.
+ * Trainer shares the email + temp password via WhatsApp; the client
+ * changes the password on first login.
  */
 export function AddClientModal({ open, onClose }: AddClientModalProps) {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [planSlug, setPlanSlug] = useState<string>(FALLBACK_PROGRAMS[1]?.slug ?? '');
   const [coachSlug, setCoachSlug] = useState<string>(FALLBACK_EXPERTS[0]?.slug ?? '');
   const [step, setStep] = useState<'form' | 'share'>('form');
-  const [copied, setCopied] = useState<'link' | 'message' | null>(null);
+  const [copied, setCopied] = useState<CopyKind | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   // Reset when modal opens
   useEffect(() => {
@@ -43,6 +46,10 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
       setCoachSlug(FALLBACK_EXPERTS[0]?.slug ?? '');
       setStep('form');
       setCopied(null);
+      setSubmitting(false);
+      setSubmitError(null);
+      setFieldErrors({});
+      setTempPassword(null);
     }
   }, [open]);
 
@@ -60,35 +67,31 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
     };
   }, [open, onClose]);
 
-  // Build the prefilled signup URL + message
   const baseUrl =
     typeof window !== 'undefined'
       ? `${window.location.protocol}//${window.location.host}`
       : '';
 
-  const params = new URLSearchParams();
-  if (email) params.set('email', email);
-  if (firstName) params.set('name', firstName);
-  if (planSlug) params.set('plan', planSlug);
-  if (coachSlug) params.set('coach', coachSlug);
-
-  const signupLink = `${baseUrl}/signup${params.toString() ? '?' + params.toString() : ''}`;
-
   const selectedProgram = FALLBACK_PROGRAMS.find((p) => p.slug === planSlug);
   const selectedExpert = FALLBACK_EXPERTS.find((e) => e.slug === coachSlug);
 
-  const whatsappMessage =
-    `Hi ${firstName || 'there'}, welcome to PURE X.\n\n` +
-    `I've set up your account on the ${selectedProgram?.name ?? 'PURE X'} plan ` +
-    `with ${selectedExpert?.name ?? 'your coach'} as your assigned coach.\n\n` +
-    `To activate your dashboard, just sign up here using your email — ` +
-    `your details are already pre-filled:\n\n${signupLink}`;
+  const loginUrl = `${baseUrl}/login`;
+
+  const whatsappMessage = tempPassword
+    ? `Hi ${firstName || 'there'}, welcome to PURE X.\n\n` +
+      `I've set up your account on the ${selectedProgram?.name ?? 'PURE X'} plan ` +
+      `with ${selectedExpert?.name ?? 'your coach'} as your assigned coach.\n\n` +
+      `Login here: ${loginUrl}\n` +
+      `Email: ${email}\n` +
+      `Temporary password: ${tempPassword}\n\n` +
+      `Please change your password after your first login.`
+    : '';
 
   const whatsappShare = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
 
   const canContinue = email.trim().length > 3 && firstName.trim().length > 0;
 
-  const copyToClipboard = async (text: string, kind: 'link' | 'message') => {
+  const copyToClipboard = async (text: string, kind: CopyKind) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(kind);
@@ -96,6 +99,32 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
     } catch {
       // ignore clipboard failures
     }
+  };
+
+  const handleCreate = async () => {
+    setSubmitting(true);
+    setSubmitError(null);
+    setFieldErrors({});
+
+    const result = await createClientFromAdmin({
+      email: email.trim(),
+      fullName: firstName.trim(),
+      planSlug: planSlug || undefined,
+      coachSlug: coachSlug || undefined,
+    });
+
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setSubmitError(result.error);
+      setFieldErrors(result.fieldErrors ?? {});
+      return;
+    }
+
+    setTempPassword(result.tempPassword);
+    setStep('share');
+    // Refresh the admin pages so the new client shows up.
+    router.refresh();
   };
 
   return (
@@ -132,12 +161,12 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 {step === 'form' ? 'Step 1 of 2' : 'Step 2 of 2'}
               </div>
               <h2 className="font-display font-semibold text-2xl tracking-tight">
-                {step === 'form' ? 'Add a new client' : 'Send the invite'}
+                {step === 'form' ? 'Add a new client' : 'Account created'}
               </h2>
               <p className="text-sm text-text-muted mt-1.5">
                 {step === 'form'
-                  ? 'Enter their details. We’ll generate a signup link to share via WhatsApp.'
-                  : `Share this with ${firstName} so they can activate their account.`}
+                  ? 'Enter their details. We’ll create the account and give you a temp password to share via WhatsApp.'
+                  : `Share these credentials with ${firstName} so they can log in.`}
               </p>
             </div>
 
@@ -145,25 +174,35 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
             {step === 'form' && (
               <div className="px-6 md:px-8 py-6 space-y-5 max-h-[60vh] overflow-y-auto">
                 {/* Email */}
-                <Field label="Email *">
+                <Field label="Email *" error={fieldErrors.email}>
                   <input
                     type="email"
                     autoFocus
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="alice@example.com"
-                    className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2.5 text-sm placeholder:text-text-dim focus:border-accent focus:outline-none transition-colors"
+                    className={cn(
+                      'w-full bg-bg-elevated border rounded-lg px-4 py-2.5 text-sm placeholder:text-text-dim focus:outline-none transition-colors',
+                      fieldErrors.email
+                        ? 'border-rose-500 focus:border-rose-500'
+                        : 'border-border focus:border-accent'
+                    )}
                   />
                 </Field>
 
                 {/* First name */}
-                <Field label="First name *">
+                <Field label="First name *" error={fieldErrors.fullName}>
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Alice"
-                    className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2.5 text-sm placeholder:text-text-dim focus:border-accent focus:outline-none transition-colors"
+                    className={cn(
+                      'w-full bg-bg-elevated border rounded-lg px-4 py-2.5 text-sm placeholder:text-text-dim focus:outline-none transition-colors',
+                      fieldErrors.fullName
+                        ? 'border-rose-500 focus:border-rose-500'
+                        : 'border-border focus:border-accent'
+                    )}
                   />
                 </Field>
 
@@ -197,16 +236,22 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                   </select>
                 </Field>
 
+                {submitError && (
+                  <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+                    {submitError}
+                  </div>
+                )}
+
                 <div className="pt-2 text-xs text-text-dim leading-relaxed">
-                  <strong className="text-text-muted">Note:</strong> This generates a signup
-                  link with details pre-filled. The client signs up themselves — no email is
-                  sent automatically yet. (Auto-invite emails will be enabled once SMTP is
-                  configured.)
+                  <strong className="text-text-muted">Note:</strong> This creates the
+                  account immediately with a temp password. No email is sent — you share
+                  the credentials directly via WhatsApp. The client changes their password
+                  on first login.
                 </div>
               </div>
             )}
 
-            {step === 'share' && (
+            {step === 'share' && tempPassword && (
               <div className="px-6 md:px-8 py-6 space-y-5 max-h-[60vh] overflow-y-auto">
                 {/* Summary */}
                 <div className="rounded-lg bg-bg-elevated border border-border p-4 space-y-1.5">
@@ -222,31 +267,62 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                   />
                 </div>
 
-                {/* Signup link */}
-                <Field label="Signup link">
+                {/* Email */}
+                <Field label="Email">
                   <div className="flex gap-2">
                     <input
                       readOnly
-                      value={signupLink}
+                      value={email}
                       onClick={(e) => (e.target as HTMLInputElement).select()}
                       className="flex-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-xs font-mono focus:border-accent focus:outline-none"
                     />
                     <button
-                      onClick={() => copyToClipboard(signupLink, 'link')}
+                      onClick={() => copyToClipboard(email, 'email')}
                       className={cn(
                         'flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium border transition-colors',
-                        copied === 'link'
+                        copied === 'email'
                           ? 'bg-accent text-bg border-accent'
                           : 'bg-bg-elevated border-border hover:border-accent text-text'
                       )}
                     >
-                      {copied === 'link' ? (
+                      {copied === 'email' ? (
                         <Check size={12} strokeWidth={2.5} />
                       ) : (
                         <Copy size={12} strokeWidth={2.5} />
                       )}
-                      {copied === 'link' ? 'Copied' : 'Copy'}
+                      {copied === 'email' ? 'Copied' : 'Copy'}
                     </button>
+                  </div>
+                </Field>
+
+                {/* Temp password */}
+                <Field label="Temporary password">
+                  <div className="flex gap-2">
+                    <input
+                      readOnly
+                      value={tempPassword}
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+                      className="flex-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-xs font-mono focus:border-accent focus:outline-none"
+                    />
+                    <button
+                      onClick={() => copyToClipboard(tempPassword, 'password')}
+                      className={cn(
+                        'flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium border transition-colors',
+                        copied === 'password'
+                          ? 'bg-accent text-bg border-accent'
+                          : 'bg-bg-elevated border-border hover:border-accent text-text'
+                      )}
+                    >
+                      {copied === 'password' ? (
+                        <Check size={12} strokeWidth={2.5} />
+                      ) : (
+                        <Copy size={12} strokeWidth={2.5} />
+                      )}
+                      {copied === 'password' ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <div className="text-[10px] text-text-dim font-mono mt-1.5">
+                    Shown once — copy now. The client should change it on first login.
                   </div>
                 </Field>
 
@@ -288,27 +364,25 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 <>
                   <button
                     onClick={onClose}
-                    className="text-sm text-text-muted hover:text-text transition-colors"
+                    disabled={submitting}
+                    className="text-sm text-text-muted hover:text-text transition-colors disabled:opacity-40"
                   >
                     Cancel
                   </button>
                   <button
-                    disabled={!canContinue}
-                    onClick={() => setStep('share')}
+                    disabled={!canContinue || submitting}
+                    onClick={handleCreate}
                     className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <UserPlus size={13} strokeWidth={2.5} />
-                    Generate invite
+                    {submitting ? 'Creating…' : 'Create account'}
                   </button>
                 </>
               ) : (
                 <>
-                  <button
-                    onClick={() => setStep('form')}
-                    className="text-sm text-text-muted hover:text-text transition-colors"
-                  >
-                    ← Edit details
-                  </button>
+                  <span className="text-xs text-text-dim font-mono">
+                    Account created
+                  </span>
                   <button
                     onClick={onClose}
                     className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-bg-elevated border border-border text-sm font-semibold hover:border-accent transition-colors"
@@ -329,9 +403,11 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
 
 function Field({
   label,
+  error,
   children,
 }: {
   label: string;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -340,6 +416,9 @@ function Field({
         {label}
       </div>
       {children}
+      {error && (
+        <div className="text-[10px] text-rose-400 font-mono mt-1.5">{error}</div>
+      )}
     </label>
   );
 }

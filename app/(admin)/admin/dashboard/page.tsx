@@ -17,11 +17,15 @@ import {
 } from '@/components/admin/AdminTable';
 import { relativeTime } from '@/lib/data/admin-mock';
 import { getAdminBookings } from '@/lib/data/admin-bookings';
+import { getAdminClients } from '@/lib/data/admin-clients';
 
 export const metadata = { title: 'Admin · Overview' };
 
 export default async function AdminDashboardPage() {
-  const { bookings, source } = await getAdminBookings();
+  const [{ bookings, source }, { clients }] = await Promise.all([
+    getAdminBookings(),
+    getAdminClients(),
+  ]);
 
   // Real-data only when source is supabase. Mock fallback = empty stats.
   const realBookings = source === 'supabase' ? bookings : [];
@@ -31,8 +35,10 @@ export default async function AdminDashboardPage() {
   const scheduledThisWeek = realBookings.filter(
     (b) => b.status === 'scheduled'
   ).length;
-  const activeClients = 0; // Will populate when clients table is wired
-  const onboardingClients = 0;
+  const activeClients = clients.filter((c) => c.status === 'active').length;
+  const onboardingClients = clients.filter(
+    (c) => c.status === 'onboarding'
+  ).length;
 
   // Latest bookings
   const recentBookings = realBookings.slice(0, 5);
