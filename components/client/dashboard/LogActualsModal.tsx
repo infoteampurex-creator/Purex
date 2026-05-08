@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { upsertDailyLog } from '@/lib/actions/client-tracking';
-import { type DailyActuals } from '@/lib/data/daily-plan';
+import { type DailyActuals } from '@/lib/data/daily-plan-types';
 
 interface LogActualsModalProps {
   open: boolean;

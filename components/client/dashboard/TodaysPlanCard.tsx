@@ -21,7 +21,7 @@ import {
 import { ProgressRing } from './ProgressRing';
 import { LogActualsModal } from './LogActualsModal';
 import { setWorkoutCompleted } from '@/lib/actions/daily-plan';
-import { type DailyPlan } from '@/lib/data/daily-plan';
+import { type DailyPlan } from '@/lib/data/daily-plan-types';
 import { cn } from '@/lib/cn';
 
 interface TodaysPlanCardProps {

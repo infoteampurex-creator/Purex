@@ -7,7 +7,8 @@ import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
 import { getMockClientPact } from '@/lib/data/commitment';
 import { getMockClientScore } from '@/lib/data/score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
-import { getDailyPlan, EMPTY_DAILY_PLAN } from '@/lib/data/daily-plan';
+import { getDailyPlan } from '@/lib/data/daily-plan';
+import { EMPTY_DAILY_PLAN } from '@/lib/data/daily-plan-types';
 
 export default async function ClientDashboardPage() {
   // These now return null when no real data exists (production mode).

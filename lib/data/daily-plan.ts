@@ -1,96 +1,21 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
+import {
+  type DailyActuals,
+  type DailyPlan,
+  type PlannedExercise,
+  EMPTY_DAILY_PLAN,
+} from '@/lib/data/daily-plan-types';
 
 /**
  * Read the planned side of a client's day for prefill in the
  * "Edit Today's Plan" modal. Returns null fields when no plan exists yet
  * — the modal renders empty inputs in that case.
+ *
+ * Types and EMPTY_* constants live in `daily-plan-types.ts` so that
+ * client components can import them without dragging this file (and
+ * its `'server-only'` + `next/headers` chain) into the client bundle.
  */
-
-export interface PlannedExercise {
-  id: string;
-  exerciseName: string;
-  targetMuscle: string | null;
-  sets: number | null;
-  reps: string | null;
-  targetWeightKg: number | null;
-  restSeconds: number | null;
-  tempo: string | null;
-  rpeTarget: number | null;
-  trainerInstruction: string | null;
-  exerciseOrder: number;
-}
-
-export interface DailyActuals {
-  steps: number | null;
-  sleepHours: number | null;
-  waterGlasses: number | null;
-  weightKg: number | null;
-  caloriesConsumed: number | null;
-  proteinG: number | null;
-  workoutCompleted: boolean;
-}
-
-export interface DailyPlan {
-  // Workout
-  workoutId: string | null;
-  workoutName: string | null;
-  workoutType: string | null;
-  targetMuscleGroup: string | null;
-  trainerNotes: string | null;
-  nextDayInstructions: string | null;
-
-  // Targets
-  stepsTarget: number | null;
-  sleepTargetHours: number | null;
-  waterTarget: number | null;
-  caloriesTarget: number | null;
-  proteinTargetG: number | null;
-  cardioTargetMinutes: number | null;
-  targetWeightKg: number | null;
-
-  // Recovery
-  recoveryGoal: string | null;
-  mobilityGoal: string | null;
-
-  // Planned exercises (ordered by exercise_order)
-  exercises: PlannedExercise[];
-
-  // What the client has logged so far for this date (separate from
-  // planned targets). Used by the client dashboard to show progress vs
-  // target.
-  actuals: DailyActuals;
-}
-
-export const EMPTY_ACTUALS: DailyActuals = {
-  steps: null,
-  sleepHours: null,
-  waterGlasses: null,
-  weightKg: null,
-  caloriesConsumed: null,
-  proteinG: null,
-  workoutCompleted: false,
-};
-
-export const EMPTY_DAILY_PLAN: DailyPlan = {
-  workoutId: null,
-  workoutName: null,
-  workoutType: null,
-  targetMuscleGroup: null,
-  trainerNotes: null,
-  nextDayInstructions: null,
-  stepsTarget: null,
-  sleepTargetHours: null,
-  waterTarget: null,
-  caloriesTarget: null,
-  proteinTargetG: null,
-  cardioTargetMinutes: null,
-  targetWeightKg: null,
-  recoveryGoal: null,
-  mobilityGoal: null,
-  exercises: [],
-  actuals: EMPTY_ACTUALS,
-};
 
 interface DailyLogRow {
   steps_target: number | null;
