@@ -40,7 +40,6 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Live data with graceful fallback to mock
   const [tasksRes, logsRes, workoutsRes, dailyPlan] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
@@ -48,9 +47,12 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getDailyPlan(client.id, today),
   ]);
 
-  const tasks = tasksRes.rows;
-  const logs = logsRes.rows;
-  const workouts = workoutsRes.rows;
+  // Real Supabase rows only — never show mock fallback data on the admin
+  // detail page, otherwise trainers see fabricated metrics for clients
+  // who haven't logged anything yet.
+  const tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
+  const logs = logsRes.source === 'supabase' ? logsRes.rows : [];
+  const workouts = workoutsRes.source === 'supabase' ? workoutsRes.rows : [];
   const bookings = getClientBookings(client.email);
   const photos = getMockClientPhotos(client.id);
 
