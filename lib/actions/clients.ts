@@ -198,3 +198,181 @@ export async function createClientFromAdmin(
     tempPassword,
   };
 }
+
+// ─── Update existing client ─────────────────────────────────────────────
+
+const PLAN_STATUS = ['active', 'onboarding', 'paused', 'completed', 'cancelled'] as const;
+type PlanStatus = (typeof PLAN_STATUS)[number];
+
+const updateClientSchema = z.object({
+  clientId: z.string().uuid(),
+  fullName: z
+    .string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(80)
+    .optional(),
+  phone: z.string().max(40).nullable().optional(),
+  planSlug: z.string().nullable().optional(),
+  coachSlug: z.string().nullable().optional(),
+  status: z.enum(PLAN_STATUS).optional(),
+});
+
+export type UpdateClientInput = z.input<typeof updateClientSchema>;
+
+export type UpdateClientResult =
+  | { ok: true }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+
+/**
+ * Update an existing client's profile + plan from the admin panel.
+ *
+ * Edits applied:
+ *   - profiles: full_name, first_name, phone (whichever fields are sent).
+ *   - client_plans: latest plan row gets plan_name, plan_tier,
+ *     assigned_expert_id, status updated. If no plan row exists yet and
+ *     a planSlug or status is provided, a new row is inserted.
+ *
+ * Setting status='active' with a plan assigned is the path to "onboard"
+ * a signed-up user — flips them out of the onboarding badge.
+ */
+export async function updateClient(
+  input: UpdateClientInput
+): Promise<UpdateClientResult> {
+  const adminUser = await requireAuth({ adminOnly: true });
+  if (!adminUser) {
+    return { ok: false, error: 'Not authorised. Admin access required.' };
+  }
+
+  const parsed = updateClientSchema.safeParse(input);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    parsed.error.issues.forEach((issue) => {
+      const key = issue.path[0] as string | undefined;
+      if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+    });
+    return {
+      ok: false,
+      error: 'Please fix the highlighted fields.',
+      fieldErrors,
+    };
+  }
+
+  const { clientId, fullName, phone, planSlug, coachSlug, status } = parsed.data;
+  const admin = createAdminClient();
+
+  // ─── 1. Update profile fields if any were sent ─────────────────────
+  const profileUpdate: Record<string, string | null> = {};
+  if (fullName !== undefined) {
+    profileUpdate.full_name = fullName;
+    profileUpdate.first_name = fullName.split(/\s+/)[0] ?? fullName;
+  }
+  if (phone !== undefined) {
+    profileUpdate.phone = phone;
+  }
+
+  if (Object.keys(profileUpdate).length > 0) {
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update(profileUpdate)
+      .eq('id', clientId);
+
+    if (profileError) {
+      console.error('[updateClient] profile update failed:', profileError);
+      return { ok: false, error: profileError.message };
+    }
+  }
+
+  // ─── 2. Update / insert plan if any plan field was sent ────────────
+  const planTouched =
+    planSlug !== undefined || coachSlug !== undefined || status !== undefined;
+
+  if (planTouched) {
+    const { data: existingPlanRow, error: planLookupError } = await admin
+      .from('client_plans')
+      .select('id')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (planLookupError) {
+      console.error('[updateClient] plan lookup failed:', planLookupError);
+      return { ok: false, error: planLookupError.message };
+    }
+
+    // Resolve plan name + tier from slug if provided.
+    let planName: string | null = null;
+    let planTier:
+      | 'fit_check'
+      | 'online_live'
+      | 'personal_transformation'
+      | 'elite_couple'
+      | null = null;
+
+    if (planSlug) {
+      const program = FALLBACK_PROGRAMS.find((p) => p.slug === planSlug);
+      planName = program?.name ?? planSlug;
+      planTier = planTierFromSlug(planSlug);
+    }
+
+    // Resolve expert id from slug if provided.
+    let assignedExpertId: string | null | undefined = undefined;
+    if (coachSlug !== undefined) {
+      if (coachSlug === null || coachSlug === '') {
+        assignedExpertId = null;
+      } else {
+        const { data: expertRow } = await admin
+          .from('experts')
+          .select('id')
+          .eq('slug', coachSlug)
+          .maybeSingle();
+        assignedExpertId = expertRow?.id ?? null;
+      }
+    }
+
+    const planPayload: Record<string, string | PlanStatus | null> = {};
+    if (planSlug !== undefined) {
+      planPayload.plan_name = planName ?? '';
+      planPayload.plan_tier = planTier;
+    }
+    if (assignedExpertId !== undefined) {
+      planPayload.assigned_expert_id = assignedExpertId;
+    }
+    if (status !== undefined) {
+      planPayload.status = status;
+    }
+
+    if (existingPlanRow?.id) {
+      const { error: updateErr } = await admin
+        .from('client_plans')
+        .update(planPayload)
+        .eq('id', existingPlanRow.id);
+      if (updateErr) {
+        console.error('[updateClient] plan update failed:', updateErr);
+        return { ok: false, error: updateErr.message };
+      }
+    } else {
+      // No existing plan — insert one. plan_name is required.
+      const insertPayload = {
+        client_id: clientId,
+        plan_name: planName ?? 'Custom plan',
+        plan_tier: planTier,
+        assigned_expert_id: assignedExpertId ?? null,
+        status: status ?? 'active',
+      };
+      const { error: insertErr } = await admin
+        .from('client_plans')
+        .insert(insertPayload);
+      if (insertErr) {
+        console.error('[updateClient] plan insert failed:', insertErr);
+        return { ok: false, error: insertErr.message };
+      }
+    }
+  }
+
+  revalidatePath(`/admin/clients/${clientId}`);
+  revalidatePath('/admin/clients');
+  revalidatePath('/admin/dashboard');
+
+  return { ok: true };
+}
