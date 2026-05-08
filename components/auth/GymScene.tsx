@@ -1,124 +1,114 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { DeadliftAnimation } from './DeadliftAnimation';
 
 interface GymSceneProps {
-  activated: boolean;
+  /** Reserved for legacy variant compatibility — currently unused. */
+  activated?: boolean;
 }
 
 /**
- * The left-side gym scene. Dark and dormant until the neon sign activates,
- * then the whole scene gains ambient green wash.
+ * Left panel of the auth screens.
+ *
+ * Composition:
+ *   - Tiny PURE X wordmark anchored top-left (brand presence, not focal)
+ *   - Centerpiece: animated deadlift loop (true focal point)
+ *   - Below the lift: rotating manifesto lines
+ *   - Subtle radial backdrop pulse for atmosphere
+ *
+ * Replaces the previous "neon sign + tiny corner deadlift" composition,
+ * which left a lot of dead vertical space.
  */
-export function GymScene({ activated }: GymSceneProps) {
+export function GymScene({ activated: _activated }: GymSceneProps = {}) {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#050705]">
-      {/* Brick wall texture via CSS */}
+    <div className="relative w-full h-full bg-bg overflow-hidden">
+      {/* ─── Backdrop atmosphere ─── */}
       <div
+        aria-hidden
         className="absolute inset-0"
         style={{
           background: `
-            linear-gradient(180deg, #0c0e0a 0%, #080a07 50%, #050704 100%),
-            repeating-linear-gradient(
-              0deg,
-              transparent 0px,
-              transparent 24px,
-              rgba(255, 255, 255, 0.015) 24px,
-              rgba(255, 255, 255, 0.015) 25px
-            ),
-            repeating-linear-gradient(
-              90deg,
-              transparent 0px,
-              transparent 50px,
-              rgba(255, 255, 255, 0.01) 50px,
-              rgba(255, 255, 255, 0.01) 51px
-            )
+            radial-gradient(ellipse at 50% 60%, rgba(198, 255, 61, 0.08) 0%, transparent 55%),
+            radial-gradient(ellipse at 50% 100%, rgba(198, 255, 61, 0.04) 0%, transparent 50%),
+            #0a0c09
           `,
         }}
       />
 
-      {/* Shadow vignette */}
+      {/* Subtle vignette */}
       <div
-        className="absolute inset-0"
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at 60% 40%, transparent 20%, rgba(0,0,0,0.7) 100%)',
+          background:
+            'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45) 100%)',
         }}
       />
 
-      {/* Ambient green floodlight from the sign — activated only */}
+      {/* ─── Top-left wordmark ─── */}
       <motion.div
-        className="absolute inset-0"
-        animate={{ opacity: activated ? 1 : 0 }}
-        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          background: `
-            radial-gradient(ellipse 90% 50% at 50% 30%, rgba(198, 255, 61, 0.3), transparent 65%),
-            radial-gradient(ellipse 80% 80% at 50% 60%, rgba(198, 255, 61, 0.1), transparent 70%),
-            linear-gradient(180deg, rgba(198, 255, 61, 0.04) 0%, transparent 60%)
-          `,
-          mixBlendMode: 'screen',
-        }}
-      />
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="absolute top-6 left-6 z-10 flex items-center gap-1"
+      >
+        <span className="font-display font-bold text-base text-text tracking-tight">
+          PURE
+        </span>
+        <span className="font-display font-bold text-base text-accent tracking-tight">
+          X
+        </span>
+        <span className="ml-1.5 font-mono text-[8px] uppercase tracking-[0.2em] text-text-dim font-bold">
+          · Station 01
+        </span>
+      </motion.div>
 
-      {/* Gym silhouette elements (equipment hints at bottom) */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none">
-        <svg viewBox="0 0 400 200" className="w-full h-full opacity-40" preserveAspectRatio="xMidYMax meet">
-          <defs>
-            <linearGradient id="equipment-fade" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#1a1f17" />
-              <stop offset="100%" stopColor="#050704" />
-            </linearGradient>
-          </defs>
-          {/* Squat rack silhouette left */}
-          <g fill="url(#equipment-fade)">
-            <rect x="40" y="60" width="4" height="140" />
-            <rect x="110" y="60" width="4" height="140" />
-            <rect x="38" y="80" width="78" height="3" />
-            <rect x="38" y="110" width="78" height="3" />
-            <rect x="30" y="120" width="94" height="5" rx="1" />
-            <circle cx="35" cy="122" r="12" />
-            <circle cx="119" cy="122" r="12" />
-          </g>
-          {/* Plates stacked right */}
-          <g fill="url(#equipment-fade)">
-            <rect x="330" y="180" width="50" height="20" rx="2" />
-            <rect x="333" y="165" width="44" height="16" rx="2" />
-            <rect x="336" y="152" width="38" height="14" rx="2" />
-          </g>
-          {/* Floor line */}
-          <rect x="0" y="198" width="400" height="2" fill="url(#equipment-fade)" opacity="0.6" />
-        </svg>
+      {/* ─── Centerpiece: deadlift animation ─── */}
+      <div className="absolute inset-0 flex items-center justify-center px-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+          className="w-full max-w-md"
+        >
+          <DeadliftAnimation />
+        </motion.div>
       </div>
 
-      {/* Dust motes (visible when activated) */}
+      {/* ─── Bottom manifesto ─── */}
       <motion.div
-        animate={{ opacity: activated ? 0.5 : 0 }}
-        transition={{ duration: 2, delay: 0.5 }}
-        className="absolute inset-0 pointer-events-none"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.9 }}
+        className="absolute bottom-8 left-6 right-6 z-10"
       >
-        {[
-          { top: '25%', left: '20%', delay: 0 },
-          { top: '60%', left: '70%', delay: 2 },
-          { top: '40%', left: '85%', delay: 4 },
-          { top: '75%', left: '30%', delay: 1.5 },
-        ].map((m, i) => (
-          <motion.span
-            key={i}
-            className="absolute w-0.5 h-0.5 rounded-full bg-accent/50"
-            style={{ top: m.top, left: m.left, filter: 'blur(0.5px)' }}
-            animate={{
-              y: [0, -30, -10, -20],
-              x: [0, 15, -5, 10],
-              opacity: [0, 1, 0.3, 0.8],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              delay: m.delay,
-            }}
-          />
-        ))}
+        <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-accent font-bold mb-2">
+          The 100-Day Commitment
+        </div>
+        <div className="font-display font-semibold text-xl text-text tracking-tight leading-[1.25] mb-4 max-w-sm">
+          Train for life.
+          <br />
+          <span className="text-text-muted">Not just aesthetics.</span>
+        </div>
+
+        {/* Three-pillar tagline */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <PillarChip label="100 days" />
+          <span className="text-text-dim text-xs">·</span>
+          <PillarChip label="6 specialists" />
+          <span className="text-text-dim text-xs">·</span>
+          <PillarChip label="Witnessed" />
+        </div>
       </motion.div>
     </div>
+  );
+}
+
+function PillarChip({ label }: { label: string }) {
+  return (
+    <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-text-dim font-bold">
+      {label}
+    </span>
   );
 }

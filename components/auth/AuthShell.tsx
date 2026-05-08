@@ -3,8 +3,6 @@
 import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { GymScene } from './GymScene';
-import { NeonPureXSign } from './NeonPureXSign';
-import { DeadliftAnimation } from './DeadliftAnimation';
 
 interface AuthShellProps {
   eyebrow: string;
@@ -14,8 +12,9 @@ interface AuthShellProps {
   footer?: ReactNode;
 
   /**
-   * 'enter' — login/signup: dark scene, deadlift animation visible
-   * 'calm'  — forgot/reset: scene already lit, ambient mood
+   * Reserved for legacy variant compatibility — currently both 'enter' and
+   * 'calm' render identically. Variant prop kept so existing call-sites
+   * compile without modification.
    */
   variant?: 'enter' | 'calm';
 }
@@ -26,46 +25,43 @@ export function AuthShell({
   subtitle,
   children,
   footer,
-  variant = 'enter',
+  variant: _variant = 'enter',
 }: AuthShellProps) {
-  // Form is always active. The previous "treadmill power button"
-  // gate was removed — users can log in immediately.
-  const activated = true;
-
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[1.1fr_1fr]">
-      {/* LEFT — Gym scene */}
-      <div className="relative h-64 lg:h-screen overflow-hidden">
-        <GymScene activated={activated} />
-
-        {/* Neon sign */}
-        <div className="absolute inset-x-0 top-0 lg:top-[18%] flex items-center justify-center px-8 h-full lg:h-auto">
-          <div className="w-full max-w-md lg:max-w-lg">
-            <NeonPureXSign activated={activated} />
-
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="mt-6 text-center"
-            >
-              <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-accent font-bold">
-                Train for Life. Not Just Aesthetics.
-              </div>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Deadlift animation stays — pure ambient flavour, not interactive */}
-        {variant === 'enter' && (
-          <div className="hidden lg:block">
-            <DeadliftAnimation activated={activated} />
-          </div>
-        )}
+      {/* ════════════════════════════════════════════════════
+           LEFT — Gym scene (deadlift animation centerpiece)
+           Hidden on mobile to keep auth fast + focused.
+      ════════════════════════════════════════════════════ */}
+      <div className="hidden lg:block relative h-screen overflow-hidden">
+        <GymScene />
       </div>
 
-      {/* RIGHT — Auth card (always interactive) */}
-      <div className="relative flex items-center justify-center p-5 md:p-8 lg:p-12 min-h-[60vh] lg:min-h-screen bg-bg">
+      {/* Mobile-only mini-banner so the brand is still present */}
+      <div className="lg:hidden h-32 bg-bg relative overflow-hidden border-b border-border-soft">
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse at 50% 100%, rgba(198, 255, 61, 0.12) 0%, transparent 60%)',
+          }}
+        />
+        <div className="relative h-full flex flex-col items-center justify-center px-6">
+          <div className="flex items-center gap-1">
+            <span className="font-display font-bold text-xl tracking-tight">PURE</span>
+            <span className="font-display font-bold text-xl text-accent tracking-tight">X</span>
+          </div>
+          <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.22em] text-accent font-bold">
+            Train for Life. Not Just Aesthetics.
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════
+           RIGHT — Auth form
+      ════════════════════════════════════════════════════ */}
+      <div className="relative flex items-center justify-center p-5 md:p-8 lg:p-12 min-h-[calc(100vh-128px)] lg:min-h-screen bg-bg">
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}

@@ -1,237 +1,266 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowUpRight, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, ArrowUpRight, X } from 'lucide-react';
 import { FALLBACK_TRANSFORMATIONS, type Transformation } from '@/lib/constants';
 
+/**
+ * Transformations gallery.
+ *
+ * Card layout: side-by-side BEFORE / AFTER photos, first name + CTA below.
+ * Click a card → full-screen modal with the complete transformation journey.
+ *
+ * Mounted on the homepage and on /transformations.
+ */
 export function TransformationGallery() {
   const [selected, setSelected] = useState<Transformation | null>(null);
 
+  // Esc to dismiss + scroll lock while modal is open
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelected(null);
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [selected]);
+
   return (
-    <>
-      <section id="transformations" className="py-20 md:py-28">
-        <div className="container-safe">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 md:mb-14">
-            <div className="max-w-3xl">
-              <span className="eyebrow">Real Clients · Real Results</span>
-              <h2 className="mt-3 font-display font-semibold text-display-lg tracking-tight">
-                Transformations that{' '}
-                <span className="text-accent">speak for themselves.</span>
-              </h2>
-              <p className="mt-4 text-base text-text-muted leading-relaxed max-w-xl">
-                Every transformation at PURE X is medically supervised, physio-integrated, and performance-driven. No crash diets. No shortcuts. Just measurable, sustainable change.
-              </p>
-            </div>
-            <Link
-              href="/transformations"
-              className="inline-flex items-center gap-2 text-sm text-text hover:text-accent transition-colors font-medium"
-            >
-              View all stories
-              <ArrowUpRight size={16} />
-            </Link>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-            {FALLBACK_TRANSFORMATIONS.map((story, i) => (
-              <motion.button
-                key={story.slug}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-80px' }}
-                transition={{
-                  duration: 0.6,
-                  ease: [0.22, 1, 0.36, 1],
-                  delay: i * 0.06,
-                }}
-                onClick={() => setSelected(story)}
-                className="group relative text-left bg-bg-card border border-border hover:border-accent/60 rounded-xl overflow-hidden transition-all duration-500 hover:-translate-y-1"
-              >
-                {/* Before/After split */}
-                <div className="relative aspect-square overflow-hidden bg-bg-inset grid grid-cols-2">
-                  {/* Before half */}
-                  <div className="relative overflow-hidden">
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background:
-                          'radial-gradient(ellipse at 50% 45%, #5a5a54 0%, #3a3a34 35%, transparent 65%), linear-gradient(180deg, #2a2a24 0%, #1a1a14 100%)',
-                      }}
-                    />
-                    <div
-                      className="absolute rounded-full"
-                      style={{
-                        left: '50%',
-                        top: '15%',
-                        transform: 'translateX(-50%)',
-                        width: '28%',
-                        aspectRatio: '1',
-                        background: 'radial-gradient(circle, #6a6a5a, #3a3a30)',
-                      }}
-                    />
-                    <div
-                      className="absolute"
-                      style={{
-                        left: '50%',
-                        top: '38%',
-                        transform: 'translateX(-50%)',
-                        width: '65%',
-                        height: '50%',
-                        borderRadius: '45% 45% 35% 35% / 40% 40% 55% 55%',
-                        background:
-                          'radial-gradient(ellipse at 50% 30%, #5a5a50, #2a2a24 70%)',
-                      }}
-                    />
-                    <div className="absolute top-3 left-3 px-2 py-1 bg-bg/80 backdrop-blur-md rounded-full font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">
-                      Before
-                    </div>
-                  </div>
-                  {/* After half */}
-                  <div className="relative overflow-hidden">
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background:
-                          'radial-gradient(ellipse at 50% 45%, rgba(198, 255, 61, 0.08) 0%, transparent 65%), linear-gradient(180deg, #1a2014 0%, #0a0c09 100%)',
-                      }}
-                    />
-                    <div
-                      className="absolute rounded-full"
-                      style={{
-                        left: '50%',
-                        top: '15%',
-                        transform: 'translateX(-50%)',
-                        width: '26%',
-                        aspectRatio: '1',
-                        background:
-                          'radial-gradient(circle at 50% 40%, #8a8a80, #3a3a32)',
-                        boxShadow: '0 0 20px rgba(198, 255, 61, 0.15)',
-                      }}
-                    />
-                    <div
-                      className="absolute"
-                      style={{
-                        left: '50%',
-                        top: '38%',
-                        transform: 'translateX(-50%)',
-                        width: '58%',
-                        height: '48%',
-                        borderRadius: '40% 40% 28% 28% / 35% 35% 50% 50%',
-                        background: 'linear-gradient(180deg, #2a3a20 0%, #1a1f14 100%)',
-                        boxShadow:
-                          'inset 0 2px 8px rgba(198, 255, 61, 0.2), 0 0 30px rgba(198, 255, 61, 0.1)',
-                      }}
-                    />
-                    <div className="absolute top-3 left-3 px-2 py-1 bg-bg/80 backdrop-blur-md rounded-full font-mono text-[9px] uppercase tracking-[0.14em] text-accent font-bold border border-accent/40">
-                      After
-                    </div>
-                  </div>
-
-                  {/* Divider line */}
-                  <div
-                    className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 z-10"
-                    style={{
-                      background:
-                        'linear-gradient(to bottom, transparent, #c6ff3d, transparent)',
-                    }}
-                  />
-
-                  {/* Hover icon */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 bg-accent text-bg rounded-full flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-glow">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="p-5">
-                  <h3 className="font-display font-semibold text-xl tracking-tight">
-                    {story.clientName}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-medium">
-                      {story.goal}
-                    </span>
-                    <span className="text-text-dim">·</span>
-                    <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-accent font-bold">
-                      {story.durationWeeks} weeks
-                    </span>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-border-soft grid grid-cols-3 gap-2">
-                    {story.stats.map((stat) => (
-                      <div key={stat.label}>
-                        <div className="font-display font-bold text-base text-accent leading-none tracking-tight">
-                          {stat.value}
-                        </div>
-                        <div className="font-mono text-[8px] uppercase tracking-[0.12em] text-text-muted mt-1 font-medium">
-                          {stat.label}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.button>
-            ))}
-          </div>
+    <section id="transformations" className="py-20 md:py-28 bg-bg">
+      <div className="container-safe">
+        {/* Header */}
+        <div className="max-w-3xl mb-12 md:mb-16">
+          <span className="eyebrow">Transformations</span>
+          <h2 className="mt-3 font-display font-semibold text-display-lg tracking-tight">
+            Real journeys.{' '}
+            <span className="text-accent">Sustainable change.</span>
+          </h2>
+          <p className="mt-4 text-base text-text-muted leading-relaxed">
+            Five people. Five very different lives. One thing in common — they
+            stopped chasing quick fixes and started building systems that lasted.
+          </p>
         </div>
-      </section>
+
+        {/* Grid — 1 col mobile, 2 col tablet, 3 col desktop */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+          {FALLBACK_TRANSFORMATIONS.map((story) => (
+            <TransformationCard
+              key={story.slug}
+              story={story}
+              onClick={() => setSelected(story)}
+            />
+          ))}
+        </div>
+
+        {/* CTA below */}
+        <div className="mt-12 md:mt-16 text-center">
+          <Link
+            href="/book"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover transition-colors"
+          >
+            Start your own transformation
+            <ArrowRight size={14} strokeWidth={2.5} />
+          </Link>
+        </div>
+      </div>
 
       {/* Modal */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg/90 backdrop-blur-xl"
-          onClick={() => setSelected(null)}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative max-w-2xl w-full bg-bg-card border border-border rounded-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setSelected(null)}
-              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-bg-elevated border border-border hover:border-accent hover:text-accent transition-colors z-10"
-              aria-label="Close"
-            >
-              <X size={18} />
-            </button>
-            <div className="p-8 md:p-10">
-              <div className="eyebrow-accent">
-                {selected.goal} · {selected.durationWeeks} weeks
-              </div>
-              <h3 className="mt-3 font-display font-bold text-3xl md:text-4xl tracking-tight leading-tight">
-                {selected.clientName}
-              </h3>
-              <p className="mt-4 text-lg text-text leading-relaxed">
-                {selected.headline}
-              </p>
-              <div className="mt-8 pt-8 border-t border-border grid grid-cols-3 gap-4">
-                {selected.stats.map((stat) => (
-                  <div key={stat.label}>
-                    <div className="font-display font-bold text-2xl md:text-3xl text-accent tracking-tight">
-                      {stat.value}
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted mt-2 font-medium">
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/book"
-                className="mt-8 inline-flex items-center gap-2 bg-accent text-bg font-semibold px-6 py-3 rounded-full hover:bg-accent-hover transition-colors"
-              >
-                Start your transformation
-                <ArrowUpRight size={16} />
-              </Link>
-            </div>
-          </motion.div>
+      <AnimatePresence>
+        {selected && (
+          <TransformationModal
+            story={selected}
+            onClose={() => setSelected(null)}
+          />
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+// ─── CARD ──────────────────────────────────────────────────────────
+
+function TransformationCard({
+  story,
+  onClick,
+}: {
+  story: Transformation;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="group relative flex flex-col rounded-xl overflow-hidden bg-bg-card border border-border hover:border-accent/40 transition-all duration-500 text-left"
+    >
+      {/* Side-by-side photos */}
+      <div className="grid grid-cols-2 aspect-[1/1] relative overflow-hidden">
+        {/* BEFORE */}
+        <div className="relative overflow-hidden">
+          <Image
+            src={story.beforeImageUrl}
+            alt={`${story.firstName} before`}
+            fill
+            sizes="(min-width: 1024px) 16vw, (min-width: 640px) 25vw, 50vw"
+            className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
+          />
+          <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-bg/80 backdrop-blur-sm font-mono text-[9px] uppercase tracking-[0.18em] text-text-muted font-bold">
+            Before
+          </div>
         </div>
-      )}
-    </>
+
+        {/* Divider line */}
+        <div
+          aria-hidden
+          className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-accent/40 to-transparent z-10"
+        />
+
+        {/* AFTER */}
+        <div className="relative overflow-hidden">
+          <Image
+            src={story.afterImageUrl}
+            alt={`${story.firstName} after`}
+            fill
+            sizes="(min-width: 1024px) 16vw, (min-width: 640px) 25vw, 50vw"
+            className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
+          />
+          <div className="absolute top-2 right-2 px-2 py-1 rounded-md bg-accent text-bg font-mono text-[9px] uppercase tracking-[0.18em] font-bold">
+            After
+          </div>
+        </div>
+      </div>
+
+      {/* Footer with name + CTA */}
+      <div className="p-5 md:p-6">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-display font-semibold text-2xl tracking-tight leading-none">
+              {story.firstName}
+            </h3>
+            <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-accent font-bold truncate">
+              {story.goal}
+            </div>
+          </div>
+          <div className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.18em] text-text-muted font-bold group-hover:text-accent transition-colors flex-shrink-0">
+            Read journey
+            <ArrowUpRight size={11} strokeWidth={2.5} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ─── MODAL ─────────────────────────────────────────────────────────
+
+function TransformationModal({
+  story,
+  onClose,
+}: {
+  story: Transformation;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start md:items-center justify-center p-0 md:p-6 overflow-y-auto"
+    >
+      <motion.div
+        initial={{ y: 24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 24, opacity: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-5xl bg-bg-card border-y md:border md:rounded-2xl border-border shadow-2xl my-0 md:my-8 overflow-hidden"
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-bg/90 backdrop-blur-sm border border-border-soft flex items-center justify-center hover:bg-bg-elevated hover:border-accent/40 transition-all"
+        >
+          <X size={16} strokeWidth={2.5} />
+        </button>
+
+        {/* Photos — top section */}
+        <div className="grid grid-cols-2 aspect-[16/9] md:aspect-[2/1] relative bg-bg-inset">
+          <div className="relative overflow-hidden">
+            <Image
+              src={story.beforeImageUrl}
+              alt={`${story.firstName} before`}
+              fill
+              sizes="(min-width: 768px) 50vw, 50vw"
+              className="object-cover object-top"
+              priority
+            />
+            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-bg/85 backdrop-blur-sm font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold">
+              Before
+            </div>
+          </div>
+          <div
+            aria-hidden
+            className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-accent/50 to-transparent z-10"
+          />
+          <div className="relative overflow-hidden">
+            <Image
+              src={story.afterImageUrl}
+              alt={`${story.firstName} after`}
+              fill
+              sizes="(min-width: 768px) 50vw, 50vw"
+              className="object-cover object-top"
+              priority
+            />
+            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-accent text-bg font-mono text-[10px] uppercase tracking-[0.18em] font-bold">
+              After
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 md:p-10 max-h-[60vh] md:max-h-none overflow-y-auto">
+          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-3">
+            {story.goal} · {story.duration}
+          </div>
+
+          <h2 className="font-display font-semibold text-2xl md:text-4xl tracking-tight leading-[1.15] mb-6">
+            {story.firstName}&rsquo;s journey
+          </h2>
+
+          <p className="font-display italic text-lg md:text-xl text-text-muted leading-relaxed mb-8 pl-4 border-l-2 border-accent/40">
+            &ldquo;{story.headline}&rdquo;
+          </p>
+
+          {/* Story paragraphs */}
+          <div className="space-y-5 max-w-2xl text-base md:text-[17px] text-text leading-[1.7]">
+            {story.story.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+
+          {/* Footer CTA */}
+          <div className="mt-10 pt-6 border-t border-border-soft flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm text-text-muted">
+              Inspired? Your transformation starts with a conversation.
+            </p>
+            <Link
+              href="/book"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover transition-colors"
+            >
+              Start now
+              <ArrowRight size={14} strokeWidth={2.5} />
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
