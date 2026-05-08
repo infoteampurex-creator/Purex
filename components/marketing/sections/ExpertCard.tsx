@@ -22,7 +22,7 @@ export function ExpertCard({ expert }: { expert: Expert }) {
     'siva-reddy':       { bg: '#2a3a1a', skin: '#b8a080', torso: '#1a1f14' },
     'chandralekha':     { bg: '#2a2420', skin: '#d8b898', torso: '#4a4a48' },
     'krishna':          { bg: '#251f18', skin: '#a8785a', torso: '#1a1a16' },
-    'paula-konasionok': { bg: '#3a2820', skin: '#d8a888', torso: '#8a3a2a' },
+    'amber-jasari':     { bg: '#1a2030', skin: '#e8c8a8', torso: '#2a3a5a' },
     'siva-jampana':     { bg: '#1f1f1f', skin: '#c89880', torso: '#14141a' },
   };
   const palette = paletteMap[expert.slug] ?? paletteMap['siva-reddy'];

@@ -169,7 +169,7 @@ const PROGRAM_DETAILS: Record<
         icon: Activity,
         label: '1-on-1 Performance Training',
         description:
-          'In-person sessions with Siva Reddy (India) or Paula Konasionok (UK). Technique, progression, intensity.',
+          'In-person sessions with Siva Reddy (India) or Siva Jampana (UK). Technique, progression, intensity.',
       },
       {
         icon: Flame,

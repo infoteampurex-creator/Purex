@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { UserPlus, Users, Sparkles, UserCheck, Mail, Phone, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Users, Sparkles, UserCheck, Mail, Phone, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { AdminStatCard } from '@/components/admin/AdminStatCard';
 import {
@@ -9,6 +9,7 @@ import {
   StatusBadge,
 } from '@/components/admin/AdminTable';
 import { Avatar } from '@/components/admin/Avatar';
+import { AddClientButton } from '@/components/admin/AddClientButton';
 import { type AdminClient } from '@/lib/data/admin-mock';
 
 // MOCK_CLIENTS removed for production — clients table not yet wired to Supabase.
@@ -43,12 +44,7 @@ export default function AdminClientsPage() {
         eyebrow="Roster"
         title="Clients"
         subtitle="Active and onboarding clients across all plans. Assign coaches, update plans, review progress."
-        action={
-          <button className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors">
-            <UserPlus size={14} />
-            Add Client
-          </button>
-        }
+        action={<AddClientButton />}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">

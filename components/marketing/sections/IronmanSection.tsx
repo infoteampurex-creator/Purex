@@ -83,7 +83,7 @@ export function IronmanSection() {
             </p>
           </div>
           <Link
-            href="/book?expert=paula-konasionok"
+            href="/book?expert=siva-jampana"
             className="inline-flex items-center gap-2 text-sm text-text hover:text-accent transition-colors font-medium flex-shrink-0"
           >
             Book IRONMAN Consult

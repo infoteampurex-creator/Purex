@@ -102,7 +102,7 @@ export function getMockAdminPacts() {
       currentDay: 63,
       streakPercent: 94,
       status: 'on-track' as const,
-      witnessName: 'Paula Konasionok',
+      witnessName: 'Siva Jampana',
     },
     {
       clientId: 'c3',
@@ -126,7 +126,7 @@ export function getMockAdminPacts() {
       currentDay: 45,
       streakPercent: 68,
       status: 'at-risk' as const,
-      witnessName: 'Paula Konasionok',
+      witnessName: 'Siva Jampana',
     },
   ];
 }

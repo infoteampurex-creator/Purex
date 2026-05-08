@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, Check } from 'lucide-react';
 import { signUp, type AuthActionState } from '@/lib/actions/auth';
 import { Input, Label, FieldError } from '@/components/ui/Input';
@@ -10,6 +11,11 @@ const initialState: AuthActionState = { ok: false };
 
 export function SignupForm() {
   const [state, formAction] = useActionState(signUp, initialState);
+  const params = useSearchParams();
+
+  // Pre-fill from query params (used when admin generates an invite link)
+  const prefillEmail = params.get('email') ?? '';
+  const prefillName = params.get('name') ?? '';
 
   if (state.ok && state.message) {
     return (
@@ -35,6 +41,7 @@ export function SignupForm() {
           type="text"
           autoComplete="name"
           placeholder="Arjun M."
+          defaultValue={prefillName}
           error={state.fieldErrors?.fullName}
           required
         />
@@ -49,6 +56,7 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
+          defaultValue={prefillEmail}
           error={state.fieldErrors?.email}
           required
         />
