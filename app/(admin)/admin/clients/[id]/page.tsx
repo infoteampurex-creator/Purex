@@ -25,6 +25,8 @@ import {
   getClientLogsLive,
   getClientWorkoutsLive,
 } from '@/lib/data/client-live';
+import { searchExercises } from '@/lib/data/exercise-library';
+import { type LibraryExerciseOption } from '@/lib/data/daily-plan-types';
 import { FALLBACK_PROGRAMS } from '@/lib/constants';
 
 export const metadata = { title: 'Admin · Client Detail' };
@@ -45,12 +47,25 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [tasksRes, logsRes, workoutsRes, dailyPlan] = await Promise.all([
-    getClientTasksLive(client.id),
-    getClientLogsLive(client.id),
-    getClientWorkoutsLive(client.id),
-    getDailyPlan(client.id, today),
-  ]);
+  const [tasksRes, logsRes, workoutsRes, dailyPlan, libraryRows] =
+    await Promise.all([
+      getClientTasksLive(client.id),
+      getClientLogsLive(client.id),
+      getClientWorkoutsLive(client.id),
+      getDailyPlan(client.id, today),
+      searchExercises({ limit: 200 }),
+    ]);
+
+  // Slim down library entries to what the EditDailyPlanModal actually
+  // reads — keeps the client bundle small.
+  const exerciseLibrary: LibraryExerciseOption[] = libraryRows.map((e) => ({
+    slug: e.slug,
+    name: e.name,
+    category: e.category,
+    defaultSets: e.defaultSets ?? null,
+    defaultReps: e.defaultReps ?? null,
+    defaultRestSeconds: e.defaultRestSeconds ?? null,
+  }));
 
   // Real Supabase rows only — never show mock fallback data on the admin
   // detail page, otherwise trainers see fabricated metrics for clients
@@ -174,6 +189,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         suggestedApps={SUGGESTED_APPS}
         internalActions={INTERNAL_ACTIONS}
         initialDailyPlan={dailyPlan}
+        exerciseLibrary={exerciseLibrary}
       />
     </>
   );

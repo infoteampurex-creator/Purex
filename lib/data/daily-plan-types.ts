@@ -7,6 +7,21 @@
  * gets bundled into client components.
  */
 
+/**
+ * Lightweight exercise-library option used to populate the dropdown
+ * inside the EditDailyPlanModal. Server-side `searchExercises` returns
+ * a richer shape; this is the slim subset the client modal actually
+ * reads. Lives here so it stays bundleable for client components.
+ */
+export interface LibraryExerciseOption {
+  slug: string;
+  name: string;
+  category: string; // 'chest' | 'back' | 'legs' | etc — used as targetMuscle prefill
+  defaultSets: string | null;
+  defaultReps: string | null;
+  defaultRestSeconds: number | null;
+}
+
 export interface ExerciseActuals {
   actualSets: number | null;
   actualReps: string | null;

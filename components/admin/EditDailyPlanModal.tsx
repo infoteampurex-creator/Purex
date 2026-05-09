@@ -23,6 +23,7 @@ import {
 } from '@/lib/actions/daily-plan';
 import {
   type DailyPlan,
+  type LibraryExerciseOption,
   type PlannedExercise,
   EMPTY_DAILY_PLAN,
 } from '@/lib/data/daily-plan-types';
@@ -36,6 +37,8 @@ interface EditDailyPlanModalProps {
   initialDate?: string;
   /** Pre-fetched plan for `initialDate`. Modal still re-fetches on date change via router refresh. */
   initialPlan?: DailyPlan | null;
+  /** All active exercises from `exercise_library` for the dropdown. Empty array hides the picker and falls back to free-text only. */
+  exerciseLibrary: LibraryExerciseOption[];
 }
 
 interface ExerciseRow {
@@ -142,6 +145,7 @@ export function EditDailyPlanModal({
   clientName,
   initialDate,
   initialPlan,
+  exerciseLibrary,
 }: EditDailyPlanModalProps) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(() =>
@@ -407,9 +411,40 @@ export function EditDailyPlanModal({
                       index={idx}
                       total={form.exercises.length}
                       exercise={ex}
+                      library={exerciseLibrary}
                       onChange={(key, value) => updateExercise(idx, key, value)}
                       onRemove={() => removeExercise(idx)}
                       onMove={(dir) => moveExercise(idx, dir)}
+                      onPickFromLibrary={(slug) => {
+                        const lib = exerciseLibrary.find((l) => l.slug === slug);
+                        if (!lib) return;
+                        // Apply library defaults to this row.
+                        setForm((prev) => ({
+                          ...prev,
+                          exercises: prev.exercises.map((row, i) =>
+                            i === idx
+                              ? {
+                                  ...row,
+                                  exerciseName: lib.name,
+                                  targetMuscle:
+                                    row.targetMuscle.trim() ||
+                                    titleCase(lib.category),
+                                  sets:
+                                    row.sets.trim() ||
+                                    (lib.defaultSets ?? ''),
+                                  reps:
+                                    row.reps.trim() ||
+                                    (lib.defaultReps ?? ''),
+                                  restSeconds:
+                                    row.restSeconds.trim() ||
+                                    (lib.defaultRestSeconds != null
+                                      ? String(lib.defaultRestSeconds)
+                                      : ''),
+                                }
+                              : row
+                          ),
+                        }));
+                      }}
                     />
                   ))}
                   <button
@@ -751,21 +786,38 @@ function TextareaField({
   );
 }
 
+function titleCase(s: string): string {
+  return s
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function ExerciseCard({
   index,
   total,
   exercise,
+  library,
   onChange,
   onRemove,
   onMove,
+  onPickFromLibrary,
 }: {
   index: number;
   total: number;
   exercise: ExerciseRow;
+  library: LibraryExerciseOption[];
   onChange: (key: keyof ExerciseRow, value: string) => void;
   onRemove: () => void;
   onMove: (direction: -1 | 1) => void;
+  onPickFromLibrary: (slug: string) => void;
 }) {
+  // Group library entries by category for the optgroups.
+  const libraryByCategory: Record<string, LibraryExerciseOption[]> = {};
+  for (const lib of library) {
+    (libraryByCategory[lib.category] ??= []).push(lib);
+  }
+  const sortedCategories = Object.keys(libraryByCategory).sort();
+
   return (
     <div className="rounded-lg border border-border-soft bg-bg-elevated/40 p-3 md:p-4 space-y-3">
       {/* Header — name + reorder + remove */}
@@ -777,7 +829,7 @@ function ExerciseCard({
           type="text"
           value={exercise.exerciseName}
           onChange={(e) => onChange('exerciseName', e.target.value)}
-          placeholder="Exercise name (e.g. Incline DB Press)"
+          placeholder="Exercise name (or pick from library below)"
           className="flex-1 min-w-0 h-10 px-3 rounded-lg bg-bg-elevated border border-border-soft text-sm focus:border-accent/50 focus:outline-none transition-colors font-medium"
         />
         <div className="flex-shrink-0 flex items-center gap-1">
@@ -809,6 +861,35 @@ function ExerciseCard({
           </button>
         </div>
       </div>
+
+      {/* Library picker — fills name + target muscle + default sets/reps/rest */}
+      {library.length > 0 && (
+        <div>
+          <FieldLabel>Pick from library</FieldLabel>
+          <select
+            // Always show the placeholder so re-selecting the same exercise re-fills.
+            value=""
+            onChange={(e) => {
+              if (e.target.value) onPickFromLibrary(e.target.value);
+            }}
+            className="w-full h-10 px-3 rounded-lg bg-bg-elevated border border-border-soft text-sm focus:border-accent/50 focus:outline-none transition-colors"
+          >
+            <option value="">— Choose to auto-fill name + defaults —</option>
+            {sortedCategories.map((cat) => (
+              <optgroup key={cat} label={titleCase(cat)}>
+                {libraryByCategory[cat].map((lib) => (
+                  <option key={lib.slug} value={lib.slug}>
+                    {lib.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <div className="text-[10px] text-text-dim font-mono mt-1.5">
+            Picking only fills empty fields, so your custom sets/reps stay put.
+          </div>
+        </div>
+      )}
 
       {/* Target muscle */}
       <div>
