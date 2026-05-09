@@ -112,7 +112,7 @@ export function Hero() {
                 </div>
               </div>
               <div>
-                <div className="font-display font-bold text-2xl md:text-3xl text-accent tracking-tight">6</div>
+                <div className="font-display font-bold text-2xl md:text-3xl text-accent tracking-tight">5</div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted mt-1">
                   Specialists
                 </div>

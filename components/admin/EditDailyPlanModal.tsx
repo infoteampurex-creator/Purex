@@ -194,11 +194,26 @@ export function EditDailyPlanModal({
       ),
     }));
 
-  const addExercise = () =>
+  const addExercise = () => {
     setForm((prev) => ({
       ...prev,
       exercises: [...prev.exercises, { ...EMPTY_EXERCISE }],
     }));
+    // After the new row mounts, scroll it into view + briefly highlight so
+    // the trainer sees the addition (otherwise on a long form the row lands
+    // below the fold and looks like nothing happened).
+    requestAnimationFrame(() => {
+      const cards = document.querySelectorAll<HTMLDivElement>(
+        '[data-exercise-card]'
+      );
+      const last = cards[cards.length - 1];
+      if (last) {
+        last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        last.dataset.flash = '1';
+        setTimeout(() => delete last.dataset.flash, 1100);
+      }
+    });
+  };
 
   const removeExercise = (index: number) =>
     setForm((prev) => ({
@@ -597,9 +612,9 @@ export function EditDailyPlanModal({
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="inline-flex items-center gap-1.5 h-10 px-3 rounded-full border border-border text-xs font-medium text-text-muted hover:border-danger/40 hover:text-danger transition-colors"
+              className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full border border-danger/50 bg-danger/10 text-danger text-sm font-semibold hover:bg-danger/20 hover:border-danger transition-colors"
             >
-              <Trash2 size={12} />
+              <Trash2 size={13} strokeWidth={2.5} />
               Delete plan
             </button>
           )}
@@ -819,7 +834,10 @@ function ExerciseCard({
   const sortedCategories = Object.keys(libraryByCategory).sort();
 
   return (
-    <div className="rounded-lg border border-border-soft bg-bg-elevated/40 p-3 md:p-4 space-y-3">
+    <div
+      data-exercise-card
+      className="rounded-lg border border-border-soft bg-bg-elevated/40 p-3 md:p-4 space-y-3 transition-all data-[flash='1']:border-accent data-[flash='1']:bg-accent/5 data-[flash='1']:shadow-[0_0_0_3px_rgba(198,255,61,0.15)]"
+    >
       {/* Header — name + reorder + remove */}
       <div className="flex items-start gap-2">
         <div className="flex-shrink-0 w-7 h-7 rounded-md bg-accent/10 text-accent flex items-center justify-center font-mono text-[11px] font-bold">
