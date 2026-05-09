@@ -50,7 +50,6 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
       {userId && (
         <TodaysPlanCard
-          clientId={userId}
           plan={dailyPlan}
           selectedDate={selectedDate}
           today={today}

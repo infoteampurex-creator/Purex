@@ -16,7 +16,6 @@ import {
   CheckCircle2,
   CircleDashed,
   CircleSlash,
-  Plus,
   StickyNote,
   Activity,
   PencilLine,
@@ -26,7 +25,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { ProgressRing } from './ProgressRing';
-import { LogActualsModal } from './LogActualsModal';
 import {
   setWorkoutCompletion,
   logExerciseActuals,
@@ -39,7 +37,6 @@ import {
 import { cn } from '@/lib/cn';
 
 interface TodaysPlanCardProps {
-  clientId: string;
   plan: DailyPlan;
   /** YYYY-MM-DD — the date this card is showing. */
   selectedDate: string;
@@ -67,13 +64,11 @@ function formatHeading(date: string, today: string): string {
 }
 
 export function TodaysPlanCard({
-  clientId,
   plan,
   selectedDate,
   today,
 }: TodaysPlanCardProps) {
   const router = useRouter();
-  const [logOpen, setLogOpen] = useState(false);
   const [completionPending, startCompletionTransition] = useTransition();
   const isToday = selectedDate === today;
   const prevDate = shiftDate(selectedDate, -1);
@@ -119,25 +114,10 @@ export function TodaysPlanCard({
           </h3>
           <p className="text-sm text-text-muted mt-2 max-w-md mx-auto">
             {isToday
-              ? "Your coach hasn't shared today's plan yet. You can still log your metrics so they have context for tomorrow."
-              : 'You can still update your logged metrics for this date.'}
+              ? "Your coach hasn't shared today's plan yet."
+              : 'No assigned plan for this date.'}
           </p>
-          <button
-            onClick={() => setLogOpen(true)}
-            className="inline-flex items-center gap-2 mt-5 h-10 px-5 rounded-full border border-border text-sm font-medium hover:border-accent transition-colors"
-          >
-            <Plus size={14} />
-            Log my metrics
-          </button>
         </div>
-
-        <LogActualsModal
-          open={logOpen}
-          onClose={() => setLogOpen(false)}
-          clientId={clientId}
-          logDate={selectedDate}
-          initialActuals={plan.actuals}
-        />
       </motion.div>
     );
   }
@@ -344,25 +324,7 @@ export function TodaysPlanCard({
           </Section>
         )}
 
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2 pt-2">
-          <button
-            onClick={() => setLogOpen(true)}
-            className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            Log my metrics
-          </button>
-        </div>
       </div>
-
-      <LogActualsModal
-        open={logOpen}
-        onClose={() => setLogOpen(false)}
-        clientId={clientId}
-        logDate={selectedDate}
-        initialActuals={plan.actuals}
-      />
     </motion.div>
   );
 }

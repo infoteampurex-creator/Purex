@@ -92,7 +92,7 @@ export function GymScene({ activated: _activated }: GymSceneProps = {}) {
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <PillarChip label="100 days" />
           <Dot />
-          <PillarChip label="6 specialists" />
+          <PillarChip label="5 specialists" />
           <Dot />
           <PillarChip label="Witnessed" />
         </div>
