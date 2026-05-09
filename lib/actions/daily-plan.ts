@@ -3,6 +3,33 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { getDailyPlan } from '@/lib/data/daily-plan';
+import {
+  type DailyPlan,
+  EMPTY_DAILY_PLAN,
+} from '@/lib/data/daily-plan-types';
+
+// ─── Read action (callable from client components) ─────────────────
+
+const loadDailyPlanSchema = z.object({
+  clientId: z.string().uuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+/**
+ * Server-action wrapper around getDailyPlan so client components
+ * (notably EditDailyPlanModal) can refetch the plan when the user
+ * changes the date inside the modal. Falls back to EMPTY_DAILY_PLAN
+ * on validation/runtime errors.
+ */
+export async function loadDailyPlan(
+  clientId: string,
+  date: string
+): Promise<DailyPlan> {
+  const parsed = loadDailyPlanSchema.safeParse({ clientId, date });
+  if (!parsed.success) return EMPTY_DAILY_PLAN;
+  return getDailyPlan(parsed.data.clientId, parsed.data.date);
+}
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -366,8 +393,28 @@ export async function setWorkoutCompletion(
 
 // ─── Per-exercise actuals (client-side action) ────────────────────
 
+const exerciseSetSchema = z.object({
+  reps: optionalText,
+  weightKg: optionalNumber,
+  rpe: z
+    .union([
+      z.number().int().min(1).max(10),
+      z.literal('').transform(() => null),
+      z.null(),
+    ])
+    .optional(),
+});
+
+export type ExerciseSetInput = z.input<typeof exerciseSetSchema>;
+
 const logExerciseActualsSchema = z.object({
   plannedExerciseId: z.string().uuid(),
+  /**
+   * Per-set actuals. When provided, this is the source of truth and
+   * the flat actualSets / actualReps / actualWeightKg fields are
+   * derived from it (mostly for backward compat with old reads).
+   */
+  setBreakdown: z.array(exerciseSetSchema).optional(),
   actualSets: optionalInt,
   actualReps: optionalText,
   actualWeightKg: optionalNumber,
@@ -438,16 +485,54 @@ export async function logExerciseActuals(
       return { ok: false, error: 'Could not resolve client for this exercise.' };
     }
 
+    // If a per-set breakdown was provided, derive the legacy flat
+    // fields from it (so older reads still produce a sensible summary).
+    let setBreakdownPayload: Array<{
+      reps: string | null;
+      weight_kg: number | null;
+      rpe: number | null;
+    }> | null = null;
+    let derivedActualSets: number | null = parsed.data.actualSets ?? null;
+    let derivedActualReps: string | null = parsed.data.actualReps ?? null;
+    let derivedActualWeight: number | null =
+      parsed.data.actualWeightKg ?? null;
+    let derivedRpe: number | null = parsed.data.rpe ?? null;
+
+    if (parsed.data.setBreakdown) {
+      setBreakdownPayload = parsed.data.setBreakdown.map((s) => ({
+        reps: s.reps ?? null,
+        weight_kg: s.weightKg ?? null,
+        rpe: s.rpe ?? null,
+      }));
+      derivedActualSets = setBreakdownPayload.length;
+      // Reps: join distinct values for a quick glance summary.
+      const repsList = setBreakdownPayload
+        .map((s) => s.reps)
+        .filter((r): r is string => Boolean(r));
+      derivedActualReps = repsList.length > 0 ? repsList.join(', ') : null;
+      // Weight: take the heaviest set as a representative top-set value.
+      const weights = setBreakdownPayload
+        .map((s) => s.weight_kg)
+        .filter((w): w is number => typeof w === 'number');
+      derivedActualWeight = weights.length > 0 ? Math.max(...weights) : null;
+      // RPE: take the max — usually the last working set.
+      const rpes = setBreakdownPayload
+        .map((s) => s.rpe)
+        .filter((r): r is number => typeof r === 'number');
+      derivedRpe = rpes.length > 0 ? Math.max(...rpes) : null;
+    }
+
     const { error } = await supabase
       .from('client_workout_exercise_logs')
       .upsert(
         {
           planned_exercise_id: parsed.data.plannedExerciseId,
           client_id: clientId,
-          actual_sets: parsed.data.actualSets ?? null,
-          actual_reps: parsed.data.actualReps ?? null,
-          actual_weight_kg: parsed.data.actualWeightKg ?? null,
-          rpe: parsed.data.rpe ?? null,
+          set_breakdown: setBreakdownPayload,
+          actual_sets: derivedActualSets,
+          actual_reps: derivedActualReps,
+          actual_weight_kg: derivedActualWeight,
+          rpe: derivedRpe,
           notes: parsed.data.notes ?? null,
           completed_at: new Date().toISOString(),
         },

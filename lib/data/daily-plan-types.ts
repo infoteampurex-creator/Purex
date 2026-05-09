@@ -22,7 +22,16 @@ export interface LibraryExerciseOption {
   defaultRestSeconds: number | null;
 }
 
+export interface ExerciseSetActual {
+  reps: string | null;
+  weightKg: number | null;
+  rpe: number | null;
+}
+
 export interface ExerciseActuals {
+  /** Per-set log when the client filled in each set individually. */
+  setBreakdown: ExerciseSetActual[] | null;
+  /** Aggregate fields kept for backward compatibility. When setBreakdown is set, actualSets is derived from its length. */
   actualSets: number | null;
   actualReps: string | null;
   actualWeightKg: number | null;

@@ -20,6 +20,7 @@ import { cn } from '@/lib/cn';
 import {
   upsertDailyPlan,
   deleteDailyPlan,
+  loadDailyPlan,
 } from '@/lib/actions/daily-plan';
 import {
   type DailyPlan,
@@ -156,18 +157,53 @@ export function EditDailyPlanModal({
   const [success, setSuccess] = useState<'saved' | 'deleted' | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [planLoading, setPlanLoading] = useState(false);
 
-  // Reset on open
+  // Reset on open. If parent didn't supply an initialPlan (e.g. opened
+  // for an older date from the Workouts tab), fetch the plan for that
+  // date so the form shows what's saved instead of an empty shell.
   useEffect(() => {
-    if (open) {
-      setForm(planToFormState(initialPlan ?? null, initialDate ?? todayStr()));
-      setSubmitting(false);
-      setDeleting(false);
-      setSuccess(null);
-      setErrorMsg(null);
-      setConfirmDelete(false);
+    if (!open) return;
+    const date = initialDate ?? todayStr();
+    setForm(planToFormState(initialPlan ?? null, date));
+    setSubmitting(false);
+    setDeleting(false);
+    setSuccess(null);
+    setErrorMsg(null);
+    setConfirmDelete(false);
+
+    if (!initialPlan) {
+      let cancelled = false;
+      setPlanLoading(true);
+      loadDailyPlan(clientId, date)
+        .then((fresh) => {
+          if (cancelled) return;
+          setForm(planToFormState(fresh, date));
+        })
+        .finally(() => {
+          if (!cancelled) setPlanLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [open, initialPlan, initialDate]);
+  }, [open, initialPlan, initialDate, clientId]);
+
+  // When the user changes the date inside the modal, refetch that date's
+  // plan so we don't accidentally save under a different day with stale
+  // form values.
+  const handleDateChange = async (newDate: string) => {
+    setForm((prev) => ({ ...prev, planDate: newDate }));
+    // Wait for a complete YYYY-MM-DD before fetching.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
+    setPlanLoading(true);
+    try {
+      const fresh = await loadDailyPlan(clientId, newDate);
+      setForm(planToFormState(fresh, newDate));
+    } finally {
+      setPlanLoading(false);
+    }
+  };
 
   // Esc + body scroll lock
   useEffect(() => {
@@ -367,11 +403,13 @@ export function EditDailyPlanModal({
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-5 md:px-6 py-5">
           {/* Date */}
           <div className="mb-5">
-            <FieldLabel>Plan date</FieldLabel>
+            <FieldLabel>
+              Plan date{planLoading && ' · loading…'}
+            </FieldLabel>
             <input
               type="date"
               value={form.planDate}
-              onChange={(e) => update('planDate', e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
               className="w-full md:w-auto h-11 px-3 rounded-lg bg-bg-elevated border border-border-soft text-sm focus:border-accent/50 focus:outline-none transition-colors font-mono"
             />
           </div>
