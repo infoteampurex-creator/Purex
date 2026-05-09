@@ -4,10 +4,28 @@ import {
   type DailyActuals,
   type DailyPlan,
   type ExerciseActuals,
+  type ExerciseSetActual,
   type PlannedExercise,
   type WorkoutCompletionStatus,
   EMPTY_DAILY_PLAN,
 } from '@/lib/data/daily-plan-types';
+
+function parseSetBreakdown(raw: unknown): ExerciseSetActual[] | null {
+  if (!Array.isArray(raw)) return null;
+  return raw.map((entry) => {
+    const e = (entry ?? {}) as Record<string, unknown>;
+    return {
+      reps: typeof e.reps === 'string' ? e.reps : null,
+      weightKg:
+        typeof e.weight_kg === 'number'
+          ? e.weight_kg
+          : typeof e.weightKg === 'number'
+            ? e.weightKg
+            : null,
+      rpe: typeof e.rpe === 'number' ? e.rpe : null,
+    };
+  });
+}
 
 /**
  * Read the planned side of a client's day for prefill in the
@@ -71,6 +89,7 @@ interface ExerciseActualsRow {
   rpe: number | null;
   notes: string | null;
   completed_at: string | null;
+  set_breakdown: unknown;
 }
 
 export async function getDailyPlan(
@@ -123,13 +142,14 @@ export async function getDailyPlan(
         const { data: actualRows } = await supabase
           .from('client_workout_exercise_logs')
           .select(
-            'planned_exercise_id, actual_sets, actual_reps, actual_weight_kg, rpe, notes, completed_at'
+            'planned_exercise_id, actual_sets, actual_reps, actual_weight_kg, rpe, notes, completed_at, set_breakdown'
           )
           .in('planned_exercise_id', plannedIds);
 
         (actualRows ?? []).forEach((row) => {
           const a = row as ExerciseActualsRow;
           actualsByPlannedId.set(a.planned_exercise_id, {
+            setBreakdown: parseSetBreakdown(a.set_breakdown),
             actualSets: a.actual_sets,
             actualReps: a.actual_reps,
             actualWeightKg: a.actual_weight_kg,

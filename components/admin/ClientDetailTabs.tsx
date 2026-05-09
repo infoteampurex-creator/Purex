@@ -24,6 +24,7 @@ import {
   Zap,
   Camera,
   Trash2,
+  Edit3,
   Loader2,
 } from 'lucide-react';
 import type {
@@ -42,6 +43,7 @@ import {
   deleteTask,
   toggleWorkout,
 } from '@/lib/actions/client-tracking';
+import { deleteDailyPlan } from '@/lib/actions/daily-plan';
 import { StatusBadge } from './AdminTable';
 import { LogMetricsModal } from './LogMetricsModal';
 import { EditDailyPlanModal } from './EditDailyPlanModal';
@@ -82,6 +84,13 @@ export function ClientDetailTabs({
   const [activeTab, setActiveTab] = useState<TabId>('progress');
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [planModalOpen, setPlanModalOpen] = useState(false);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [planModalDate, setPlanModalDate] = useState<string>(todayStr);
+
+  const openPlanForDate = (date: string) => {
+    setPlanModalDate(date);
+    setPlanModalOpen(true);
+  };
 
   const tabs: { id: TabId; label: string; icon: typeof Activity; count?: number }[] = [
     { id: 'progress', label: 'Progress', icon: Activity },
@@ -135,11 +144,18 @@ export function ClientDetailTabs({
           <ProgressTab
             logs={logs}
             onLogMetrics={() => setLogModalOpen(true)}
-            onEditPlan={() => setPlanModalOpen(true)}
+            onEditPlan={() => openPlanForDate(todayStr)}
           />
         )}
         {activeTab === 'tasks' && <TasksTab tasks={tasks} clientId={client.id} />}
-        {activeTab === 'workouts' && <WorkoutsTab workouts={workouts} clientId={client.id} />}
+        {activeTab === 'workouts' && (
+          <WorkoutsTab
+            workouts={workouts}
+            clientId={client.id}
+            onEditWorkout={(date) => openPlanForDate(date)}
+            onAssignNew={() => openPlanForDate(todayStr)}
+          />
+        )}
         {activeTab === 'bookings' && <BookingsTab bookings={bookings} />}
         {activeTab === 'photos' && (
           <PhotosTab
@@ -171,7 +187,10 @@ export function ClientDetailTabs({
         onClose={() => setPlanModalOpen(false)}
         clientName={client.fullName}
         clientId={client.id}
-        initialPlan={initialDailyPlan ?? null}
+        initialDate={planModalDate}
+        // Only pass the prefetched plan when we're opening for today —
+        // for any other date the modal fetches fresh on open.
+        initialPlan={planModalDate === todayStr ? (initialDailyPlan ?? null) : null}
         exerciseLibrary={exerciseLibrary ?? []}
       />
     </div>
@@ -625,15 +644,20 @@ function TaskRow({
 function WorkoutsTab({
   workouts,
   clientId: _clientId,
+  onEditWorkout,
+  onAssignNew,
 }: {
   workouts: AdminClientWorkout[];
   clientId: string;
+  onEditWorkout: (date: string) => void;
+  onAssignNew: () => void;
 }) {
   const router = useRouter();
   const [workoutList, setWorkoutList] = useState(workouts);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const toggleDone = (w: AdminClientWorkout) => {
     if (isPending) return;
@@ -657,13 +681,46 @@ function WorkoutsTab({
     });
   };
 
+  const deleteForDate = (w: AdminClientWorkout) => {
+    if (!w.workoutDate) {
+      setErrorMsg('Cannot delete a workout without a date.');
+      return;
+    }
+    setPendingId(w.id);
+    setErrorMsg(null);
+    startTransition(async () => {
+      const result = await deleteDailyPlan({
+        clientId: _clientId,
+        planDate: w.workoutDate!,
+      });
+      setPendingId(null);
+      setConfirmDeleteId(null);
+      if (!result.ok) {
+        setErrorMsg(result.error ?? 'Could not delete the workout.');
+        return;
+      }
+      // Optimistically remove from list; refresh re-fetches from server.
+      setWorkoutList((prev) => prev.filter((x) => x.id !== w.id));
+      router.refresh();
+    });
+  };
+
   if (workoutList.length === 0) {
     return (
-      <EmptyState
-        icon={<Dumbbell />}
-        title="No workouts assigned"
-        description="Use the button below — or the client's plan page — to assign workouts."
-      />
+      <div className="space-y-4">
+        <EmptyState
+          icon={<Dumbbell />}
+          title="No workouts assigned"
+          description="Click below to plan today's workout, or use the Progress tab toolbar."
+        />
+        <button
+          onClick={onAssignNew}
+          className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors"
+        >
+          <Plus size={14} strokeWidth={2.5} />
+          Assign first workout
+        </button>
+      </div>
     );
   }
 
@@ -683,6 +740,7 @@ function WorkoutsTab({
       <div className="grid md:grid-cols-2 gap-3">
         {workoutList.map((w) => {
           const isRowPending = pendingId === w.id;
+          const isConfirming = confirmDeleteId === w.id;
           return (
             <div
               key={w.id}
@@ -725,12 +783,58 @@ function WorkoutsTab({
                 {w.difficulty && <span>{w.difficulty}</span>}
                 {w.workoutDate && <span className="ml-auto">{w.workoutDate}</span>}
               </div>
+
+              {/* Edit / Delete row */}
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={() =>
+                    w.workoutDate
+                      ? onEditWorkout(w.workoutDate)
+                      : setErrorMsg('This workout has no date — assign a new one instead.')
+                  }
+                  disabled={isRowPending}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full border border-border text-xs font-medium hover:border-accent/50 hover:text-accent transition-colors disabled:opacity-50"
+                >
+                  <Edit3 size={11} />
+                  Edit
+                </button>
+                {isConfirming ? (
+                  <>
+                    <button
+                      onClick={() => deleteForDate(w)}
+                      disabled={isRowPending}
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full bg-danger text-bg text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {isRowPending ? 'Deleting…' : 'Confirm'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      disabled={isRowPending}
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full border border-border text-xs font-medium hover:border-text-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(w.id)}
+                    disabled={isRowPending}
+                    className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full border border-danger/40 bg-danger/10 text-danger text-xs font-semibold hover:bg-danger/20 hover:border-danger transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 size={11} />
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
-      <button className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-full border border-border border-dashed text-sm font-medium text-text-muted hover:border-accent/50 hover:text-accent transition-colors">
-        <Plus size={14} />
+      <button
+        onClick={onAssignNew}
+        className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-full border border-accent/50 bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 hover:border-accent transition-colors"
+      >
+        <Plus size={14} strokeWidth={2.5} />
         Assign new workout
       </button>
     </div>

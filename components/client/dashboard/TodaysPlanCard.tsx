@@ -23,6 +23,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { ProgressRing } from './ProgressRing';
 import {
@@ -441,24 +443,27 @@ function ExerciseRow({
 
   const hasActuals =
     exercise.actuals !== null &&
-    (exercise.actuals.actualSets != null ||
+    ((exercise.actuals.setBreakdown?.length ?? 0) > 0 ||
+      exercise.actuals.actualSets != null ||
       exercise.actuals.actualReps != null ||
       exercise.actuals.actualWeightKg != null ||
       exercise.actuals.rpe != null ||
       (exercise.actuals.notes ?? '').trim().length > 0);
 
   const handleSave = (input: {
-    actualSets: number | null;
-    actualReps: string | null;
-    actualWeightKg: number | null;
-    rpe: number | null;
+    setBreakdown: Array<{
+      reps: string | null;
+      weightKg: number | null;
+      rpe: number | null;
+    }>;
     notes: string | null;
   }) => {
     setErrorMsg(null);
     startTransition(async () => {
       const result = await logExerciseActuals({
         plannedExerciseId: exercise.id,
-        ...input,
+        setBreakdown: input.setBreakdown,
+        notes: input.notes,
       });
       if (!result.ok) {
         setErrorMsg(result.error ?? 'Could not save.');
@@ -557,6 +562,9 @@ function ExerciseRow({
               >
                 <ExerciseLogForm
                   initial={exercise.actuals}
+                  plannedSets={exercise.sets}
+                  plannedReps={exercise.reps}
+                  plannedWeightKg={exercise.targetWeightKg}
                   pending={pending}
                   errorMsg={errorMsg}
                   onCancel={() => {
@@ -575,28 +583,57 @@ function ExerciseRow({
 }
 
 function ActualsSummary({ actuals }: { actuals: ExerciseActuals }) {
+  const breakdown = actuals.setBreakdown ?? [];
+  const hasBreakdown = breakdown.length > 0;
+
   return (
     <div className="mt-2 rounded-md bg-bg-elevated/40 border border-success/20 px-2.5 py-1.5">
       <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-success font-bold mb-1">
         You did
       </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-mono">
-        {actuals.actualSets != null && (
-          <SpecChip label="sets" value={String(actuals.actualSets)} />
-        )}
-        {actuals.actualReps && (
-          <SpecChip label="reps" value={actuals.actualReps} />
-        )}
-        {actuals.actualWeightKg != null && (
-          <SpecChip
-            label="weight"
-            value={`${actuals.actualWeightKg}kg`}
-          />
-        )}
-        {actuals.rpe != null && (
-          <SpecChip label="rpe" value={String(actuals.rpe)} />
-        )}
-      </div>
+
+      {hasBreakdown ? (
+        <div className="space-y-0.5">
+          {breakdown.map((s, idx) => {
+            const parts: string[] = [];
+            if (s.reps) parts.push(`${s.reps} reps`);
+            if (s.weightKg != null) parts.push(`${s.weightKg}kg`);
+            if (s.rpe != null) parts.push(`RPE ${s.rpe}`);
+            return (
+              <div
+                key={idx}
+                className="flex items-baseline gap-2 text-xs font-mono"
+              >
+                <span className="text-text-dim text-[9px] uppercase tracking-[0.12em] w-10 shrink-0">
+                  Set {idx + 1}
+                </span>
+                <span className="text-text">
+                  {parts.length > 0 ? parts.join(' · ') : '—'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-mono">
+          {actuals.actualSets != null && (
+            <SpecChip label="sets" value={String(actuals.actualSets)} />
+          )}
+          {actuals.actualReps && (
+            <SpecChip label="reps" value={actuals.actualReps} />
+          )}
+          {actuals.actualWeightKg != null && (
+            <SpecChip
+              label="weight"
+              value={`${actuals.actualWeightKg}kg`}
+            />
+          )}
+          {actuals.rpe != null && (
+            <SpecChip label="rpe" value={String(actuals.rpe)} />
+          )}
+        </div>
+      )}
+
       {actuals.notes && (
         <div className="text-xs text-text italic mt-1 leading-relaxed">
           “{actuals.notes}”
@@ -606,32 +643,81 @@ function ActualsSummary({ actuals }: { actuals: ExerciseActuals }) {
   );
 }
 
+interface SetRow {
+  reps: string;
+  weight: string;
+  rpe: string;
+}
+
 function ExerciseLogForm({
   initial,
+  plannedSets,
+  plannedReps,
+  plannedWeightKg,
   pending,
   errorMsg,
   onCancel,
   onSave,
 }: {
   initial: ExerciseActuals | null;
+  plannedSets: number | null;
+  plannedReps: string | null;
+  plannedWeightKg: number | null;
   pending: boolean;
   errorMsg: string | null;
   onCancel: () => void;
   onSave: (input: {
-    actualSets: number | null;
-    actualReps: string | null;
-    actualWeightKg: number | null;
-    rpe: number | null;
+    setBreakdown: Array<{
+      reps: string | null;
+      weightKg: number | null;
+      rpe: number | null;
+    }>;
     notes: string | null;
   }) => void;
 }) {
-  const s = (v: number | string | null | undefined) =>
-    v == null ? '' : String(v);
-  const [sets, setSets] = useState(s(initial?.actualSets));
-  const [reps, setReps] = useState(s(initial?.actualReps));
-  const [weight, setWeight] = useState(s(initial?.actualWeightKg));
-  const [rpe, setRpe] = useState(s(initial?.rpe));
+  const repsHint = plannedReps ?? '';
+  const weightHint =
+    plannedWeightKg != null ? String(plannedWeightKg) : '';
+
+  // Decide initial rows:
+  //   - Existing breakdown wins.
+  //   - Else fill plannedSets blank rows (default 1).
+  //   - As a last resort, hydrate from the legacy flat fields so older
+  //     logs don't appear empty when re-edited.
+  const initialRows: SetRow[] = (() => {
+    if (initial?.setBreakdown && initial.setBreakdown.length > 0) {
+      return initial.setBreakdown.map((s) => ({
+        reps: s.reps ?? '',
+        weight: s.weightKg != null ? String(s.weightKg) : '',
+        rpe: s.rpe != null ? String(s.rpe) : '',
+      }));
+    }
+    if (initial && (initial.actualSets || initial.actualReps || initial.actualWeightKg || initial.rpe)) {
+      // Legacy single-row log — show as one set so the trainer/client can
+      // re-enter per-set if they want.
+      return [
+        {
+          reps: initial.actualReps ?? '',
+          weight: initial.actualWeightKg != null ? String(initial.actualWeightKg) : '',
+          rpe: initial.rpe != null ? String(initial.rpe) : '',
+        },
+      ];
+    }
+    const count = Math.max(1, plannedSets ?? 1);
+    return Array.from({ length: count }, () => ({ reps: '', weight: '', rpe: '' }));
+  })();
+
+  const [rows, setRows] = useState<SetRow[]>(initialRows);
   const [notes, setNotes] = useState(initial?.notes ?? '');
+
+  const updateRow = (index: number, key: keyof SetRow, value: string) =>
+    setRows((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [key]: value } : r))
+    );
+  const addRow = () =>
+    setRows((prev) => [...prev, { reps: '', weight: '', rpe: '' }]);
+  const removeRow = (index: number) =>
+    setRows((prev) => prev.filter((_, i) => i !== index));
 
   const parseInt10 = (v: string): number | null => {
     if (!v.trim()) return null;
@@ -644,40 +730,97 @@ function ExerciseLogForm({
     return Number.isFinite(n) ? n : null;
   };
 
+  const handleSubmit = () => {
+    // Drop fully empty rows so we never persist `[{},{},{}]`.
+    const nonEmpty = rows.filter(
+      (r) => r.reps.trim() || r.weight.trim() || r.rpe.trim()
+    );
+    onSave({
+      setBreakdown: nonEmpty.map((r) => ({
+        reps: r.reps.trim() || null,
+        weightKg: parseNum(r.weight),
+        rpe: parseInt10(r.rpe),
+      })),
+      notes: notes.trim() || null,
+    });
+  };
+
   return (
     <div className="mt-3 space-y-2.5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <SmallInput
-          label="Sets"
-          type="number"
-          value={sets}
-          onChange={setSets}
-          placeholder="4"
-        />
-        <SmallInput
-          label="Reps"
-          value={reps}
-          onChange={setReps}
-          placeholder="10"
-        />
-        <SmallInput
-          label="Weight kg"
-          type="number"
-          step="0.5"
-          value={weight}
-          onChange={setWeight}
-          placeholder="20"
-        />
-        <SmallInput
-          label="RPE"
-          type="number"
-          min="1"
-          max="10"
-          value={rpe}
-          onChange={setRpe}
-          placeholder="8"
-        />
+      {/* Per-set rows */}
+      <div className="space-y-1.5">
+        <div className="grid grid-cols-[28px_1fr_1fr_1fr_28px] gap-2 px-1">
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">
+            Set
+          </span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">
+            Reps
+          </span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">
+            Weight kg
+          </span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">
+            RPE
+          </span>
+          <span />
+        </div>
+
+        {rows.map((row, idx) => (
+          <div
+            key={idx}
+            className="grid grid-cols-[28px_1fr_1fr_1fr_28px] gap-2 items-center"
+          >
+            <span className="text-[11px] font-mono font-bold text-accent text-center">
+              {idx + 1}
+            </span>
+            <input
+              type="text"
+              value={row.reps}
+              onChange={(e) => updateRow(idx, 'reps', e.target.value)}
+              placeholder={repsHint || '10'}
+              className="w-full h-9 px-2 rounded-md bg-bg-elevated border border-border-soft text-xs focus:border-accent/50 focus:outline-none transition-colors"
+            />
+            <input
+              type="number"
+              step="0.5"
+              value={row.weight}
+              onChange={(e) => updateRow(idx, 'weight', e.target.value)}
+              placeholder={weightHint || '20'}
+              className="w-full h-9 px-2 rounded-md bg-bg-elevated border border-border-soft text-xs focus:border-accent/50 focus:outline-none transition-colors"
+            />
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={row.rpe}
+              onChange={(e) => updateRow(idx, 'rpe', e.target.value)}
+              placeholder="8"
+              className="w-full h-9 px-2 rounded-md bg-bg-elevated border border-border-soft text-xs focus:border-accent/50 focus:outline-none transition-colors"
+            />
+            <button
+              type="button"
+              onClick={() => removeRow(idx)}
+              disabled={rows.length === 1 || pending}
+              aria-label="Remove set"
+              className="w-7 h-7 rounded-md border border-border-soft text-text-muted hover:border-danger/50 hover:text-danger transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={11} />
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addRow}
+          disabled={pending}
+          className="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-dashed border-border-soft text-[10px] font-mono uppercase tracking-[0.12em] text-text-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
+        >
+          <Plus size={10} />
+          Add another set
+        </button>
       </div>
+
+      {/* Notes (one per exercise) */}
       <div>
         <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold mb-1">
           Notes
@@ -690,21 +833,15 @@ function ExerciseLogForm({
           className="w-full px-2 py-1.5 rounded-md bg-bg-elevated border border-border-soft text-xs focus:border-accent/50 focus:outline-none transition-colors resize-none"
         />
       </div>
+
       {errorMsg && (
         <div className="text-[11px] text-rose-400 font-mono">{errorMsg}</div>
       )}
+
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() =>
-            onSave({
-              actualSets: parseInt10(sets),
-              actualReps: reps.trim() || null,
-              actualWeightKg: parseNum(weight),
-              rpe: parseInt10(rpe),
-              notes: notes.trim() || null,
-            })
-          }
+          onClick={handleSubmit}
           disabled={pending}
           className="inline-flex items-center gap-1 h-8 px-3 rounded-full bg-accent text-bg text-xs font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50"
         >
@@ -720,44 +857,6 @@ function ExerciseLogForm({
           Cancel
         </button>
       </div>
-    </div>
-  );
-}
-
-function SmallInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-  step,
-  min,
-  max,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-  step?: string;
-  min?: string;
-  max?: string;
-}) {
-  return (
-    <div>
-      <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold mb-1">
-        {label}
-      </div>
-      <input
-        type={type}
-        step={step}
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full h-9 px-2 rounded-md bg-bg-elevated border border-border-soft text-xs focus:border-accent/50 focus:outline-none transition-colors"
-      />
     </div>
   );
 }
