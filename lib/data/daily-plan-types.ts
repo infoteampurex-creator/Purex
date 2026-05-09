@@ -7,6 +7,15 @@
  * gets bundled into client components.
  */
 
+export interface ExerciseActuals {
+  actualSets: number | null;
+  actualReps: string | null;
+  actualWeightKg: number | null;
+  rpe: number | null;
+  notes: string | null;
+  loggedAt: string | null;
+}
+
 export interface PlannedExercise {
   id: string;
   exerciseName: string;
@@ -19,7 +28,11 @@ export interface PlannedExercise {
   rpeTarget: number | null;
   trainerInstruction: string | null;
   exerciseOrder: number;
+  /** Per-exercise actuals logged by the client. null when never logged. */
+  actuals: ExerciseActuals | null;
 }
+
+export type WorkoutCompletionStatus = 'completed' | 'partial' | 'skipped' | null;
 
 export interface DailyActuals {
   steps: number | null;
@@ -28,7 +41,9 @@ export interface DailyActuals {
   weightKg: number | null;
   caloriesConsumed: number | null;
   proteinG: number | null;
+  /** Boolean kept for backward compat; prefer workoutCompletionStatus. */
   workoutCompleted: boolean;
+  workoutCompletionStatus: WorkoutCompletionStatus;
 }
 
 export interface DailyPlan {
@@ -68,6 +83,7 @@ export const EMPTY_ACTUALS: DailyActuals = {
   caloriesConsumed: null,
   proteinG: null,
   workoutCompleted: false,
+  workoutCompletionStatus: null,
 };
 
 export const EMPTY_DAILY_PLAN: DailyPlan = {
