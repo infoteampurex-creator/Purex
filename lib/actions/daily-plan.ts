@@ -300,23 +300,30 @@ export async function upsertDailyPlan(
 
 // ─── Workout completion (client-side action) ──────────────────────
 
-const setWorkoutCompletedSchema = z.object({
+const WORKOUT_COMPLETION_STATUS = [
+  'completed',
+  'partial',
+  'skipped',
+] as const;
+export type WorkoutCompletionStatus =
+  | (typeof WORKOUT_COMPLETION_STATUS)[number]
+  | null;
+
+const setWorkoutCompletionSchema = z.object({
   workoutId: z.string().uuid(),
-  completed: z.boolean(),
+  // null = clear the status (mark as not yet done)
+  status: z.enum(WORKOUT_COMPLETION_STATUS).nullable(),
 });
 
 /**
- * Toggle a workout's completion flag. Used by the client's "Today's
- * Plan" card on the dashboard so they can mark today's workout as done.
- *
- * RLS: clients can update their own workout rows ("Clients manage own
- * workouts" policy from migration 00002). The 00006 trainer policy
- * stacks on top so trainers can also flip this from the admin side.
+ * Set a workout's completion status from the client dashboard.
+ * Tri-state: 'completed' | 'partial' | 'skipped' | null. Also keeps
+ * the legacy `completed` boolean in sync so older queries keep working.
  */
-export async function setWorkoutCompleted(
-  input: z.infer<typeof setWorkoutCompletedSchema>
+export async function setWorkoutCompletion(
+  input: z.infer<typeof setWorkoutCompletionSchema>
 ): Promise<DailyPlanActionState> {
-  const parsed = setWorkoutCompletedSchema.safeParse(input);
+  const parsed = setWorkoutCompletionSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
@@ -324,18 +331,22 @@ export async function setWorkoutCompleted(
   try {
     const supabase = await createClient();
 
+    const { status } = parsed.data;
+    const completedFlag = status === 'completed';
+
     const { data: row, error } = await supabase
       .from('client_workouts')
       .update({
-        completed: parsed.data.completed,
-        completed_at: parsed.data.completed ? new Date().toISOString() : null,
+        completion_status: status,
+        completed: completedFlag,
+        completed_at: status ? new Date().toISOString() : null,
       })
       .eq('id', parsed.data.workoutId)
       .select('client_id')
       .single();
 
     if (error) {
-      console.error('[PURE X] setWorkoutCompleted failed', error);
+      console.error('[PURE X] setWorkoutCompletion failed', error);
       return { ok: false, error: error.message };
     }
 
@@ -343,6 +354,113 @@ export async function setWorkoutCompleted(
     if (row?.client_id) {
       revalidatePath(`/admin/clients/${row.client_id}`);
     }
+
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    };
+  }
+}
+
+// ─── Per-exercise actuals (client-side action) ────────────────────
+
+const logExerciseActualsSchema = z.object({
+  plannedExerciseId: z.string().uuid(),
+  actualSets: optionalInt,
+  actualReps: optionalText,
+  actualWeightKg: optionalNumber,
+  rpe: z
+    .union([
+      z.number().int().min(1).max(10),
+      z.literal('').transform(() => null),
+      z.null(),
+    ])
+    .optional(),
+  notes: optionalText,
+});
+
+export type LogExerciseActualsInput = z.input<typeof logExerciseActualsSchema>;
+
+/**
+ * Upsert a client's actual sets/reps/weight against a planned
+ * exercise. Keyed by `planned_exercise_id` (unique), so subsequent
+ * saves overwrite. Cleared by passing all fields as null/empty —
+ * the upsert still writes a row but with all-null actuals.
+ *
+ * RLS: client manages their own; trainer/admin manages assigned
+ * (00008 policies). The trainer's user.id is captured implicitly
+ * through auth.uid() in RLS.
+ */
+export async function logExerciseActuals(
+  input: LogExerciseActualsInput
+): Promise<DailyPlanActionState> {
+  const parsed = logExerciseActualsSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Invalid input',
+    };
+  }
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: 'Not authenticated.' };
+
+    // Find which client this planned exercise belongs to (the actuals
+    // table needs client_id alongside the FK).
+    const { data: workoutRow, error: lookupErr } = await supabase
+      .from('client_workout_exercises')
+      .select('workout_id, client_workouts!inner(client_id)')
+      .eq('id', parsed.data.plannedExerciseId)
+      .maybeSingle();
+
+    if (lookupErr || !workoutRow) {
+      return {
+        ok: false,
+        error: lookupErr?.message ?? 'Planned exercise not found.',
+      };
+    }
+
+    // Type the joined row loosely — supabase-js infers a wide shape.
+    const joined = workoutRow as unknown as {
+      client_workouts: { client_id: string } | { client_id: string }[];
+    };
+    const clientId = Array.isArray(joined.client_workouts)
+      ? joined.client_workouts[0]?.client_id
+      : joined.client_workouts.client_id;
+
+    if (!clientId) {
+      return { ok: false, error: 'Could not resolve client for this exercise.' };
+    }
+
+    const { error } = await supabase
+      .from('client_workout_exercise_logs')
+      .upsert(
+        {
+          planned_exercise_id: parsed.data.plannedExerciseId,
+          client_id: clientId,
+          actual_sets: parsed.data.actualSets ?? null,
+          actual_reps: parsed.data.actualReps ?? null,
+          actual_weight_kg: parsed.data.actualWeightKg ?? null,
+          rpe: parsed.data.rpe ?? null,
+          notes: parsed.data.notes ?? null,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: 'planned_exercise_id' }
+      );
+
+    if (error) {
+      console.error('[PURE X] logExerciseActuals failed', error);
+      return { ok: false, error: error.message };
+    }
+
+    revalidatePath('/client/dashboard');
+    revalidatePath(`/admin/clients/${clientId}`);
 
     return { ok: true };
   } catch (err) {

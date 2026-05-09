@@ -3,7 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import {
   type DailyActuals,
   type DailyPlan,
+  type ExerciseActuals,
   type PlannedExercise,
+  type WorkoutCompletionStatus,
   EMPTY_DAILY_PLAN,
 } from '@/lib/data/daily-plan-types';
 
@@ -44,6 +46,7 @@ interface WorkoutRow {
   trainer_notes: string | null;
   next_day_instructions: string | null;
   completed: boolean | null;
+  completion_status: string | null;
 }
 
 interface ExerciseRow {
@@ -58,6 +61,16 @@ interface ExerciseRow {
   rpe_target: number | null;
   trainer_instruction: string | null;
   exercise_order: number;
+}
+
+interface ExerciseActualsRow {
+  planned_exercise_id: string;
+  actual_sets: number | null;
+  actual_reps: string | null;
+  actual_weight_kg: number | null;
+  rpe: number | null;
+  notes: string | null;
+  completed_at: string | null;
 }
 
 export async function getDailyPlan(
@@ -79,7 +92,7 @@ export async function getDailyPlan(
       supabase
         .from('client_workouts')
         .select(
-          'id, name, category, target_muscle_group, trainer_notes, next_day_instructions, completed'
+          'id, name, category, target_muscle_group, trainer_notes, next_day_instructions, completed, completion_status'
         )
         .eq('client_id', clientId)
         .eq('workout_date', planDate)
@@ -101,23 +114,50 @@ export async function getDailyPlan(
         .eq('workout_id', w.id)
         .order('exercise_order', { ascending: true });
 
-      exercises = (exerciseRows ?? []).map((row) => {
-        const r = row as ExerciseRow;
-        return {
-          id: r.id,
-          exerciseName: r.exercise_name,
-          targetMuscle: r.target_muscle,
-          sets: r.sets,
-          reps: r.reps,
-          targetWeightKg: r.target_weight_kg,
-          restSeconds: r.rest_seconds,
-          tempo: r.tempo,
-          rpeTarget: r.rpe_target,
-          trainerInstruction: r.trainer_instruction,
-          exerciseOrder: r.exercise_order,
-        };
-      });
+      const plannedRows = (exerciseRows ?? []) as ExerciseRow[];
+
+      // Fetch any logged actuals for these planned exercises in one query.
+      const plannedIds = plannedRows.map((r) => r.id);
+      const actualsByPlannedId = new Map<string, ExerciseActuals>();
+      if (plannedIds.length > 0) {
+        const { data: actualRows } = await supabase
+          .from('client_workout_exercise_logs')
+          .select(
+            'planned_exercise_id, actual_sets, actual_reps, actual_weight_kg, rpe, notes, completed_at'
+          )
+          .in('planned_exercise_id', plannedIds);
+
+        (actualRows ?? []).forEach((row) => {
+          const a = row as ExerciseActualsRow;
+          actualsByPlannedId.set(a.planned_exercise_id, {
+            actualSets: a.actual_sets,
+            actualReps: a.actual_reps,
+            actualWeightKg: a.actual_weight_kg,
+            rpe: a.rpe,
+            notes: a.notes,
+            loggedAt: a.completed_at,
+          });
+        });
+      }
+
+      exercises = plannedRows.map((r) => ({
+        id: r.id,
+        exerciseName: r.exercise_name,
+        targetMuscle: r.target_muscle,
+        sets: r.sets,
+        reps: r.reps,
+        targetWeightKg: r.target_weight_kg,
+        restSeconds: r.rest_seconds,
+        tempo: r.tempo,
+        rpeTarget: r.rpe_target,
+        trainerInstruction: r.trainer_instruction,
+        exerciseOrder: r.exercise_order,
+        actuals: actualsByPlannedId.get(r.id) ?? null,
+      }));
     }
+
+    const completionStatus = (w?.completion_status ??
+      null) as WorkoutCompletionStatus;
 
     const actuals: DailyActuals = {
       steps: l?.steps ?? null,
@@ -127,6 +167,7 @@ export async function getDailyPlan(
       caloriesConsumed: l?.calories_consumed ?? null,
       proteinG: l?.protein_g ?? null,
       workoutCompleted: Boolean(w?.completed),
+      workoutCompletionStatus: completionStatus,
     };
 
     return {
