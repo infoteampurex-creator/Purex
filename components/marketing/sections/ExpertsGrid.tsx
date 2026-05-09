@@ -16,7 +16,7 @@ export function ExpertsGrid() {
           <div>
             <span className="eyebrow">Meet The Team</span>
             <h2 className="mt-3 font-display font-semibold text-display-lg tracking-tight max-w-2xl">
-              Six specialists.{' '}
+              Five specialists.{' '}
               <span className="text-accent">One plan.</span>
             </h2>
             <p className="mt-4 text-base text-text-muted max-w-xl leading-relaxed">

@@ -81,7 +81,7 @@ export default async function ThankYouPage({ searchParams }: ThankYouPageProps) 
                 Meet the Team
               </div>
               <div className="mt-1 text-xs text-text-muted">
-                Six specialists, one plan
+                Five specialists, one plan
               </div>
             </Link>
             <Link

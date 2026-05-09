@@ -16,7 +16,7 @@ export default function BookingsPage() {
           All Bookings
         </h1>
         <p className="mt-4 text-sm text-text-muted leading-relaxed">
-          Your full booking history and upcoming sessions with all 6 specialists. Phase 2 will integrate Calendly and show all past + future appointments here.
+          Your full booking history and upcoming sessions with all 5 specialists. Phase 2 will integrate Calendly and show all past + future appointments here.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
           <Link href="/book">

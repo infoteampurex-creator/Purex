@@ -5,7 +5,7 @@ import { VisionMissionAim } from '@/components/marketing/sections/VisionMissionA
 export const metadata: Metadata = {
   title: 'The Team · PURE X',
   description:
-    'Meet the six specialists behind PURE X — doctors, physiotherapists, trainers, and mental health consultants working as one unified system across India and UK.',
+    'Meet the five specialists behind PURE X — doctors, physiotherapists, trainers, and mental health consultants working as one unified system across India and UK.',
 };
 
 export default function ExpertsPage() {
@@ -28,7 +28,7 @@ export default function ExpertsPage() {
             <span className="w-4 h-px bg-accent" />
           </div>
           <h1 className="font-display font-semibold text-4xl md:text-6xl tracking-tight leading-[1.02] mb-5 max-w-3xl mx-auto">
-            Six specialists.
+            Five specialists.
             <br />
             One <span className="text-accent">integrated system</span>.
           </h1>

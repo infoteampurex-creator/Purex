@@ -282,7 +282,7 @@ export const FALLBACK_PROGRAMS = [
       'Race-day visualisation and mental preparation protocols',
       'Recovery and nutrition optimised for race demands',
       'Weekly performance reviews with the full team',
-      '1-on-1 coaching across all 6 specialists',
+      '1-on-1 coaching across all 5 specialists',
     ],
   },
 ] as const;
