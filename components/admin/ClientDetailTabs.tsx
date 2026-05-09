@@ -45,7 +45,10 @@ import {
 import { StatusBadge } from './AdminTable';
 import { LogMetricsModal } from './LogMetricsModal';
 import { EditDailyPlanModal } from './EditDailyPlanModal';
-import { type DailyPlan } from '@/lib/data/daily-plan-types';
+import {
+  type DailyPlan,
+  type LibraryExerciseOption,
+} from '@/lib/data/daily-plan-types';
 import { PhotoUpload } from './PhotoUpload';
 import { cn } from '@/lib/cn';
 
@@ -61,6 +64,7 @@ interface Props {
   suggestedApps: AdminSuggestedApp[];
   internalActions: AdminInternalAction[];
   initialDailyPlan?: DailyPlan | null;
+  exerciseLibrary?: LibraryExerciseOption[];
 }
 
 export function ClientDetailTabs({
@@ -73,6 +77,7 @@ export function ClientDetailTabs({
   suggestedApps,
   internalActions,
   initialDailyPlan,
+  exerciseLibrary,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('progress');
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -167,6 +172,7 @@ export function ClientDetailTabs({
         clientName={client.fullName}
         clientId={client.id}
         initialPlan={initialDailyPlan ?? null}
+        exerciseLibrary={exerciseLibrary ?? []}
       />
     </div>
   );
