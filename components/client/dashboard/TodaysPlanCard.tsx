@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import {
   Dumbbell,
   Footprints,
@@ -21,6 +22,8 @@ import {
   PencilLine,
   Save,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { ProgressRing } from './ProgressRing';
 import { LogActualsModal } from './LogActualsModal';
@@ -38,12 +41,45 @@ import { cn } from '@/lib/cn';
 interface TodaysPlanCardProps {
   clientId: string;
   plan: DailyPlan;
+  /** YYYY-MM-DD — the date this card is showing. */
+  selectedDate: string;
+  /** YYYY-MM-DD — today's date in the user's timezone (for label + "next" cap). */
+  today: string;
 }
 
-export function TodaysPlanCard({ clientId, plan }: TodaysPlanCardProps) {
+function shiftDate(yyyymmdd: string, days: number): string {
+  const [y, m, d] = yyyymmdd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+function formatHeading(date: string, today: string): string {
+  if (date === today) return 'My plan today';
+  if (date === shiftDate(today, -1)) return 'Yesterday’s plan';
+  const [y, m, d] = date.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+export function TodaysPlanCard({
+  clientId,
+  plan,
+  selectedDate,
+  today,
+}: TodaysPlanCardProps) {
   const router = useRouter();
   const [logOpen, setLogOpen] = useState(false);
   const [completionPending, startCompletionTransition] = useTransition();
+  const isToday = selectedDate === today;
+  const prevDate = shiftDate(selectedDate, -1);
+  const nextDate = shiftDate(selectedDate, 1);
+  const canGoNext = nextDate <= today;
+  const heading = formatHeading(selectedDate, today);
 
   const hasAnyPlan =
     plan.workoutId !== null ||
@@ -62,33 +98,44 @@ export function TodaysPlanCard({ clientId, plan }: TodaysPlanCardProps) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="rounded-3xl border border-border bg-bg-card p-6 md:p-8 text-center"
+        className="rounded-3xl border border-border bg-bg-card p-6 md:p-8"
       >
-        <div className="inline-flex w-12 h-12 items-center justify-center rounded-2xl bg-accent/10 text-accent mb-4">
-          <Dumbbell size={20} />
+        <DateNav
+          selectedDate={selectedDate}
+          prevDate={prevDate}
+          nextDate={nextDate}
+          canGoNext={canGoNext}
+          today={today}
+          heading={heading}
+        />
+        <div className="text-center">
+          <div className="inline-flex w-12 h-12 items-center justify-center rounded-2xl bg-accent/10 text-accent mb-4">
+            <Dumbbell size={20} />
+          </div>
+          <h3 className="font-display font-semibold text-xl tracking-tight">
+            {isToday
+              ? 'No plan set for today'
+              : `No plan was set for ${heading.toLowerCase()}`}
+          </h3>
+          <p className="text-sm text-text-muted mt-2 max-w-md mx-auto">
+            {isToday
+              ? "Your coach hasn't shared today's plan yet. You can still log your metrics so they have context for tomorrow."
+              : 'You can still update your logged metrics for this date.'}
+          </p>
+          <button
+            onClick={() => setLogOpen(true)}
+            className="inline-flex items-center gap-2 mt-5 h-10 px-5 rounded-full border border-border text-sm font-medium hover:border-accent transition-colors"
+          >
+            <Plus size={14} />
+            Log my metrics
+          </button>
         </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-2">
-          Today&apos;s plan
-        </div>
-        <h3 className="font-display font-semibold text-xl tracking-tight">
-          No plan set for today
-        </h3>
-        <p className="text-sm text-text-muted mt-2 max-w-md mx-auto">
-          Your coach hasn&apos;t shared today&apos;s plan yet. You can still log your
-          metrics so they have context for tomorrow.
-        </p>
-        <button
-          onClick={() => setLogOpen(true)}
-          className="inline-flex items-center gap-2 mt-5 h-10 px-5 rounded-full border border-border text-sm font-medium hover:border-accent transition-colors"
-        >
-          <Plus size={14} />
-          Log my metrics
-        </button>
 
         <LogActualsModal
           open={logOpen}
           onClose={() => setLogOpen(false)}
           clientId={clientId}
+          logDate={selectedDate}
           initialActuals={plan.actuals}
         />
       </motion.div>
@@ -145,12 +192,18 @@ export function TodaysPlanCard({ clientId, plan }: TodaysPlanCardProps) {
       />
 
       <div className="relative p-5 md:p-7 space-y-6">
+        <DateNav
+          selectedDate={selectedDate}
+          prevDate={prevDate}
+          nextDate={nextDate}
+          canGoNext={canGoNext}
+          today={today}
+          heading={heading}
+        />
+
         {/* Header — workout title + complete toggle */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-1.5">
-              My plan today
-            </div>
             <h2 className="font-display font-bold text-2xl md:text-3xl tracking-tight leading-tight">
               {plan.workoutName ?? 'Daily plan'}
             </h2>
@@ -307,6 +360,7 @@ export function TodaysPlanCard({ clientId, plan }: TodaysPlanCardProps) {
         open={logOpen}
         onClose={() => setLogOpen(false)}
         clientId={clientId}
+        logDate={selectedDate}
         initialActuals={plan.actuals}
       />
     </motion.div>
@@ -314,6 +368,70 @@ export function TodaysPlanCard({ clientId, plan }: TodaysPlanCardProps) {
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────
+
+function DateNav({
+  selectedDate,
+  prevDate,
+  nextDate,
+  canGoNext,
+  today,
+  heading,
+}: {
+  selectedDate: string;
+  prevDate: string;
+  nextDate: string;
+  canGoNext: boolean;
+  today: string;
+  heading: string;
+}) {
+  // Drop the query param when navigating back to today, so /client/dashboard
+  // remains the canonical "today" URL.
+  const nextHref =
+    nextDate === today
+      ? '/client/dashboard'
+      : `/client/dashboard?date=${nextDate}`;
+  const prevHref = `/client/dashboard?date=${prevDate}`;
+
+  return (
+    <div className="flex items-center justify-between gap-3 -mb-2">
+      <Link
+        href={prevHref}
+        scroll={false}
+        className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-border-soft text-text-muted hover:border-accent hover:text-accent transition-colors"
+        aria-label="Previous day"
+      >
+        <ChevronLeft size={14} />
+      </Link>
+
+      <div className="flex flex-col items-center min-w-0 flex-1">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold">
+          {heading}
+        </div>
+        <div className="text-[10px] text-text-dim font-mono mt-0.5 tabular-nums">
+          {selectedDate}
+        </div>
+      </div>
+
+      {canGoNext ? (
+        <Link
+          href={nextHref}
+          scroll={false}
+          className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-border-soft text-text-muted hover:border-accent hover:text-accent transition-colors"
+          aria-label="Next day"
+        >
+          <ChevronRight size={14} />
+        </Link>
+      ) : (
+        <span
+          aria-disabled="true"
+          className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-border-soft text-text-dim opacity-40 cursor-not-allowed"
+        >
+          <ChevronRight size={14} />
+        </span>
+      )}
+    </div>
+  );
+}
 
 function Section({
   title,

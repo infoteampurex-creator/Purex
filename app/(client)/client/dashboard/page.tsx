@@ -10,21 +10,33 @@ import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
 import { EMPTY_DAILY_PLAN } from '@/lib/data/daily-plan-types';
 
-export default async function ClientDashboardPage() {
-  // These now return null when no real data exists (production mode).
+interface PageProps {
+  searchParams: Promise<{ date?: string }>;
+}
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function ClientDashboardPage({ searchParams }: PageProps) {
   const pact = getMockClientPact();
   const score = getMockClientScore();
 
   const userId = await getCurrentUserId();
   const today = new Date().toISOString().slice(0, 10);
 
+  // ?date=YYYY-MM-DD lets the client view (and log to) past days. Reject
+  // anything that isn't a valid YYYY-MM-DD; default to today.
+  const params = await searchParams;
+  const requestedDate = params.date;
+  const selectedDate =
+    requestedDate && DATE_PATTERN.test(requestedDate) ? requestedDate : today;
+
   let tasks: Awaited<ReturnType<typeof getClientTasksLive>>['rows'] = [];
   let dailyPlan = EMPTY_DAILY_PLAN;
 
   if (userId) {
     const [tasksRes, plan] = await Promise.all([
-      getClientTasksLive(userId),
-      getDailyPlan(userId, today),
+      getClientTasksLive(userId, selectedDate),
+      getDailyPlan(userId, selectedDate),
     ]);
     tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
     dailyPlan = plan;
@@ -32,21 +44,23 @@ export default async function ClientDashboardPage() {
 
   return (
     <div className="space-y-6 md:space-y-7">
-      {/* Admin-only shortcut — shows only if logged-in user has admin role */}
       <AdminSwitcher />
 
       <WelcomeHeader />
 
-      {/* Today's Plan — set by trainer; client logs actuals + workout completion */}
-      {userId && <TodaysPlanCard clientId={userId} plan={dailyPlan} />}
+      {userId && (
+        <TodaysPlanCard
+          clientId={userId}
+          plan={dailyPlan}
+          selectedDate={selectedDate}
+          today={today}
+        />
+      )}
 
-      {/* 100-Day Commitment — empty state if no pact signed */}
       <CommitmentWidget pact={pact} />
 
-      {/* PURE X Score — empty state until score data exists */}
       <ScoreWidget score={score} />
 
-      {/* Today's tasks — empty state when none assigned */}
       <TaskChecklist tasks={tasks} />
     </div>
   );
