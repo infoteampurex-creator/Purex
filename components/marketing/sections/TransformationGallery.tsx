@@ -191,14 +191,15 @@ function TransformationModal({
           <X size={16} strokeWidth={2.5} />
         </button>
 
-        {/* Photos — top section */}
-        <div className="grid grid-cols-2 aspect-[16/9] md:aspect-[2/1] relative bg-bg-inset">
-          <div className="relative overflow-hidden">
+        {/* Photos — stack on narrow viewports, side-by-side once there's
+            room for both portraits to read clearly. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 sm:aspect-[16/9] md:aspect-[2/1] relative bg-bg-inset">
+          <div className="relative overflow-hidden aspect-[4/5] sm:aspect-auto">
             <Image
               src={story.beforeImageUrl}
               alt={`${story.firstName} before`}
               fill
-              sizes="(min-width: 768px) 50vw, 50vw"
+              sizes="(min-width: 640px) 50vw, 100vw"
               className="object-cover object-top"
               priority
             />
@@ -208,14 +209,14 @@ function TransformationModal({
           </div>
           <div
             aria-hidden
-            className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-accent/50 to-transparent z-10"
+            className="hidden sm:block absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-accent/50 to-transparent z-10"
           />
-          <div className="relative overflow-hidden">
+          <div className="relative overflow-hidden aspect-[4/5] sm:aspect-auto">
             <Image
               src={story.afterImageUrl}
               alt={`${story.firstName} after`}
               fill
-              sizes="(min-width: 768px) 50vw, 50vw"
+              sizes="(min-width: 640px) 50vw, 100vw"
               className="object-cover object-top"
               priority
             />
@@ -225,8 +226,10 @@ function TransformationModal({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 md:p-10 max-h-[60vh] md:max-h-none overflow-y-auto">
+        {/* Content — let the page-level scroll handle long text rather
+            than the inner div on small screens, and let prose use the
+            full card width instead of capping at max-w-2xl. */}
+        <div className="p-6 md:p-10">
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-3">
             {story.goal} · {story.duration}
           </div>
@@ -240,7 +243,7 @@ function TransformationModal({
           </p>
 
           {/* Story paragraphs */}
-          <div className="space-y-5 max-w-2xl text-base md:text-[17px] text-text leading-[1.7]">
+          <div className="space-y-5 text-base md:text-[17px] text-text leading-[1.7]">
             {story.story.map((para, i) => (
               <p key={i}>{para}</p>
             ))}
