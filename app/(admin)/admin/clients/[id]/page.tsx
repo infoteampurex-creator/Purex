@@ -25,8 +25,10 @@ import {
   getClientLogsLive,
   getClientWorkoutsLive,
 } from '@/lib/data/client-live';
-import { searchExercises } from '@/lib/data/exercise-library';
-import { getWorkoutTemplates } from '@/lib/data/workout-templates';
+import {
+  getCachedActiveExerciseLibrary,
+  getCachedWorkoutTemplates,
+} from '@/lib/data/cached-queries';
 import { type LibraryExerciseOption } from '@/lib/data/daily-plan-types';
 import { FALLBACK_PROGRAMS } from '@/lib/constants';
 
@@ -54,8 +56,8 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
       getClientLogsLive(client.id),
       getClientWorkoutsLive(client.id),
       getDailyPlan(client.id, today),
-      searchExercises({ limit: 200 }),
-      getWorkoutTemplates(),
+      getCachedActiveExerciseLibrary(),
+      getCachedWorkoutTemplates(),
     ]);
 
   // Slim down library entries to what the EditDailyPlanModal actually
