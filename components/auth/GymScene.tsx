@@ -1,12 +1,25 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { DeadliftSilhouette } from './DeadliftSilhouette';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface GymSceneProps {
   /** Reserved for legacy variant compatibility — currently unused. */
   activated?: boolean;
 }
+
+/**
+ * Brand-only headline lines that cycle on the login page. Deliberately
+ * about the methodology, never about specific clients — the auth page
+ * shouldn't leak any roster info.
+ */
+const BRAND_LINES: Array<{ primary: string; secondary: string }> = [
+  { primary: 'Train for life.', secondary: 'Not just aesthetics.' },
+  { primary: 'Five specialists.', secondary: 'One playbook.' },
+  { primary: 'Hundred days.', secondary: 'Witnessed.' },
+];
+
+const ROTATE_MS = 5000;
 
 /**
  * Login left panel composition (desktop only).
@@ -129,7 +142,7 @@ export function GymScene({ activated: _activated }: GymSceneProps = {}) {
       </motion.div>
 
       {/* ════════════════════════════════════════════════════
-           CENTER — Deadlift silhouette
+           CENTER — Rotating brand tagline (no client data)
       ════════════════════════════════════════════════════ */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -137,13 +150,11 @@ export function GymScene({ activated: _activated }: GymSceneProps = {}) {
         transition={{ duration: 0.9, delay: 0.5 }}
         className="relative flex-1 flex items-center justify-center px-12 z-10"
       >
-        <div className="w-full max-w-[280px]">
-          <DeadliftSilhouette />
-        </div>
+        <RotatingTagline />
       </motion.div>
 
       {/* ════════════════════════════════════════════════════
-           BOTTOM — Manifesto
+           BOTTOM — Pillar chips
       ════════════════════════════════════════════════════ */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -151,13 +162,6 @@ export function GymScene({ activated: _activated }: GymSceneProps = {}) {
         transition={{ duration: 0.7, delay: 0.8 }}
         className="relative pb-12 px-12 z-10 text-center"
       >
-        <div className="font-display font-semibold text-xl text-text tracking-tight leading-[1.3] mb-3">
-          Train for life.
-          <br />
-          <span className="text-text-muted">Not just aesthetics.</span>
-        </div>
-
-        {/* Three pillar chips */}
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <PillarChip label="100 days" />
           <Dot />
@@ -166,6 +170,67 @@ export function GymScene({ activated: _activated }: GymSceneProps = {}) {
           <PillarChip label="Witnessed" />
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+// ─── Center: rotating two-line brand statement ─────────────────────
+
+function RotatingTagline() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(
+      () => setIndex((i) => (i + 1) % BRAND_LINES.length),
+      ROTATE_MS
+    );
+    return () => window.clearInterval(id);
+  }, []);
+
+  const line = BRAND_LINES[index];
+
+  return (
+    <div className="relative max-w-md text-center">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="font-display font-semibold tracking-tight leading-[1.15]"
+          style={{ fontSize: 'clamp(1.75rem, 3.4vw, 2.75rem)' }}
+        >
+          <div className="text-text">{line.primary}</div>
+          <div className="text-text-muted mt-1.5">{line.secondary}</div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Slim progress strip showing which line we're on. Three short
+          bars, the active one bright, others dimmed — matches the
+          ambient-motion vibe without adding noise. */}
+      <div
+        aria-hidden
+        className="mt-9 flex items-center justify-center gap-2"
+      >
+        {BRAND_LINES.map((_, i) => (
+          <div
+            key={i}
+            className="h-px transition-all duration-500 ease-out"
+            style={{
+              width: i === index ? 28 : 14,
+              background:
+                i === index
+                  ? 'rgba(198, 255, 61, 0.85)'
+                  : 'rgba(255, 255, 255, 0.18)',
+              boxShadow:
+                i === index
+                  ? '0 0 8px rgba(198, 255, 61, 0.6)'
+                  : 'none',
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
