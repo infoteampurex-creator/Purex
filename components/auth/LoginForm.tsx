@@ -75,7 +75,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full h-12 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-all inline-flex items-center justify-center gap-2"
+      className="group/btn w-full h-12 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover hover:shadow-[0_0_24px_rgba(198,255,61,0.4)] active:scale-[0.97] active:shadow-[0_0_16px_rgba(198,255,61,0.5)] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 inline-flex items-center justify-center gap-2"
     >
       {pending ? (
         <>
