@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { createClient, requireAuth } from '@/lib/supabase/server';
 import { getWorkoutTemplateById } from '@/lib/data/workout-templates';
@@ -192,6 +192,7 @@ export async function upsertWorkoutTemplate(
     }
   }
 
+  updateTag('workout-templates');
   revalidatePath('/admin/templates');
   revalidatePath('/admin/clients');
 
@@ -228,6 +229,7 @@ export async function deleteWorkoutTemplate(
     return { ok: false, error: error.message };
   }
 
+  updateTag('workout-templates');
   revalidatePath('/admin/templates');
   return { ok: true };
 }

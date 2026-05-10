@@ -1,16 +1,18 @@
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { TemplatesList } from '@/components/admin/TemplatesList';
-import { getWorkoutTemplates } from '@/lib/data/workout-templates';
 import { loadWorkoutTemplate } from '@/lib/actions/workout-templates';
-import { searchExercises } from '@/lib/data/exercise-library';
+import {
+  getCachedActiveExerciseLibrary,
+  getCachedWorkoutTemplates,
+} from '@/lib/data/cached-queries';
 import { type LibraryExerciseOption } from '@/lib/data/daily-plan-types';
 
 export const metadata = { title: 'Admin · Templates' };
 
 export default async function AdminTemplatesPage() {
   const [templates, libraryRows] = await Promise.all([
-    getWorkoutTemplates(),
-    searchExercises({ limit: 200 }),
+    getCachedWorkoutTemplates(),
+    getCachedActiveExerciseLibrary(),
   ]);
 
   const exerciseLibrary: LibraryExerciseOption[] = libraryRows.map((e) => ({
