@@ -9,6 +9,7 @@ import {
   Users,
   UserCog,
   FileText,
+  Library,
   LogOut,
   ExternalLink,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/admin/leads', label: 'Leads', icon: Inbox, badge: true },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { href: '/admin/clients', label: 'Clients', icon: Users },
+  { href: '/admin/templates', label: 'Templates', icon: Library },
   { href: '/admin/specialists', label: 'Specialists', icon: UserCog },
   { href: '/admin/forms', label: 'Forms', icon: FileText },
 ];
