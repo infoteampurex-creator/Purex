@@ -151,3 +151,57 @@
     opacity: 0.5;
   }
 }
+
+/* Slow breathing glow for the giant PURE X wall wordmark on the login
+ * page. Two stacked text-shadow stacks with different opacities so the
+ * "neon tube" feels like it's barely flickering into life and back —
+ * not jittery, more like a real backlit sign. */
+@keyframes pureX-neon-breathe {
+  0%, 100% {
+    text-shadow:
+      0 0 4px rgba(198, 255, 61, 0.55),
+      0 0 14px rgba(198, 255, 61, 0.45),
+      0 0 32px rgba(198, 255, 61, 0.32),
+      0 0 64px rgba(198, 255, 61, 0.18),
+      0 0 96px rgba(198, 255, 61, 0.10);
+  }
+  50% {
+    text-shadow:
+      0 0 6px rgba(198, 255, 61, 0.7),
+      0 0 20px rgba(198, 255, 61, 0.55),
+      0 0 48px rgba(198, 255, 61, 0.40),
+      0 0 96px rgba(198, 255, 61, 0.24),
+      0 0 140px rgba(198, 255, 61, 0.14);
+  }
+}
+
+/* Soft white halo for "PURE" — same idea, smaller magnitude, no color
+ * shift so it reads as overhead/ambient light bouncing off the
+ * letters rather than a tube. */
+@keyframes pureX-white-breathe {
+  0%, 100% {
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 0.20),
+      0 0 18px rgba(255, 255, 255, 0.10),
+      0 0 40px rgba(255, 255, 255, 0.05);
+  }
+  50% {
+    text-shadow:
+      0 0 8px rgba(255, 255, 255, 0.30),
+      0 0 24px rgba(255, 255, 255, 0.15),
+      0 0 56px rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Wall halo behind the wordmark — soft, slow expansion so the wall
+ * itself feels lit by the sign, not just the type. */
+@keyframes pureX-wall-halo {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.78;
+    transform: scale(1.04);
+  }
+}
