@@ -49,8 +49,18 @@ export function AuthShell({
         />
         <div className="relative h-full flex flex-col items-center justify-center px-6">
           <div className="flex items-center gap-1">
-            <span className="font-display font-bold text-xl tracking-tight">PURE</span>
-            <span className="font-display font-bold text-xl text-accent tracking-tight">X</span>
+            <span
+              className="font-display font-bold text-xl tracking-tight"
+              style={{ animation: 'pureX-white-breathe 6s ease-in-out infinite' }}
+            >
+              PURE
+            </span>
+            <span
+              className="font-display font-bold text-xl text-accent tracking-tight"
+              style={{ animation: 'pureX-wordmark-breath 6s ease-in-out infinite' }}
+            >
+              X
+            </span>
           </div>
           <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.22em] text-accent font-bold">
             Train for Life. Not Just Aesthetics.

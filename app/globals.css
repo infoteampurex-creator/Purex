@@ -152,6 +152,40 @@
   }
 }
 
+/* Login page ambient motion — option A:
+ * a slow grid drift, a slow accent-gradient sweep, and a plate-dot
+ * pulse on the deadlift silhouette. Each loop is long enough that
+ * the panel feels alive without being distracting. */
+@keyframes pureX-grid-drift {
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(40px, 40px, 0); }
+}
+
+@keyframes pureX-sweep {
+  0%   { transform: translateX(-30%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateX(130%); opacity: 0; }
+}
+
+@keyframes pureX-plate-pulse {
+  0%, 100% {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 1px rgba(198,255,61,0.4));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(198,255,61,0.85));
+  }
+}
+
+/* Login wordmark "breath" — applied to the small lockup in the form
+ * card so the brand mark gently breathes on load. */
+@keyframes pureX-wordmark-breath {
+  0%, 100% { text-shadow: 0 0 6px rgba(198,255,61,0.30); }
+  50%      { text-shadow: 0 0 14px rgba(198,255,61,0.55), 0 0 32px rgba(198,255,61,0.20); }
+}
+
 /* Slow breathing glow for the giant PURE X wall wordmark on the login
  * page. Two stacked text-shadow stacks with different opacities so the
  * "neon tube" feels like it's barely flickering into life and back —

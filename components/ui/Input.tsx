@@ -11,9 +11,10 @@ export const Input = React.forwardRef<
       'w-full h-12 px-4 rounded-lg',
       'bg-bg-inset border border-border',
       'text-text placeholder:text-text-dim',
-      'focus:border-accent focus:outline-none transition-colors',
+      'focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/20',
+      'transition-[border-color,box-shadow] duration-200',
       'disabled:opacity-50 disabled:cursor-not-allowed',
-      error && 'border-danger',
+      error && 'border-danger focus:ring-danger/20',
       className
     )}
     {...props}
@@ -32,8 +33,9 @@ export const Textarea = React.forwardRef<
       'w-full px-4 py-3 rounded-lg resize-none',
       'bg-bg-inset border border-border',
       'text-text placeholder:text-text-dim',
-      'focus:border-accent focus:outline-none transition-colors',
-      error && 'border-danger',
+      'focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/20',
+      'transition-[border-color,box-shadow] duration-200',
+      error && 'border-danger focus:ring-danger/20',
       className
     )}
     {...props}
