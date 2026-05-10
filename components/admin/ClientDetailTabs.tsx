@@ -51,6 +51,7 @@ import {
   type DailyPlan,
   type LibraryExerciseOption,
 } from '@/lib/data/daily-plan-types';
+import { type WorkoutTemplateSummary } from '@/lib/data/workout-templates-types';
 import { PhotoUpload } from './PhotoUpload';
 import { cn } from '@/lib/cn';
 
@@ -67,6 +68,7 @@ interface Props {
   internalActions: AdminInternalAction[];
   initialDailyPlan?: DailyPlan | null;
   exerciseLibrary?: LibraryExerciseOption[];
+  workoutTemplates?: WorkoutTemplateSummary[];
 }
 
 export function ClientDetailTabs({
@@ -80,6 +82,7 @@ export function ClientDetailTabs({
   internalActions,
   initialDailyPlan,
   exerciseLibrary,
+  workoutTemplates,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('progress');
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -191,6 +194,7 @@ export function ClientDetailTabs({
         // Only pass the prefetched plan when we're opening for today —
         // for any other date the modal fetches fresh on open.
         initialPlan={planModalDate === todayStr ? (initialDailyPlan ?? null) : null}
+        workoutTemplates={workoutTemplates}
         exerciseLibrary={exerciseLibrary ?? []}
       />
     </div>

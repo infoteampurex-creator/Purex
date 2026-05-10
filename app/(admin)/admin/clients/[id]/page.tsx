@@ -26,6 +26,7 @@ import {
   getClientWorkoutsLive,
 } from '@/lib/data/client-live';
 import { searchExercises } from '@/lib/data/exercise-library';
+import { getWorkoutTemplates } from '@/lib/data/workout-templates';
 import { type LibraryExerciseOption } from '@/lib/data/daily-plan-types';
 import { FALLBACK_PROGRAMS } from '@/lib/constants';
 
@@ -47,13 +48,14 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [tasksRes, logsRes, workoutsRes, dailyPlan, libraryRows] =
+  const [tasksRes, logsRes, workoutsRes, dailyPlan, libraryRows, workoutTemplates] =
     await Promise.all([
       getClientTasksLive(client.id),
       getClientLogsLive(client.id),
       getClientWorkoutsLive(client.id),
       getDailyPlan(client.id, today),
       searchExercises({ limit: 200 }),
+      getWorkoutTemplates(),
     ]);
 
   // Slim down library entries to what the EditDailyPlanModal actually
@@ -190,6 +192,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         internalActions={INTERNAL_ACTIONS}
         initialDailyPlan={dailyPlan}
         exerciseLibrary={exerciseLibrary}
+        workoutTemplates={workoutTemplates}
       />
     </>
   );

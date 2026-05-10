@@ -23,6 +23,11 @@ import {
   loadDailyPlan,
 } from '@/lib/actions/daily-plan';
 import {
+  applyTemplateToClient,
+  loadWorkoutTemplate,
+} from '@/lib/actions/workout-templates';
+import { type WorkoutTemplateSummary } from '@/lib/data/workout-templates-types';
+import {
   type DailyPlan,
   type LibraryExerciseOption,
   type PlannedExercise,
@@ -40,6 +45,8 @@ interface EditDailyPlanModalProps {
   initialPlan?: DailyPlan | null;
   /** All active exercises from `exercise_library` for the dropdown. Empty array hides the picker and falls back to free-text only. */
   exerciseLibrary: LibraryExerciseOption[];
+  /** Saved workout templates for the "Apply template" picker at the top of the modal. Empty array hides the picker. */
+  workoutTemplates?: WorkoutTemplateSummary[];
 }
 
 interface ExerciseRow {
@@ -147,6 +154,7 @@ export function EditDailyPlanModal({
   initialDate,
   initialPlan,
   exerciseLibrary,
+  workoutTemplates,
 }: EditDailyPlanModalProps) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(() =>
@@ -158,6 +166,7 @@ export function EditDailyPlanModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [planLoading, setPlanLoading] = useState(false);
+  const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(null);
 
   // Reset on open. If parent didn't supply an initialPlan (e.g. opened
   // for an older date from the Workouts tab), fetch the plan for that
@@ -202,6 +211,63 @@ export function EditDailyPlanModal({
       setForm(planToFormState(fresh, newDate));
     } finally {
       setPlanLoading(false);
+    }
+  };
+
+  // Apply a saved workout template:
+  //   1. Persist on the server (writes client_workouts + replaces
+  //      planned exercises for this client + date).
+  //   2. Refetch the plan so the form reflects what's now saved.
+  // The user can then tweak fields and Save again to override.
+  const handleApplyTemplate = async (templateId: string) => {
+    if (!templateId) return;
+    setApplyingTemplateId(templateId);
+    setErrorMsg(null);
+    try {
+      // First, load the template details into the form locally so the
+      // user sees the change instantly even if the apply is slow.
+      const tpl = await loadWorkoutTemplate(templateId);
+      if (tpl) {
+        setForm((prev) => ({
+          ...prev,
+          workoutName: prev.workoutName.trim() || tpl.name,
+          workoutType: prev.workoutType.trim() || tpl.category || '',
+          targetMuscleGroup:
+            prev.targetMuscleGroup.trim() || tpl.targetMuscleGroup || '',
+          trainerNotes:
+            prev.trainerNotes.trim() || tpl.trainerNotes || '',
+          nextDayInstructions:
+            prev.nextDayInstructions.trim() ||
+            tpl.nextDayInstructions ||
+            '',
+          exercises: tpl.exercises.map((ex) => ({
+            exerciseName: ex.exerciseName,
+            targetMuscle: ex.targetMuscle ?? '',
+            sets: ex.sets != null ? String(ex.sets) : '',
+            reps: ex.reps ?? '',
+            targetWeightKg:
+              ex.targetWeightKg != null ? String(ex.targetWeightKg) : '',
+            restSeconds:
+              ex.restSeconds != null ? String(ex.restSeconds) : '',
+            tempo: ex.tempo ?? '',
+            rpeTarget: ex.rpeTarget != null ? String(ex.rpeTarget) : '',
+            trainerInstruction: ex.trainerInstruction ?? '',
+          })),
+        }));
+      }
+
+      // Then persist via the server action (idempotent — the user can
+      // still hit Save afterwards to add daily targets).
+      const result = await applyTemplateToClient({
+        templateId,
+        clientId,
+        planDate: form.planDate,
+      });
+      if (!result.ok) {
+        setErrorMsg(result.error ?? 'Could not apply template.');
+      }
+    } finally {
+      setApplyingTemplateId(null);
     }
   };
 
@@ -413,6 +479,37 @@ export function EditDailyPlanModal({
               className="w-full md:w-auto h-11 px-3 rounded-lg bg-bg-elevated border border-border-soft text-sm focus:border-accent/50 focus:outline-none transition-colors font-mono"
             />
           </div>
+
+          {/* Apply from a saved template */}
+          {workoutTemplates && workoutTemplates.length > 0 && (
+            <div className="mb-5 rounded-lg border border-accent/30 bg-accent/[0.04] p-3">
+              <FieldLabel>
+                Apply from template{applyingTemplateId && ' · applying…'}
+              </FieldLabel>
+              <select
+                value=""
+                disabled={applyingTemplateId !== null || planLoading}
+                onChange={(e) => {
+                  if (e.target.value) handleApplyTemplate(e.target.value);
+                }}
+                className="w-full h-11 px-3 rounded-lg bg-bg-elevated border border-accent/40 text-sm focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+              >
+                <option value="">— Pick a template to load 7-8 exercises at once —</option>
+                {workoutTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.category ? ` · ${t.category}` : ''}
+                    {` · ${t.exerciseCount} exercise${t.exerciseCount === 1 ? '' : 's'}`}
+                  </option>
+                ))}
+              </select>
+              <div className="text-[10px] text-text-dim font-mono mt-1.5">
+                Loads the template into the form below, then writes it to this
+                client&apos;s {form.planDate}. You can still tweak any field
+                before/after.
+              </div>
+            </div>
+          )}
 
           {/* Workout */}
           <Section title="Workout" icon={<Dumbbell size={14} />}>
