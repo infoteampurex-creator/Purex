@@ -10,13 +10,18 @@ import {
 } from '@/components/admin/AdminTable';
 import { Avatar } from '@/components/admin/Avatar';
 import { AddClientButton } from '@/components/admin/AddClientButton';
+import { PendingSignupsBanner } from '@/components/admin/PendingSignupsBanner';
 import { getAdminClients } from '@/lib/data/admin-clients';
+import { getPendingSignups } from '@/lib/data/pending-signups';
 import { getMockAdminScores, statusColor, scoreStatus } from '@/lib/data/score';
 
 export const metadata = { title: 'Admin · Clients' };
 
 export default async function AdminClientsPage() {
-  const { clients } = await getAdminClients();
+  const [{ clients }, pendingSignups] = await Promise.all([
+    getAdminClients(),
+    getPendingSignups(),
+  ]);
 
   const active = clients.filter((c) => c.status === 'active');
   const onboarding = clients.filter((c) => c.status === 'onboarding');
@@ -44,6 +49,8 @@ export default async function AdminClientsPage() {
         subtitle="Active and onboarding clients across all plans. Assign coaches, update plans, review progress."
         action={<AddClientButton />}
       />
+
+      <PendingSignupsBanner pending={pendingSignups} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
         <AdminStatCard
