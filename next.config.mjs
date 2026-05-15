@@ -13,6 +13,18 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  async redirects() {
+    return [
+      // Migrate the short-lived per-slug story routes (PR #18) back onto
+      // the single /transformations page with a hash anchor (PR #20).
+      // Bookmarks / shared links from that window keep working.
+      {
+        source: '/transformations/:slug',
+        destination: '/transformations#:slug',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
