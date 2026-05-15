@@ -77,6 +77,7 @@ function TransformationCard({ story }: { story: Transformation }) {
             fill
             sizes="(min-width: 1024px) 16vw, (min-width: 640px) 25vw, 50vw"
             className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
+            unoptimized
           />
           <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-bg/80 backdrop-blur-sm font-mono text-[9px] uppercase tracking-[0.18em] text-text-muted font-bold">
             Before
