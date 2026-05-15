@@ -188,6 +188,13 @@ function PhotoPanel({
         fill
         sizes="(min-width: 1024px) 40vw, 100vw"
         className="object-cover object-top"
+        // The panel mounts inside an AnimatePresence + motion.div that
+        // animates a `transform`. That transform sometimes prevents
+        // next/image's intersection-observer-based lazy load from
+        // firing, leaving the photo stuck on a broken-image placeholder
+        // until the user resizes. Eager-loading sidesteps the issue —
+        // there are only two photos per story anyway.
+        priority
       />
       <div
         className={
