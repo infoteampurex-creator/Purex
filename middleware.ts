@@ -49,6 +49,42 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Gate /client routes behind admin approval. Users with status =
+  // 'pending_approval' or 'rejected' get bounced to /pending-approval
+  // (top-level route, not under /client, so the gate doesn't recurse).
+  if (pathname.startsWith('/client') && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('signup_status')
+      .eq('id', user.id)
+      .single();
+
+    if (profile && profile.signup_status !== 'approved') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/pending-approval';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Conversely, if an *approved* user lands on /pending-approval, send
+  // them to their dashboard — they've already been let in.
+  if (pathname === '/pending-approval' && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('signup_status, role')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.signup_status === 'approved') {
+      const url = request.nextUrl.clone();
+      url.pathname =
+        profile.role === 'admin' || profile.role === 'super_admin'
+          ? '/admin/dashboard'
+          : '/client/dashboard';
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Protect /admin routes — also check role
   if (pathname.startsWith('/admin')) {
     if (!user) {
@@ -73,19 +109,25 @@ export async function middleware(request: NextRequest) {
 
   // Redirect authenticated users away from auth pages
   if ((pathname === '/login' || pathname === '/signup') && user) {
-    // Check role and send admin users to the admin dashboard,
-    // everyone else to the client dashboard.
+    // Send admin users to the admin dashboard; client users to their
+    // dashboard if approved, otherwise to /pending-approval.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, signup_status')
       .eq('id', user.id)
       .single();
 
     const isAdmin =
       profile?.role === 'admin' || profile?.role === 'super_admin';
-
     const url = request.nextUrl.clone();
-    url.pathname = isAdmin ? '/admin/dashboard' : '/client/dashboard';
+
+    if (isAdmin) {
+      url.pathname = '/admin/dashboard';
+    } else if (profile?.signup_status === 'approved') {
+      url.pathname = '/client/dashboard';
+    } else {
+      url.pathname = '/pending-approval';
+    }
     return NextResponse.redirect(url);
   }
 

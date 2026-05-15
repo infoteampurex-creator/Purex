@@ -120,6 +120,9 @@ export async function createClientFromAdmin(
       email_confirm: true,
       user_metadata: {
         full_name: fullName,
+        // Tells the handle_new_user trigger (00012) to auto-approve
+        // this account instead of dropping it into pending_approval.
+        admin_created: true,
       },
     });
 
