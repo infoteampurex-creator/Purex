@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { TransformationGallery } from '@/components/marketing/sections/TransformationGallery';
+import { TransformationStoryViewer } from '@/components/marketing/sections/TransformationStoryViewer';
 
 export const metadata: Metadata = {
   title: 'Transformations · PURE X',
@@ -36,8 +37,10 @@ export default function TransformationsPage() {
         </div>
       </section>
 
-      {/* Gallery (re-uses the homepage component — modal opens on click) */}
+      {/* Gallery — cards link to #slug; StoryViewer below reads the
+          hash and expands inline. No modal, no per-story route. */}
       <TransformationGallery />
+      <TransformationStoryViewer />
     </main>
   );
 }
