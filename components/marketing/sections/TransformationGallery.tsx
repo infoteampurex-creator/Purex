@@ -4,14 +4,17 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { FALLBACK_TRANSFORMATIONS, type Transformation } from '@/lib/constants';
 
 /**
- * Transformations gallery.
+ * Transformations gallery — grid of teaser cards.
  *
- * Card layout: side-by-side BEFORE / AFTER photos, first name + CTA below.
- * Click a card → navigates to /transformations/[slug] (a dedicated full
- * page per story, replacing the old centered modal which felt cramped
- * on narrow viewports).
+ * Each card is a link to /transformations#{slug}. On the
+ * /transformations page itself, the <TransformationStoryViewer />
+ * sits below this gallery and renders the story matching the URL
+ * hash inline. On the homepage, clicking a card navigates to the
+ * /transformations page with the hash, which auto-opens the story
+ * on arrival.
  *
- * Mounted on the homepage and on /transformations.
+ * No modal, no per-story route. The hash is the single source of
+ * truth for "which story is open."
  */
 export function TransformationGallery() {
   return (
@@ -56,9 +59,13 @@ export function TransformationGallery() {
 
 function TransformationCard({ story }: { story: Transformation }) {
   return (
-    <Link
-      href={`/transformations/${story.slug}`}
-      className="group relative flex flex-col rounded-xl overflow-hidden bg-bg-card border border-border hover:border-accent/40 transition-all duration-500"
+    <a
+      // Use a regular <a> rather than next/link so on /transformations
+      // the click triggers a hashchange (picked up by StoryViewer)
+      // rather than a route transition. On the homepage it navigates
+      // to /transformations and arrives with the hash already set.
+      href={`/transformations#${story.slug}`}
+      className="group relative flex flex-col rounded-xl overflow-hidden bg-bg-card border border-border hover:border-accent/40 transition-all duration-500 scroll-mt-24"
     >
       {/* Side-by-side photos */}
       <div className="grid grid-cols-2 aspect-[1/1] relative overflow-hidden">
@@ -118,6 +125,6 @@ function TransformationCard({ story }: { story: Transformation }) {
           </div>
         </div>
       </div>
-    </Link>
+    </a>
   );
 }
