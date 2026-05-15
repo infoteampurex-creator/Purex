@@ -7,6 +7,11 @@ const nextConfig = {
     ],
     // Next 16 requires explicit qualities list when using non-default values
     qualities: [75, 85, 90],
+    // Allow cache-busting query strings on transformation photos —
+    // these dodge stale 308 redirects cached from PR #21.
+    localPatterns: [
+      { pathname: '/transformations/**', search: 'v=2' },
+    ],
   },
   experimental: {
     serverActions: {
