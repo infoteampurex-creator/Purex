@@ -7,9 +7,20 @@ const nextConfig = {
     ],
     // Next 16 requires explicit qualities list when using non-default values
     qualities: [75, 85, 90],
-    // Allow cache-busting query strings on transformation photos —
-    // these dodge stale 308 redirects cached from PR #21.
+    // localPatterns is allow-list-only in Next 16. Anything not matched
+    // here returns 400 INVALID_IMAGE_OPTIMIZE_REQUEST from the optimizer.
+    // We must enumerate every /public subfolder we serve images from.
+    //
+    // The transformations entry intentionally also accepts `search:
+    // 'v=2'` to dodge stale 308 redirects from PR #21. The default
+    // (search: undefined) means "no query string allowed"; we keep the
+    // explicit v=2 entry alongside the wildcard one so both forms work.
     localPatterns: [
+      { pathname: '/experts/**' },
+      { pathname: '/trainers/**' },
+      { pathname: '/in-action/**' },
+      { pathname: '/hero/**' },
+      { pathname: '/transformations/**' },
       { pathname: '/transformations/**', search: 'v=2' },
     ],
   },
