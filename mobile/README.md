@@ -56,6 +56,17 @@ scan it. The app loads.
 > SDK Expo CLI thinks you should be on, pulls any missing peer
 > dependencies, and runs `npm install`. ~30 seconds.
 
+> "Project is incompatible with this version of Expo Go" on the
+> phone means the project's SDK is newer than the Expo Go app
+> installed via Play Store. Two paths: (a) update Expo Go on the
+> phone, or (b) downgrade the project with `npm install
+> expo@~54.0.0 && npx expo install --fix` then restart.
+
+> "Unable to resolve `@/components/...`" means Metro's bundler
+> cache is stale after a babel config change. Restart with
+> `npx expo start --tunnel --clear` — the `--clear` wipes the
+> Metro cache and rebundles from scratch.
+
 ### Hot reload
 
 Save any file in `mobile/`. The app updates on your phone in <1 second.
