@@ -1,9 +1,9 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, ScrollView, View, Text, StyleSheet } from 'react-native';
-import { Wordmark } from '@/components/Wordmark';
-import { XMark } from '@/components/XMark';
-import { colors } from '@/theme/colors';
+import { Wordmark } from './src/components/Wordmark';
+import { XMark } from './src/components/XMark';
+import { colors } from './src/theme/colors';
 
 /**
  * Phase A1 — bare-bones entry screen.

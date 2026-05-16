@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '@/theme/colors';
+import { colors } from '../theme/colors';
 
 /**
  * The Teampurex 'X' monogram — the lime-green X from the wordmark,

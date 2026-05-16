@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors } from '../theme/colors';
 
 /**
  * The full TEAM PURE X wordmark — same lockup as the web header and
