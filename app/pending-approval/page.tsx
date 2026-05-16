@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CheckCircle2, Clock, ShieldX } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { signOut } from '@/lib/actions/auth';
+import { BRAND } from '@/lib/constants';
 
 export const metadata = { title: 'Application under review · PURE X' };
 
@@ -105,7 +106,7 @@ function PendingView({ firstName }: { firstName: string }) {
       <p className="text-xs text-text-muted mt-6 leading-relaxed">
         In a hurry? Reach us on{' '}
         <Link
-          href="https://wa.me/919999999999"
+          href={`https://wa.me/${BRAND.whatsapp.replace(/\D/g, '')}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent hover:underline font-medium"
