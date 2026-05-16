@@ -13,6 +13,12 @@ void _InActionGallery;
 import { TransformationGallery } from '@/components/marketing/sections/TransformationGallery';
 import { TestimonialStrip } from '@/components/marketing/sections/TestimonialStrip';
 import { CtaBand } from '@/components/marketing/sections/CtaBand';
+import { MotherStrongTeaser } from '@/components/marketing/sections/MotherStrongTeaser';
+
+// ISR — the MotherStrongTeaser fetches live cohort stats. Refreshing
+// every 5 minutes is fast enough for "Day X of 60" + active count
+// without making the homepage fully dynamic.
+export const revalidate = 300;
 
 export default function HomePage() {
   return (
@@ -24,6 +30,7 @@ export default function HomePage() {
       <ProgramsGrid />
       {/* <InActionGallery /> — hidden until photo refresh */}
       <TransformationGallery />
+      <MotherStrongTeaser />
       <TestimonialStrip />
       <CtaBand />
     </>
