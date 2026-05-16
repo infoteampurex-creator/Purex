@@ -10,6 +10,7 @@ import {
   UserCog,
   FileText,
   Library,
+  Footprints,
   LogOut,
   ExternalLink,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { href: '/admin/clients', label: 'Clients', icon: Users },
   { href: '/admin/templates', label: 'Templates', icon: Library },
+  { href: '/admin/mother-strong', label: 'Mother Strong', icon: Footprints },
   { href: '/admin/specialists', label: 'Specialists', icon: UserCog },
   { href: '/admin/forms', label: 'Forms', icon: FileText },
 ];
