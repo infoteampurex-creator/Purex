@@ -43,19 +43,15 @@ const getTeaserData = unstable_cache(
 export async function MotherStrongTeaser() {
   const { activeCount, day, config } = await getTeaserData();
 
-  // Hide the section when there's no live cohort (no start date set and
-  // no participants registered). Avoids a sad "0 mothers" card.
-  if (activeCount === 0 && day === 0) {
-    return null;
-  }
-
   const cohortLabel = config.cohortLabel ?? "Mother's Day cohort";
   const isLive = day > 0 && day <= 60;
+  // Headline varies by cohort state, but the section always renders —
+  // even on an empty cohort the registration CTA is the whole point.
   const headline = isLive
     ? 'A cohort of mothers is walking right now.'
     : activeCount > 0
       ? 'A new cohort is forming.'
-      : 'Mother Strong.';
+      : 'For our mothers. Sixty days. Witnessed.';
 
   return (
     <section className="relative py-20 md:py-28 border-t border-border overflow-hidden">
@@ -124,12 +120,21 @@ export async function MotherStrongTeaser() {
                 value={`Day ${day} of 60`}
               />
             )}
-            <StatCard
-              icon={<Users size={16} />}
-              label={activeCount === 1 ? 'Mother walking strong' : 'Mothers walking strong'}
-              value={`${activeCount}`}
-              big
-            />
+            {activeCount > 0 ? (
+              <StatCard
+                icon={<Users size={16} />}
+                label={activeCount === 1 ? 'Mother walking strong' : 'Mothers walking strong'}
+                value={`${activeCount}`}
+                big
+              />
+            ) : (
+              <StatCard
+                icon={<Users size={16} />}
+                label="Open for registration"
+                value="Be the first"
+                mono
+              />
+            )}
           </div>
         </div>
       </div>
