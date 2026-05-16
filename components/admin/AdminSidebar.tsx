@@ -11,6 +11,7 @@ import {
   FileText,
   Library,
   Footprints,
+  Stethoscope,
   LogOut,
   ExternalLink,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/admin/mother-strong', label: 'Mother Strong', icon: Footprints },
   { href: '/admin/specialists', label: 'Specialists', icon: UserCog },
   { href: '/admin/forms', label: 'Forms', icon: FileText },
+  { href: '/admin/diagnostic', label: 'Diagnostic', icon: Stethoscope },
 ];
 
 export function AdminSidebar() {
