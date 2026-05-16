@@ -11,6 +11,7 @@ import {
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { EditClientButton } from '@/components/admin/EditClientButton';
+import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import {
   getClientBookings,
@@ -177,6 +178,11 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
                 coachSlug: client.assignedCoachSlug,
                 status: client.status,
               }}
+            />
+            <DeleteClientButton
+              clientId={client.id}
+              clientEmail={client.email}
+              clientName={client.fullName}
             />
           </div>
         </div>

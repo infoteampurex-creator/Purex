@@ -379,3 +379,108 @@ export async function updateClient(
 
   return { ok: true };
 }
+
+// ─── Delete an existing client ──────────────────────────────────────────
+
+const deleteClientSchema = z.object({
+  clientId: z.string().uuid(),
+  /**
+   * Caller must type the client's email back. Stops fat-finger deletes.
+   * The action compares (case-insensitive) before issuing the destructive
+   * call.
+   */
+  confirmEmail: z.string().email('Type the client’s email to confirm'),
+});
+
+export type DeleteClientInput = z.input<typeof deleteClientSchema>;
+
+export type DeleteClientResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Hard-delete a client account.
+ *
+ * Calls Supabase Auth admin API to delete the user. The `auth.users`
+ * → `public.profiles` foreign key is `on delete cascade`, so the
+ * profile row and every dependent row (client_plans, daily_logs,
+ * client_workouts, etc.) cascade with it.
+ *
+ * Admin-only. Refuses to delete another admin (so a misclick can't
+ * lock the org out of its own panel).
+ *
+ * The caller is required to confirm by typing back the client's
+ * email — surfaced by `DeleteClientModal` in the admin UI.
+ */
+export async function deleteClient(
+  input: DeleteClientInput
+): Promise<DeleteClientResult> {
+  const adminUser = await requireAuth({ adminOnly: true });
+  if (!adminUser) {
+    return { ok: false, error: 'Not authorised. Admin access required.' };
+  }
+
+  const parsed = deleteClientSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Invalid input',
+    };
+  }
+
+  // Don't allow self-delete or admin-on-admin delete.
+  if (parsed.data.clientId === adminUser.id) {
+    return { ok: false, error: 'You cannot delete your own account here.' };
+  }
+
+  const admin = createAdminClient();
+
+  // Fetch the profile so we can:
+  //   1. Verify the typed confirmation email matches the row.
+  //   2. Refuse to delete another admin.
+  const { data: target, error: lookupError } = await admin
+    .from('profiles')
+    .select('email, is_admin, role')
+    .eq('id', parsed.data.clientId)
+    .maybeSingle();
+
+  if (lookupError) {
+    console.error('[deleteClient] profile lookup failed:', lookupError);
+    return { ok: false, error: lookupError.message };
+  }
+  if (!target) {
+    return { ok: false, error: 'Client not found.' };
+  }
+  if (target.is_admin || target.role === 'admin') {
+    return {
+      ok: false,
+      error: 'This account is an admin. Demote it first, then delete.',
+    };
+  }
+  if (
+    typeof target.email !== 'string' ||
+    target.email.trim().toLowerCase() !==
+      parsed.data.confirmEmail.trim().toLowerCase()
+  ) {
+    return {
+      ok: false,
+      error: 'The confirmation email doesn’t match this client.',
+    };
+  }
+
+  // Issue the destructive auth-admin call. profile + cascading
+  // rows go with the user row.
+  const { error: deleteError } = await admin.auth.admin.deleteUser(
+    parsed.data.clientId
+  );
+
+  if (deleteError) {
+    console.error('[deleteClient] auth.admin.deleteUser failed:', deleteError);
+    return { ok: false, error: deleteError.message };
+  }
+
+  revalidatePath('/admin/clients');
+  revalidatePath('/admin/dashboard');
+
+  return { ok: true };
+}
