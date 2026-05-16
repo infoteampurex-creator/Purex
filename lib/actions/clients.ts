@@ -438,9 +438,11 @@ export async function deleteClient(
   // Fetch the profile so we can:
   //   1. Verify the typed confirmation email matches the row.
   //   2. Refuse to delete another admin.
+  // Note: profiles has `role text` (user / admin / super_admin) — there
+  // is no separate is_admin column on this schema.
   const { data: target, error: lookupError } = await admin
     .from('profiles')
-    .select('email, is_admin, role')
+    .select('email, role')
     .eq('id', parsed.data.clientId)
     .maybeSingle();
 
@@ -451,7 +453,7 @@ export async function deleteClient(
   if (!target) {
     return { ok: false, error: 'Client not found.' };
   }
-  if (target.is_admin || target.role === 'admin') {
+  if (target.role === 'admin' || target.role === 'super_admin') {
     return {
       ok: false,
       error: 'This account is an admin. Demote it first, then delete.',
