@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Teampurex",
+    "slug": "teampurex",
+    "scheme": "teampurex",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.teampurex.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0c09"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.teampurex.app",
+      "supportsTablet": false
+    },
+    "extra": {
+      "comment": "Splash image, icon assets, and the expo-splash-screen plugin land in PR A3. PR A1 uses Expo's default development splash (black background, no logo). Supabase URL + anon key get added in PR A2 via app.config.ts so we can read process.env at build time."
+    }
+  }
+}
