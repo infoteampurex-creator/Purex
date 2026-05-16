@@ -49,10 +49,12 @@ scan it. The app loads.
 > `npx expo start --tunnel` instead. Slightly slower but works over
 > mobile data or VPNs. Equivalent to `npm run tunnel`.
 
-> If `expo start` errors with "Expo SDK version is out of date" or
-> "incompatible Expo Go version," run `npx expo install --fix`.
-> That bumps the dependencies in `package.json` to whatever Expo Go
-> on your phone currently supports, then `npm install` again.
+> If `expo start` errors with "Expo SDK version is out of date,"
+> "incompatible Expo Go version," or "The required package
+> `expo-foo` cannot be found," run `npx expo install --fix`.
+> That auto-aligns every dependency in `package.json` with whatever
+> SDK Expo CLI thinks you should be on, pulls any missing peer
+> dependencies, and runs `npm install`. ~30 seconds.
 
 ### Hot reload
 
