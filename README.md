@@ -23,9 +23,24 @@ Premium integrated health coaching platform for PURE X. Marketing site + booking
 - Auth setup guide: `docs/06-auth-setup.md`
 - SQL migration: `supabase/migrations/00001_auth_foundation.sql`
 
-### Still scaffolded (next Phase 2 items)
+### Phase 3 ✅ (Daily plans + templates + admin)
+- **Daily plan system** — trainer plans 7-8 exercises per client per day; client logs per-set actuals (reps / weight / RPE). Schema in `00006`–`00009`.
+- **Workout templates** — build once, apply to any client's day in one click. Schema in `00010`, seeded starters in `00011`.
+- **Admin: client CRUD** wired against Supabase; admin-created accounts skip the moderation gate.
+- **Moderated signup** — public signups land as `pending_approval`; admin approves / rejects with Resend-powered welcome / rejection emails (`00012`).
+
+### Phase 4 ✅ (PUREX Mother Strong — NEW)
+- **Free 60-day "10,000 Steps Challenge"** for mothers. Public registration → admin daily-entry grid → public leaderboard → personal progress page → gratitude card PNG generator.
+- **Public registration** at `/mother-strong` (senior-friendly form, photo upload, honeypot, localStorage autosave, `?lang=hi` toggle).
+- **Admin panel** at `/admin/mother-strong` with five tabs: Participants, Daily entry (60-day grid + bulk paste), Journey feed (photo posts), Config, Gratitude cards.
+- **Public leaderboard** at `/mother-strong/leaderboard` (top-3 podium + ranks 4–50 + journey feed, ISR with `mother-strong-leaderboard` tag invalidation).
+- **Personal progress** at `/mother-strong/my-progress?id=PX001-or-10-digit-number` — 60-day calendar + stats + rank.
+- **Gratitude card** PNG via `next/og` at `/api/mother-strong/cards/[id]` — admin-only, 1200×630 brand card with stats.
+- **Homepage teaser** showing live cohort stats with `unstable_cache`-friendly tag invalidation; homepage stays statically renderable.
+- Schema in `00013_mother_strong.sql` + casing fix in `00014_mother_strong_name_format_fix.sql`.
+
+### Still scaffolded (next items)
 - 🚧 Calendly integration per specialist (component exists at `components/booking/CalendlyEmbed.tsx` + config at `lib/calendly.ts`, not yet wired into booking flow)
-- 🚧 Admin panel for managing clients, bookings, content
 - 🚧 Individual expert profile pages
 
 ## Quick start
@@ -139,15 +154,44 @@ The card stack on the right side of the hero uses `useMouseTilt` (see `hooks/use
 - Click opens modal with full story + stats + CTA
 - Click outside modal or X button to close
 
-## Wiring Supabase (when ready)
+## Wiring Supabase
 
-1. Create a Supabase project
-2. Run `docs/02-database-schema.md` SQL in the SQL editor
-3. Fill in `.env.local` with your URL + keys
-4. Replace `FALLBACK_EXPERTS` etc. imports with actual Supabase queries in `lib/data/`
-5. Build the admin panel to edit content
+1. Create a Supabase project.
+2. **Run every file in `supabase/migrations/` in order** via the SQL editor:
+   `00001` → `00002` → … → `00014`. They're idempotent; rerunning is safe.
+3. Fill in `.env.local` (see `.env.local.example`):
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` — required for admin actions and the registerParticipant server action
+   - `NEXT_PUBLIC_SITE_URL` — used by password-reset email callbacks
+   - `RESEND_API_KEY` + `EMAIL_FROM` + `EMAIL_ADMIN_INBOX` — required for signup-approval emails
+4. Create the first admin: sign up via `/signup`, then run this SQL once in Supabase:
+   ```sql
+   update public.profiles
+     set is_admin = true, signup_status = 'approved'
+     where id = (select id from auth.users where email = 'YOU@example.com');
+   ```
+5. Confirm with `/admin/dashboard`. New self-signups will now land in
+   `/admin/leads` for you to approve.
 
-Detailed migration guide lives in `docs/` — follow `01-architecture.md` → `02-database-schema.md` → (new file) `04-supabase-setup.md`.
+### Mother Strong setup (Phase 4)
+After running `00013` + `00014`:
+
+1. Open `/admin/mother-strong` → **Config** tab. Set the cohort
+   start date, daily goal (default 10,000), WhatsApp group invite
+   link, and cohort label (e.g. "Mother's Day 2026").
+2. Share `/mother-strong` with mothers — they self-register; you'll
+   see them appear under the **Participants** tab in real time.
+3. Each day, open the **Daily entry** tab. Type the step count into
+   the cell for today; click anywhere outside to save. Or, for a
+   week-ahead catch-up, use the per-row **bulk paste** button.
+4. Drop journey-feed photos via **Journey feed** tab — they appear
+   on `/mother-strong/leaderboard` and feed the cohort's public
+   story.
+5. After 60 days, switch any participant to **Completed** under the
+   Participants tab, then download her **Gratitude card** PNG from
+   the Cards tab and forward via WhatsApp.
+
+Detailed migration guide lives in `docs/` — follow `01-architecture.md` → `02-database-schema.md`.
 
 ## Known Phase 1 gaps (intentional)
 
@@ -169,6 +213,36 @@ vercel deploy
 ```
 
 Or connect the repo to Vercel dashboard for auto-deploy on push.
+
+### Production env vars
+Set the same keys from `.env.local.example` in Vercel → Project Settings → Environment Variables. Required for full functionality:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` *(server-only — keep secret)*
+- `NEXT_PUBLIC_SITE_URL` *(your prod domain)*
+- `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_ADMIN_INBOX` *(signup-approval emails)*
+- `NEXT_PUBLIC_WHATSAPP_NUMBER` *(optional override)*
+
+### Storage buckets
+The migrations create these buckets automatically; if you set up an older Supabase project, double-check they exist under Storage:
+
+| Bucket | Visibility | Used by |
+|---|---|---|
+| `client-avatars` | private | Profile headshots |
+| `client-progress` | private | Transformation photos |
+| `mother-strong-photos` | **public** | Participant photos + journey feed |
+
+### Backups
+Supabase auto-snapshots every 24h on free tier. For a manual export of just the Mother Strong cohort (handy before wiping a season):
+
+```sql
+copy (select * from public.mother_strong_participants) to stdout with csv header;
+copy (select * from public.mother_strong_daily_entries) to stdout with csv header;
+copy (select * from public.mother_strong_journey_posts) to stdout with csv header;
+```
+
+Run those in Supabase SQL editor with **Download CSV** enabled.
 
 ## Next steps for Phase 1 completion
 
