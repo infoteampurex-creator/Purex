@@ -1,4 +1,5 @@
 import 'server-only';
+import { BRAND } from '@/lib/constants';
 
 /**
  * Plain-HTML email templates for the signup approval flow.
@@ -30,8 +31,12 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
   'https://www.teampurex.com';
 
-const WHATSAPP_NUMBER =
-  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '919999999999';
+// Single source of truth: BRAND.whatsapp in lib/constants.ts. We strip
+// the leading '+' and any non-digit characters because Resend templates
+// render the number in `wa.me/<digits-only>` links and as
+// `+<digits-only>` for display.
+const WHATSAPP_DIGITS = BRAND.whatsapp.replace(/\D/g, '');
+const WHATSAPP_NUMBER = WHATSAPP_DIGITS;
 
 function LogoMark(): string {
   return `

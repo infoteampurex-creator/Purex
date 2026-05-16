@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Users, Trophy } from 'lucide-react';
+import { Users, Trophy, Sparkles, Lock, Smartphone } from 'lucide-react';
 import {
   getMotherStrongConfig,
   getMotherStrongActiveCount,
@@ -8,6 +8,7 @@ import {
 } from '@/lib/data/mother-strong';
 import { ms } from '@/lib/i18n/mother-strong';
 import { RegistrationForm } from '@/components/mother-strong/RegistrationForm';
+import { RegistrationSidebar } from '@/components/mother-strong/RegistrationSidebar';
 import { type PreferredLanguage } from '@/lib/data/mother-strong-types';
 
 export const metadata: Metadata = {
@@ -35,13 +36,13 @@ export default async function MotherStrongLandingPage({
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
-      {/* Background atmosphere — soft accent halo top-centre */}
+      {/* Background atmosphere — warmer, dual gradient for a maternal/sunrise feel */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse at 50% 0%, rgba(198, 255, 61, 0.08) 0%, transparent 55%)',
+            'radial-gradient(ellipse at 20% -10%, rgba(198, 255, 61, 0.14) 0%, transparent 45%), radial-gradient(ellipse at 85% 20%, rgba(255, 184, 120, 0.10) 0%, transparent 50%)',
         }}
       />
 
@@ -70,9 +71,17 @@ export default async function MotherStrongLandingPage({
             {t.register.subtitle}
           </p>
 
-          {/* Live cohort stats */}
+          {/* Trust pills — always visible, anchor the offer */}
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <TrustPill icon={<Sparkles size={12} />} label="Free, forever" />
+            <TrustPill icon={<Trophy size={12} />} label="60 days · witnessed" />
+            <TrustPill icon={<Smartphone size={12} />} label="No app to install" />
+            <TrustPill icon={<Lock size={12} />} label="Your data, private" />
+          </div>
+
+          {/* Live cohort stats — render only when there's something to brag about */}
           {activeCount > 0 && (
-            <div className="mt-8 flex flex-wrap items-center gap-4 md:gap-6">
+            <div className="mt-6 flex flex-wrap items-center gap-4 md:gap-6">
               {day > 0 && (
                 <Stat icon={<Trophy size={14} />} label={`Day ${day} of 60`} />
               )}
@@ -91,12 +100,35 @@ export default async function MotherStrongLandingPage({
           )}
         </header>
 
-        {/* Registration form */}
-        <div className="mt-12 md:mt-14 max-w-2xl">
-          <RegistrationForm lang={lang} whatsappGroupLink={config.whatsappGroupLink} />
+        {/* Form + side panel.
+            Desktop: 2-column with the form taking ~60% and the panel ~40%.
+            Mobile: stacks — panel goes ABOVE the form so the motivation
+            lands before the field set. */}
+        <div className="mt-12 md:mt-14 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-8 md:gap-10 lg:gap-12">
+          {/* On mobile, sidebar renders FIRST; on desktop it sits on the right
+              via the `lg:order-2` flip. The form is order-2 on mobile, order-1
+              on desktop. */}
+          <div className="order-2 lg:order-1 min-w-0">
+            <RegistrationForm
+              lang={lang}
+              whatsappGroupLink={config.whatsappGroupLink}
+            />
+          </div>
+          <div className="order-1 lg:order-2">
+            <RegistrationSidebar />
+          </div>
         </div>
       </div>
     </main>
+  );
+}
+
+function TrustPill({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bg-card/80 border border-border-soft text-[11px] font-mono uppercase tracking-[0.14em] text-text-muted font-bold">
+      <span className="text-accent">{icon}</span>
+      {label}
+    </span>
   );
 }
 
