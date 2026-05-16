@@ -6,10 +6,12 @@ import {
   CheckCircle2,
   ShieldX,
   Mail,
+  MailWarning,
   Phone,
   ChevronDown,
   ChevronUp,
   Loader2,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
@@ -22,45 +24,80 @@ interface PendingSignupsBannerProps {
   pending: PendingSignup[];
 }
 
+interface FlashMessage {
+  kind: 'success' | 'warning';
+  title: string;
+  detail?: string;
+}
+
 export function PendingSignupsBanner({ pending }: PendingSignupsBannerProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(true);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [flash, setFlash] = useState<FlashMessage | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  if (pending.length === 0) return null;
+  if (pending.length === 0 && !flash) return null;
 
-  const onApprove = (id: string) => {
+  // The action took effect — refresh the page to redraw the list, but
+  // keep the surfaced flash so the admin can read it. Pending list will
+  // be empty after refresh, so the banner stays mounted only for the
+  // flash readout (we guard the early-return on `!flash` above).
+  const runAction = (
+    id: string,
+    runner: typeof approveSignup | typeof rejectSignup,
+    label: 'Approved' | 'Rejected'
+  ) => {
     setErrorMsg(null);
+    setFlash(null);
     setPendingId(id);
     startTransition(async () => {
-      const result = await approveSignup({ userId: id });
+      const result = await runner({ userId: id });
       setPendingId(null);
       if (!result.ok) {
         setErrorMsg(result.error);
         return;
       }
-      router.refresh();
-    });
-  };
-
-  const onReject = (id: string) => {
-    setErrorMsg(null);
-    setPendingId(id);
-    startTransition(async () => {
-      const result = await rejectSignup({ userId: id });
-      setPendingId(null);
-      if (!result.ok) {
-        setErrorMsg(result.error);
-        return;
+      if (result.emailSent) {
+        setFlash({
+          kind: 'success',
+          title: `${label} — welcome email sent to ${result.recipient}.`,
+        });
+      } else {
+        setFlash({
+          kind: 'warning',
+          title: `${label} — but the email did NOT send. Reach out to ${result.recipient} via WhatsApp.`,
+          detail: result.emailError,
+        });
       }
       router.refresh();
     });
   };
+
+  const onApprove = (id: string) =>
+    runAction(id, approveSignup, 'Approved');
+
+  const onReject = (id: string) =>
+    runAction(id, rejectSignup, 'Rejected');
+
+  // When the list has emptied but the flash is still showing, render
+  // a flash-only standalone strip instead of the count banner.
+  if (pending.length === 0 && flash) {
+    return <FlashStrip flash={flash} onDismiss={() => setFlash(null)} />;
+  }
 
   return (
     <div className="mb-6 rounded-xl bg-amber/5 border border-amber/30 overflow-hidden">
+      {/* Flash at the top of the banner (action just ran). */}
+      {flash && (
+        <FlashStrip
+          flash={flash}
+          onDismiss={() => setFlash(null)}
+          inline
+        />
+      )}
+
       {/* Banner header — count + collapse toggle */}
       <button
         onClick={() => setExpanded((e) => !e)}
@@ -158,6 +195,54 @@ export function PendingSignupsBanner({ pending }: PendingSignupsBannerProps) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Flash readout (success / warning) ────────────────────────────
+
+function FlashStrip({
+  flash,
+  onDismiss,
+  inline,
+}: {
+  flash: FlashMessage;
+  onDismiss: () => void;
+  inline?: boolean;
+}) {
+  const isWarning = flash.kind === 'warning';
+  const cls = isWarning
+    ? 'bg-amber/15 border-amber/40 text-amber'
+    : 'bg-accent/10 border-accent/30 text-accent';
+  const Icon = isWarning ? MailWarning : Mail;
+  return (
+    <div
+      role={isWarning ? 'alert' : 'status'}
+      className={cn(
+        'flex items-start gap-3 px-4 py-3 border',
+        cls,
+        inline
+          ? 'border-b border-l-0 border-r-0 border-t-0'
+          : 'mb-6 rounded-xl'
+      )}
+    >
+      <Icon size={16} className="flex-shrink-0 mt-0.5" />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold leading-snug">{flash.title}</div>
+        {flash.detail && (
+          <div className="text-[11px] font-mono text-text-muted mt-1 break-words">
+            {flash.detail}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors"
+      >
+        <X size={13} />
+      </button>
     </div>
   );
 }

@@ -14,7 +14,17 @@ const idSchema = z.object({
 });
 
 export type SignupApprovalResult =
-  | { ok: true; emailSent: boolean }
+  | {
+      ok: true;
+      emailSent: boolean;
+      /** Recipient email — surfaced so the admin UI can name it in the
+       *  toast even when the row has already been refreshed away. */
+      recipient: string;
+      /** Populated when emailSent is false. Carries the verbatim
+       *  Resend error so the admin can act on it (e.g. set
+       *  RESEND_API_KEY, verify the sender domain). */
+      emailError?: string;
+    }
   | { ok: false; error: string };
 
 // ─── approveSignup ─────────────────────────────────────────────────
@@ -72,7 +82,12 @@ export async function approveSignup(
   revalidatePath('/admin/clients');
   revalidatePath('/admin/dashboard');
 
-  return { ok: true, emailSent: emailResult.ok };
+  return {
+    ok: true,
+    emailSent: emailResult.ok,
+    recipient: updated.email,
+    emailError: emailResult.ok ? undefined : emailResult.error,
+  };
 }
 
 // ─── rejectSignup ──────────────────────────────────────────────────
@@ -127,5 +142,10 @@ export async function rejectSignup(
   revalidatePath('/admin/clients');
   revalidatePath('/admin/dashboard');
 
-  return { ok: true, emailSent: emailResult.ok };
+  return {
+    ok: true,
+    emailSent: emailResult.ok,
+    recipient: updated.email,
+    emailError: emailResult.ok ? undefined : emailResult.error,
+  };
 }

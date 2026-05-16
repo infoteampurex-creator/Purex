@@ -2,21 +2,28 @@ import 'server-only';
 import { Resend } from 'resend';
 
 /**
- * Resend client + send helper. Tolerates a missing API key — if the
- * env var isn't set yet, send() resolves with `{ ok: false }` and a
- * console.warn so the rest of the system keeps working (admin can
- * still WhatsApp the client; the email step is non-blocking).
+ * Resend client + send helper.
+ *
+ * Two failure modes we surface (instead of silently no-op'ing):
+ *   1. RESEND_API_KEY missing → `Resend not configured.`
+ *   2. Resend API rejected the send (e.g. unverified sender domain,
+ *      malformed recipient) → the verbatim message from Resend.
+ *
+ * Env vars are read lazily inside the function so a freshly-set
+ * Vercel env-var value picks up on the next request, not after a
+ * cold start.
  */
-
-const apiKey = process.env.RESEND_API_KEY;
-const fromAddress =
-  process.env.EMAIL_FROM ?? 'PURE X <hello@teampurex.com>';
-
-const client = apiKey ? new Resend(apiKey) : null;
 
 export type SendEmailResult =
   | { ok: true; id: string }
   | { ok: false; error: string };
+
+function readConfig(): { apiKey: string | null; fromAddress: string } {
+  const apiKey = process.env.RESEND_API_KEY?.trim() || null;
+  const fromAddress =
+    process.env.EMAIL_FROM?.trim() || 'PURE X <hello@teampurex.com>';
+  return { apiKey, fromAddress };
+}
 
 export async function sendEmail(input: {
   to: string;
@@ -27,13 +34,21 @@ export async function sendEmail(input: {
   /** Override the From: header for this single send. */
   from?: string;
 }): Promise<SendEmailResult> {
-  if (!client) {
+  const { apiKey, fromAddress } = readConfig();
+
+  if (!apiKey) {
     console.warn(
       '[PURE X] Resend not configured — RESEND_API_KEY missing. Skipping email send for:',
       input.subject
     );
-    return { ok: false, error: 'Resend not configured.' };
+    return {
+      ok: false,
+      error:
+        'Resend not configured (RESEND_API_KEY is missing on the server). Set it in Vercel → Project Settings → Environment Variables.',
+    };
   }
+
+  const client = new Resend(apiKey);
 
   try {
     const { data, error } = await client.emails.send({
@@ -46,7 +61,10 @@ export async function sendEmail(input: {
 
     if (error || !data) {
       console.error('[PURE X] Resend send failed:', error);
-      return { ok: false, error: error?.message ?? 'Send failed' };
+      return {
+        ok: false,
+        error: error?.message ?? 'Resend rejected the send (no error returned).',
+      };
     }
 
     return { ok: true, id: data.id };
@@ -60,5 +78,5 @@ export async function sendEmail(input: {
 }
 
 export function isResendConfigured(): boolean {
-  return client !== null;
+  return readConfig().apiKey !== null;
 }
