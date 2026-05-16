@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Trophy, Flame, Footprints } from 'lucide-react';
+import { Trophy, Flame, Footprints, Sparkles, ArrowRight } from 'lucide-react';
 import { type LeaderboardRow } from '@/lib/data/mother-strong-types';
 
 interface Props {
@@ -18,30 +18,7 @@ interface Props {
  */
 export function Leaderboard({ rows, dailyGoal }: Props) {
   if (rows.length === 0) {
-    return (
-      <div className="rounded-2xl bg-bg-card border border-border p-10 md:p-14 text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-accent/10 text-accent mb-4">
-          <Trophy size={26} />
-        </div>
-        <h2 className="font-display font-semibold text-2xl md:text-3xl tracking-tight mb-3">
-          The leaderboard goes live the moment the first mother registers.
-        </h2>
-        <p
-          className="text-text-muted leading-relaxed max-w-md mx-auto mb-6"
-          style={{ fontSize: 16 }}
-        >
-          Sixty days. Ten thousand steps a day. One witnessed cohort. Be the
-          first name on the board.
-        </p>
-        <Link
-          href="/mother-strong"
-          className="inline-flex items-center justify-center px-6 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
-          style={{ height: 48, minHeight: 48, fontSize: 16 }}
-        >
-          Register
-        </Link>
-      </div>
-    );
+    return <EmptyState />;
   }
 
   const topThree = rows.slice(0, 3);
@@ -392,6 +369,176 @@ function Avatar({
 }
 
 // ─── Formatting helpers ────────────────────────────────────────────
+
+// ─── Empty state (no participants yet) ────────────────────────────
+
+function EmptyState() {
+  // Three preview-card slots that hint at what the podium will look
+  // like once mothers register. Visually identical to the real
+  // PodiumCard, but with placeholder values + a soft veil + a single
+  // 'Be the first' overlay above the leftmost (gold) slot.
+  const placeholders = [
+    {
+      rank: 1,
+      label: 'GOLD',
+      border: 'border-accent/40',
+      bg: 'bg-accent/5',
+      text: 'text-accent',
+    },
+    {
+      rank: 2,
+      label: 'SILVER',
+      border: 'border-text-muted/30',
+      bg: 'bg-bg-elevated/50',
+      text: 'text-text',
+    },
+    {
+      rank: 3,
+      label: 'BRONZE',
+      border: 'border-amber/30',
+      bg: 'bg-amber/5',
+      text: 'text-amber',
+    },
+  ];
+
+  return (
+    <div className="space-y-8 md:space-y-10">
+      {/* Hero call-out */}
+      <div className="rounded-3xl border border-accent/40 bg-gradient-to-br from-accent/15 via-bg-card to-bg-card p-6 md:p-10 lg:p-12 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/15 text-accent mb-5">
+          <Sparkles size={28} />
+        </div>
+        <h2 className="font-display font-semibold text-2xl md:text-3xl lg:text-4xl tracking-tight leading-tight mb-3">
+          The board is waiting for its first name.
+        </h2>
+        <p
+          className="text-text-muted leading-relaxed max-w-xl mx-auto mb-6"
+          style={{ fontSize: 17 }}
+        >
+          Sixty days. Ten thousand steps a day. One witnessed cohort. The
+          first mother to register sits at the top until day two — and the
+          team starts logging her steps the moment she joins.
+        </p>
+        <Link
+          href="/mother-strong"
+          className="inline-flex items-center justify-center gap-2 px-7 rounded-full bg-accent text-bg font-semibold hover:bg-accent-hover transition-colors"
+          style={{ height: 52, minHeight: 52, fontSize: 16 }}
+        >
+          Be the first
+          <ArrowRight size={15} />
+        </Link>
+      </div>
+
+      {/* Preview of what the podium will look like */}
+      <div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold mb-4 text-center">
+          Once mothers join, the podium fills in like this
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+          {placeholders.map((p) => (
+            <div
+              key={p.rank}
+              className={`relative rounded-2xl border ${p.border} ${p.bg} p-5 md:p-6 opacity-60`}
+              aria-hidden
+            >
+              {/* Rank badge */}
+              <div className="absolute -top-3 -left-3 w-11 h-11 rounded-full bg-bg-card border border-border-soft flex items-center justify-center">
+                <span
+                  className={`font-display font-bold ${p.text}`}
+                  style={{ fontSize: 22 }}
+                >
+                  {p.rank}
+                </span>
+              </div>
+              <div
+                className={`absolute top-4 right-4 font-mono text-[10px] uppercase tracking-[0.18em] font-bold ${p.text}`}
+              >
+                {p.label}
+              </div>
+
+              {/* Avatar + name skeleton */}
+              <div className="flex items-center gap-3 mt-3">
+                <div className="w-14 h-14 rounded-full bg-bg-elevated/80 border border-border-soft flex items-center justify-center text-text-dim">
+                  <Trophy size={20} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="h-3.5 w-32 rounded-full bg-bg-elevated/80 mb-2" />
+                  <div className="h-2.5 w-20 rounded-full bg-bg-elevated/60" />
+                </div>
+              </div>
+
+              {/* Stat skeleton */}
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                {['Days hit', 'Streak', 'Total'].map((s) => (
+                  <div
+                    key={s}
+                    className="rounded-lg bg-bg-card/60 border border-border-soft px-2 py-2 text-center"
+                  >
+                    <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-muted font-bold mb-0.5">
+                      {s}
+                    </div>
+                    <div className="h-4 mx-auto w-8 rounded-full bg-bg-elevated/70" />
+                  </div>
+                ))}
+              </div>
+
+              {/* Consistency placeholder */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted font-bold">
+                    Consistency
+                  </span>
+                  <span
+                    className={`font-mono text-xs font-bold tabular-nums ${p.text}`}
+                  >
+                    —
+                  </span>
+                </div>
+                <div className="relative h-1.5 bg-bg-elevated rounded-full overflow-hidden" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* What to expect block */}
+      <div className="rounded-2xl border border-border bg-bg-card p-5 md:p-7">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-3">
+          What happens when you register
+        </div>
+        <ol className="space-y-3 text-sm text-text-muted leading-relaxed">
+          <Step
+            n="1"
+            text="The team adds you to the cohort's WhatsApp group within hours."
+          />
+          <Step
+            n="2"
+            text="Your daily steps are logged for you. No app to install."
+          />
+          <Step
+            n="3"
+            text="Your name appears here on the public board — ranked by consistency."
+          />
+          <Step
+            n="4"
+            text="On Day 60, you receive a personal gratitude card with your numbers."
+          />
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+function Step({ n, text }: { n: string; text: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent/15 text-accent font-mono text-[11px] font-bold">
+        {n}
+      </span>
+      <span className="min-w-0 text-text">{text}</span>
+    </li>
+  );
+}
 
 function formatStepsCompact(n: number): string {
   if (n >= 100000) return `${(n / 1000).toFixed(0)}K`;
