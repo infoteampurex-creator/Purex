@@ -126,6 +126,33 @@ export async function registerParticipant(
     return { ok: false, error: 'Something went wrong. Please try again.' };
   }
 
+  // ─── Cohort-not-open guard ───
+  // Refuse registration if the configured challenge_start_date is in
+  // the future (or absent). Compared in Asia/Kolkata so cutover lines
+  // up with the rest of the cohort logic.
+  const { data: cfgRow } = await admin
+    .from('mother_strong_config')
+    .select('challenge_start_date')
+    .eq('id', 1)
+    .maybeSingle();
+
+  const startIso = cfgRow?.challenge_start_date as string | null | undefined;
+  const todayIstIso = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Kolkata',
+  });
+  const cohortOpen =
+    !!startIso && Date.parse(startIso) <= Date.parse(todayIstIso);
+
+  if (!cohortOpen) {
+    const friendly = startIso
+      ? `Registration opens on ${new Date(startIso + 'T00:00:00').toLocaleDateString(
+          'en-GB',
+          { day: 'numeric', month: 'long', year: 'numeric' }
+        )}.`
+      : 'Registration is not open yet. Check back soon.';
+    return { ok: false, error: friendly };
+  }
+
   // ─── Duplicate check (friendlier message than the unique-constraint error) ───
   const { data: existing } = await admin
     .from('mother_strong_participants')

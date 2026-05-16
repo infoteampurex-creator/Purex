@@ -9,6 +9,7 @@ import {
 import { ms } from '@/lib/i18n/mother-strong';
 import { RegistrationForm } from '@/components/mother-strong/RegistrationForm';
 import { RegistrationSidebar } from '@/components/mother-strong/RegistrationSidebar';
+import { RegistrationClosedPanel } from '@/components/mother-strong/RegistrationClosedPanel';
 import { type PreferredLanguage } from '@/lib/data/mother-strong-types';
 
 export const metadata: Metadata = {
@@ -33,6 +34,12 @@ export default async function MotherStrongLandingPage({
     getMotherStrongActiveCount(),
     getCurrentChallengeDay(),
   ]);
+
+  // Registration unlocks only inside the configured 60-day window.
+  // Before launch we render the gold RegistrationClosedPanel; after
+  // day 60 the form would also close (cohort complete), but that
+  // path is handled by ops — admin flips status manually.
+  const isCohortLive = day > 0 && day <= 60;
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
@@ -100,19 +107,28 @@ export default async function MotherStrongLandingPage({
           )}
         </header>
 
-        {/* Form + side panel.
+        {/* Form (or closed panel) + side panel.
             Desktop: 2-column with the form taking ~60% and the panel ~40%.
-            Mobile: stacks — panel goes ABOVE the form so the motivation
-            lands before the field set. */}
+            Mobile: stacks — sidebar goes ABOVE the form so motivation
+            lands first.
+
+            Registration unlocks only when the cohort is live (day 1..60
+            of the configured start date). Before that we render the
+            gold RegistrationClosedPanel — explicit about WHEN the form
+            opens and channeling interest into the WhatsApp group. */}
         <div className="mt-12 md:mt-14 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-8 md:gap-10 lg:gap-12">
-          {/* On mobile, sidebar renders FIRST; on desktop it sits on the right
-              via the `lg:order-2` flip. The form is order-2 on mobile, order-1
-              on desktop. */}
           <div className="order-2 lg:order-1 min-w-0">
-            <RegistrationForm
-              lang={lang}
-              whatsappGroupLink={config.whatsappGroupLink}
-            />
+            {isCohortLive ? (
+              <RegistrationForm
+                lang={lang}
+                whatsappGroupLink={config.whatsappGroupLink}
+              />
+            ) : (
+              <RegistrationClosedPanel
+                challengeStartDate={config.challengeStartDate}
+                whatsappGroupLink={config.whatsappGroupLink}
+              />
+            )}
           </div>
           <div className="order-1 lg:order-2">
             <RegistrationSidebar />
