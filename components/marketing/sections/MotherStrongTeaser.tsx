@@ -62,6 +62,7 @@ export async function MotherStrongTeaser() {
       <ComingSoonGoldCard
         cohortLabel={config.cohortLabel ?? "Mother's Day cohort"}
         challengeStartDate={config.challengeStartDate}
+        whatsappGroupLink={config.whatsappGroupLink}
         activeCount={activeCount}
       />
     );
@@ -184,10 +185,12 @@ function ActiveGreenCard({
 function ComingSoonGoldCard({
   cohortLabel,
   challengeStartDate,
+  whatsappGroupLink,
   activeCount,
 }: {
   cohortLabel: string;
   challengeStartDate: string | null;
+  whatsappGroupLink: string | null;
   activeCount: number;
 }) {
   // Format the date + countdown when we have a start date.
@@ -331,27 +334,48 @@ function ComingSoonGoldCard({
               style={{ fontSize: 17 }}
             >
               A free 60-day walking program for mothers — 10,000 steps a day,
-              witnessed by the team. We&apos;re finalising the next cohort.
-              Pre-register now and we&apos;ll save your spot.
+              witnessed by the team. Registration opens on launch day.
+              Join the WhatsApp group below to be notified the moment the
+              form unlocks.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/mother-strong"
-                className="inline-flex items-center justify-center gap-2 px-6 rounded-full font-semibold transition-all hover:shadow-lg"
-                style={{
-                  height: 52,
-                  minHeight: 52,
-                  fontSize: 16,
-                  background:
-                    'linear-gradient(135deg, #d4a050 0%, #ffe69a 50%, #d4a050 100%)',
-                  color: '#1a1308',
-                  boxShadow: '0 4px 20px rgba(212, 160, 80, 0.25)',
-                }}
-              >
-                <BellRing size={15} strokeWidth={2.5} />
-                Reserve my spot
-              </Link>
+              {whatsappGroupLink ? (
+                <a
+                  href={whatsappGroupLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 rounded-full font-semibold transition-all hover:opacity-95"
+                  style={{
+                    height: 52,
+                    minHeight: 52,
+                    fontSize: 16,
+                    background: '#25D366',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 20px rgba(37, 211, 102, 0.25)',
+                  }}
+                >
+                  <BellRing size={15} strokeWidth={2.5} />
+                  Join the WhatsApp group
+                </a>
+              ) : (
+                <Link
+                  href="/mother-strong"
+                  className="inline-flex items-center justify-center gap-2 px-6 rounded-full font-semibold transition-all hover:shadow-lg"
+                  style={{
+                    height: 52,
+                    minHeight: 52,
+                    fontSize: 16,
+                    background:
+                      'linear-gradient(135deg, #d4a050 0%, #ffe69a 50%, #d4a050 100%)',
+                    color: '#1a1308',
+                    boxShadow: '0 4px 20px rgba(212, 160, 80, 0.25)',
+                  }}
+                >
+                  <BellRing size={15} strokeWidth={2.5} />
+                  Notify me
+                </Link>
+              )}
               <Link
                 href="/mother-strong"
                 className="inline-flex items-center justify-center gap-2 px-6 rounded-full border font-semibold transition-colors"
