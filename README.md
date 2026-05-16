@@ -191,6 +191,9 @@ After running `00013` + `00014`:
    Participants tab, then download her **Gratitude card** PNG from
    the Cards tab and forward via WhatsApp.
 
+#### Demo data for screenshots / QA
+Need a populated cohort to demo the leaderboard before real registrations land? Run **`supabase/seeds/mother_strong_demo.sql`** in the SQL editor. It seeds 5 sample participants (WhatsApp numbers in the reserved `999900000X` range), realistic per-day step counts, 3 journey posts, and sets the cohort config to a 14-day-old start date. Idempotent — re-running is a no-op. Cleanup block at the bottom of the file removes it cleanly.
+
 Detailed migration guide lives in `docs/` — follow `01-architecture.md` → `02-database-schema.md`.
 
 ## Known Phase 1 gaps (intentional)
