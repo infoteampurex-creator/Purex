@@ -196,40 +196,61 @@ Need a populated cohort to demo the leaderboard before real registrations land? 
 
 Detailed migration guide lives in `docs/` → follow `01-architecture.md` → `02-database-schema.md`.
 
-## Android app via Capacitor
+## Native apps (Android + iOS) via Capacitor
 
-The Teampurex Android app is a native WebView wrapper around the
+The Teampurex mobile apps are native WebView wrappers around the
 live website — same Next.js code, same Supabase backend, same
-features. Hosted mode (loads `https://www.teampurex.com` live) means
-no separate codebase to maintain and no OTA tooling needed.
+features, **two stores**. Hosted mode (loads
+`https://www.teampurex.com` live) means no separate codebase, no
+OTA tooling, one source of truth for both platforms.
 
-**One-time setup** (~10 minutes after installing Android Studio):
+**App identity (shared across both platforms):**
+- Bundle id: `com.teampurex.app`
+- App name: `Teampurex`
+- Splash background: `#0a0c09` (brand black)
+- Status bar style: dark (white icons on black)
+
+### Android — one-time setup (~10 minutes after Android Studio is installed)
 
 ```bash
-npm install                  # picks up @capacitor/* packages
-npx cap add android          # scaffolds the android/ folder
-npm run cap:sync             # applies capacitor.config.ts
-npm run cap:open             # opens Android Studio
+npm install                       # picks up @capacitor/* packages
+npx cap add android               # scaffolds the android/ folder
+npm run cap:sync:android          # applies capacitor.config.ts
+npm run cap:open:android          # opens Android Studio
 ```
 
 Then in Android Studio: **Build → Build Bundle(s) / APK(s) →
 Build APK(s)** and install on your phone.
 
-**Daily workflow:**
-- Web code change → nothing to rebuild. The app loads the live site
-  on next open, automatic Vercel deploys propagate.
-- `capacitor.config.ts` change → `npm run cap:sync` then rebuild APK.
-- New Capacitor plugin → `npm install <plugin>` then
-  `npm run cap:sync` then rebuild APK.
+**Full Android runbook**: `docs/capacitor-setup.md` (prerequisites,
+signing keystore setup, Play Store release, troubleshooting).
 
-**Full runbook** with prerequisites, signing keystore setup, Play
-Store release, and troubleshooting: see `docs/capacitor-setup.md`.
+### iOS — Codemagic cloud build (no Mac required) or borrow-a-Mac
 
-**App identity:**
-- Bundle id: `com.teampurex.app`
-- App name: `Teampurex`
-- Splash background: `#0a0c09` (brand black)
-- Status bar style: dark (white icons on black)
+iOS builds require macOS. Two paths:
+
+| Path | Cost | Pros | Cons |
+|---|---|---|---|
+| **Codemagic cloud builds** | Free tier 500 min/mo · $28/mo paid | No Mac needed; runs on every push to main | First-time setup ~30 min |
+| **Borrow a Mac** | $0 if borrowed; $300-600 for used M1 mini | Familiar Xcode workflow | Need physical access |
+
+**Both paths** require a one-time **Apple Developer Program** signup
+(**$99 / year**) at https://developer.apple.com/programs/enroll.
+
+**Full iOS runbook**: `docs/capacitor-ios-setup.md` (Apple Developer
+enrolment, Codemagic config, App Store Connect setup, signing certs,
+submission checklist, troubleshooting).
+
+### Daily workflow (both platforms)
+
+- **Web code change** → nothing to rebuild. Both apps load the live
+  site on next open, automatic Vercel deploys propagate to both.
+- **`capacitor.config.ts` change** →
+  - Android: `npm run cap:sync:android` then rebuild APK
+  - iOS: `npm run cap:sync:ios` then push to trigger Codemagic
+    rebuild (or rebuild manually if you have a Mac)
+- **New Capacitor plugin** → `npm install <plugin>` then
+  `npm run cap:sync` (no platform suffix — syncs both) then rebuild.
 
 ## Known Phase 1 gaps (intentional)
 
@@ -237,9 +258,12 @@ These are documented in `docs/01-architecture.md` under "Non-goals".
 What's still **deferred** today:
 - No payment gateway (admin assigns plans manually)
 - No real-time coach chat (Path B-minus deferral; planned v1.1)
-- Health Connect sync, push notifications — scaffolded in Capacitor
-  but not yet wired (Phase 5 + 6)
-- No iOS app (Android-only for v1; iOS later when ROI justifies)
+- Health Connect (Android) + HealthKit (iOS) sync — Capacitor
+  scaffolded but not yet wired (Phase 5)
+- Push notifications — Capacitor scaffolded but not yet wired
+  (Phase 6)
+- iOS native HealthKit specifically — separate plugin from Android
+  Health Connect; lands after the Android version
 
 ## Deployment
 
