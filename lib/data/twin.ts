@@ -56,6 +56,144 @@ export const TWIN_STAT_META: Record<
   },
 };
 
+// ─── Healthy Streak scoring (the spec formula) ────────────────────
+
+/**
+ * Healthy Streak daily score breakdown.
+ * Weights from the product spec:
+ *   steps      25%
+ *   sleep      20%
+ *   workout    25%
+ *   water      15%
+ *   nutrition  15%
+ *
+ * A day counts as a STREAK DAY when total >= STREAK_THRESHOLD (70).
+ */
+export const STREAK_THRESHOLD = 70;
+
+export const STREAK_WEIGHTS = {
+  steps: 0.25,
+  sleep: 0.2,
+  workout: 0.25,
+  water: 0.15,
+  nutrition: 0.15,
+} as const;
+
+export interface HealthDayScore {
+  steps: number;        // 0..100 per component
+  sleep: number;
+  workout: number;
+  water: number;
+  nutrition: number;
+  total: number;        // weighted sum, 0..100
+  hitGoal: boolean;     // total >= STREAK_THRESHOLD
+}
+
+/**
+ * Compute the 5 component pcts + weighted total for a single day.
+ *
+ * If a component has no data (e.g. nutrition not logged), it scores
+ * 0 — same as if the user "didn't do" that component. This
+ * deliberately punishes silence; the streak rewards logging, not
+ * just doing.
+ */
+export function computeHealthScore(input: {
+  steps?: number | null;
+  stepsGoal?: number | null;
+  sleepMinutes?: number | null;
+  sleepGoalMinutes?: number | null;
+  waterMl?: number | null;
+  waterGoalMl?: number | null;
+  workoutCompletedToday?: boolean;
+  nutritionAdherencePct?: number | null;
+}): HealthDayScore {
+  const clamp = (n: number) => Math.max(0, Math.min(100, n));
+
+  const stepsPct =
+    input.steps != null && input.stepsGoal && input.stepsGoal > 0
+      ? clamp((input.steps / input.stepsGoal) * 100)
+      : 0;
+
+  const sleepPct =
+    input.sleepMinutes != null &&
+    input.sleepGoalMinutes &&
+    input.sleepGoalMinutes > 0
+      ? clamp((input.sleepMinutes / input.sleepGoalMinutes) * 100)
+      : 0;
+
+  const waterPct =
+    input.waterMl != null && input.waterGoalMl && input.waterGoalMl > 0
+      ? clamp((input.waterMl / input.waterGoalMl) * 100)
+      : 0;
+
+  const workoutPct = input.workoutCompletedToday ? 100 : 0;
+
+  const nutritionPct =
+    input.nutritionAdherencePct != null
+      ? clamp(input.nutritionAdherencePct)
+      : 0;
+
+  const total =
+    stepsPct * STREAK_WEIGHTS.steps +
+    sleepPct * STREAK_WEIGHTS.sleep +
+    workoutPct * STREAK_WEIGHTS.workout +
+    waterPct * STREAK_WEIGHTS.water +
+    nutritionPct * STREAK_WEIGHTS.nutrition;
+
+  const totalRounded = Math.round(total);
+
+  return {
+    steps: Math.round(stepsPct),
+    sleep: Math.round(sleepPct),
+    workout: Math.round(workoutPct),
+    water: Math.round(waterPct),
+    nutrition: Math.round(nutritionPct),
+    total: totalRounded,
+    hitGoal: totalRounded >= STREAK_THRESHOLD,
+  };
+}
+
+/** Pre-computed daily score paired with its date, for the calendar grid. */
+export interface DayScoreEntry {
+  date: string;          // YYYY-MM-DD
+  score: number;         // 0..100, weighted total
+  hitGoal: boolean;
+  hasData: boolean;      // false when there's no log at all for the day
+}
+
+/**
+ * Walk backwards from the most recent entry, count consecutive
+ * goal-hit days. Stops at the first non-goal-hit or no-data day.
+ */
+export function computeCurrentStreak(history: DayScoreEntry[]): number {
+  // History is assumed sorted descending by date (today first).
+  let n = 0;
+  for (const entry of history) {
+    if (!entry.hasData || !entry.hitGoal) break;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * Longest run of consecutive goal-hit days anywhere in the
+ * provided history.
+ */
+export function computeBestStreak(history: DayScoreEntry[]): number {
+  // Reverse-chronological scan; track current run + max.
+  let best = 0;
+  let current = 0;
+  for (const entry of history) {
+    if (entry.hasData && entry.hitGoal) {
+      current++;
+      if (current > best) best = current;
+    } else {
+      current = 0;
+    }
+  }
+  return best;
+}
+
 // ─── Inputs → Twin stats ───────────────────────────────────────────
 
 export interface DailyInputs {
