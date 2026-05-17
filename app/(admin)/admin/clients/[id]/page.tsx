@@ -13,6 +13,8 @@ import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { EditClientButton } from '@/components/admin/EditClientButton';
 import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
+import { AdminHealthyStreakPanel } from '@/components/admin/AdminHealthyStreakPanel';
+import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import {
   getClientBookings,
   getMockClientPhotos,
@@ -51,15 +53,25 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [tasksRes, logsRes, workoutsRes, dailyPlan, libraryRows, workoutTemplates] =
-    await Promise.all([
-      getClientTasksLive(client.id),
-      getClientLogsLive(client.id),
-      getClientWorkoutsLive(client.id),
-      getDailyPlan(client.id, today),
-      getCachedActiveExerciseLibrary(),
-      getCachedWorkoutTemplates(),
-    ]);
+  const [
+    tasksRes,
+    logsRes,
+    workoutsRes,
+    dailyPlan,
+    libraryRows,
+    workoutTemplates,
+    twinInputsResult,
+    streakHistory,
+  ] = await Promise.all([
+    getClientTasksLive(client.id),
+    getClientLogsLive(client.id),
+    getClientWorkoutsLive(client.id),
+    getDailyPlan(client.id, today),
+    getCachedActiveExerciseLibrary(),
+    getCachedWorkoutTemplates(),
+    getTwinDailyInputs(client.id, today),
+    getStreakHistory(client.id, 30),
+  ]);
 
   // Slim down library entries to what the EditDailyPlanModal actually
   // reads — keeps the client bundle small.
@@ -187,6 +199,13 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      {/* Healthy Streak panel — at-a-glance compliance snapshot */}
+      <AdminHealthyStreakPanel
+        inputs={twinInputsResult.inputs}
+        history={streakHistory}
+        clientName={client.fullName.split(/\s+/)[0] ?? client.fullName}
+      />
 
       {/* Tabbed content */}
       <ClientDetailTabs

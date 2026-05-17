@@ -333,6 +333,133 @@ export async function getStreakHistory(
   }
 }
 
+// ─── Batched roster fetcher (admin /clients page) ────────────────
+
+export interface ClientStreakStatus {
+  currentStreak: number;
+  todayScore: number;
+  hitToday: boolean;
+  loggedToday: boolean;
+}
+
+/**
+ * One-shot fetcher used by the admin roster to display per-client
+ * streak status. Two queries total (logs + workouts) filtered by
+ * `client_id IN (list)` — scales to ~100 clients fine.
+ */
+export async function getRosterStreakStatus(
+  clientIds: string[]
+): Promise<Map<string, ClientStreakStatus>> {
+  const result = new Map<string, ClientStreakStatus>();
+  if (clientIds.length === 0) return result;
+
+  const targetDate = todayIsoIST();
+  const ninetyDaysAgo = addDaysIso(targetDate, -89);
+
+  try {
+    const supabase = await createClient();
+    const [logsRes, workoutsRes] = await Promise.all([
+      supabase
+        .from('client_daily_logs')
+        .select('client_id, ' + LOG_COLS)
+        .in('client_id', clientIds)
+        .gte('log_date', ninetyDaysAgo)
+        .lte('log_date', targetDate)
+        .order('log_date', { ascending: false }),
+      supabase
+        .from('client_workouts')
+        .select('client_id, workout_date, completed')
+        .in('client_id', clientIds)
+        .eq('completed', true)
+        .gte('workout_date', ninetyDaysAgo)
+        .lte('workout_date', targetDate),
+    ]);
+
+    const logs =
+      (logsRes.data ?? []) as unknown as (DailyLogRow & {
+        client_id: string;
+      })[];
+    const workouts =
+      (workoutsRes.data ?? []) as unknown as (WorkoutRow & {
+        client_id: string;
+      })[];
+
+    // Bucket logs + workouts by client_id
+    const logsByClient = new Map<string, Map<string, DailyLogRow>>();
+    for (const row of logs) {
+      let m = logsByClient.get(row.client_id);
+      if (!m) {
+        m = new Map();
+        logsByClient.set(row.client_id, m);
+      }
+      m.set(row.log_date, row);
+    }
+    const workoutsByClient = new Map<string, Set<string>>();
+    for (const row of workouts) {
+      if (!row.workout_date) continue;
+      let s = workoutsByClient.get(row.client_id);
+      if (!s) {
+        s = new Set();
+        workoutsByClient.set(row.client_id, s);
+      }
+      s.add(row.workout_date);
+    }
+
+    // Compute streak per client
+    for (const clientId of clientIds) {
+      const clientLogs = logsByClient.get(clientId) ?? new Map();
+      const clientWorkouts = workoutsByClient.get(clientId) ?? new Set();
+
+      // Walk back from today, count streak.
+      let currentStreak = 0;
+      let todayScore = 0;
+      let hitToday = false;
+      let loggedToday = false;
+      for (let i = 0; i < 90; i++) {
+        const iso = addDaysIso(targetDate, -i);
+        const log = clientLogs.get(iso) ?? null;
+        const hasWorkout = clientWorkouts.has(iso);
+        const score = computeHealthScore({
+          steps: log?.steps,
+          stepsGoal: log?.steps_target ?? DEFAULT_STEPS_GOAL,
+          sleepMinutes:
+            log?.sleep_hours != null
+              ? Math.round(log.sleep_hours * 60)
+              : null,
+          sleepGoalMinutes:
+            (log?.sleep_target_hours ?? DEFAULT_SLEEP_HOURS) * 60,
+          waterMl:
+            log?.water_glasses != null
+              ? log.water_glasses * ML_PER_GLASS
+              : null,
+          waterGoalMl:
+            (log?.water_target ?? DEFAULT_WATER_GLASSES) * ML_PER_GLASS,
+          workoutCompletedToday: hasWorkout,
+          nutritionAdherencePct: log ? deriveNutritionPct(log) : null,
+        });
+        if (i === 0) {
+          todayScore = score.total;
+          hitToday = score.hitGoal;
+          loggedToday = log != null;
+        }
+        if (!log || !score.hitGoal) break;
+        currentStreak++;
+      }
+
+      result.set(clientId, {
+        currentStreak,
+        todayScore,
+        hitToday,
+        loggedToday,
+      });
+    }
+    return result;
+  } catch (err) {
+    console.error('[twin-server] getRosterStreakStatus failed', err);
+    return result;
+  }
+}
+
 function emptyInputs(): DailyInputs {
   return {
     steps: 0,
