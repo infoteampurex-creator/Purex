@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { TwinSilhouette } from './TwinSilhouette';
 import { TwinStatsPanel } from './TwinStatsPanel';
+import { TwinStatusBadge } from './TwinStatusBadge';
+import { AnimatedNumber } from './AnimatedNumber';
 import {
   type TwinStats,
   type TwinVisualState,
@@ -27,13 +29,16 @@ export function TwinDashboardCard({ stats, state, message }: Props) {
           PureX Twin
         </div>
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="font-display font-semibold text-lg tracking-tight">
-            Your live fitness clone
-          </h3>
-          <div className="text-right tabular-nums">
-            <div className="font-display font-bold text-accent" style={{ fontSize: 28, lineHeight: 1 }}>
-              {overall}
+          <div className="min-w-0">
+            <h3 className="font-display font-semibold text-lg tracking-tight">
+              Your live fitness clone
+            </h3>
+            <div className="mt-2">
+              <TwinStatusBadge state={state} compact />
             </div>
+          </div>
+          <div className="text-right tabular-nums flex-shrink-0">
+            <AnimatedNumber value={overall} fontSize={28} />
             <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-text-muted font-bold mt-0.5">
               Vitality
             </div>

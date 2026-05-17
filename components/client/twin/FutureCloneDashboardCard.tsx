@@ -104,7 +104,7 @@ export function FutureCloneDashboardCard({ stats, workoutDoneToday }: Props) {
             state={projectedState}
             width={88}
             compact
-            futureBoost={0.5}
+            evolution={0.5}
             auraOverride={preview.aura}
           />
           <div

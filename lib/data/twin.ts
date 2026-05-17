@@ -121,22 +121,62 @@ export function twinOverallScore(stats: TwinStats): number {
 // ─── Visual states ────────────────────────────────────────────────
 
 /**
- * The 5 visual states the Twin's silhouette can be in. Each maps
- * to a different aura colour, breathing speed, and accent glow.
- * Computed from stats + flags so the avatar changes throughout
+ * The 6 visual states the Twin can be in. Each maps to a different
+ * aura colour, breathing speed, accent glow, and user-facing status
+ * label. Computed from stats + flags so the avatar changes through
  * the day as the user logs.
+ *
+ * 'hybrid' is the prized state — all 5 stats balanced + above
+ * threshold. Represents the "complete athlete" rather than a
+ * specialist. Triggers a distinct white-gold aura.
  */
 export type TwinVisualState =
   | 'depleted' // overall < 30
   | 'recovering' // recovery low, others mid
   | 'focused' // strong streak, mid energy
-  | 'charged' // high overall (>= 70) — golden aura
-  | 'peak'; // 85+ AND workout done today
+  | 'charged' // high overall (>= 70)
+  | 'peak' // 85+ AND workout done today
+  | 'hybrid'; // all 5 stats >= 60 AND spread <= 25
+
+/** User-facing status labels — short, brand-aligned. */
+export const TWIN_STATUS_LABEL: Record<TwinVisualState, string> = {
+  depleted: 'Recovery Needed',
+  recovering: 'Recovery Needed',
+  focused: 'Locked In',
+  charged: 'Momentum Rising',
+  peak: 'Peak State',
+  hybrid: 'Hybrid Mode',
+};
+
+/** Short copy under the status pill — one sentence, present tense. */
+export const TWIN_STATUS_TAGLINE: Record<TwinVisualState, string> = {
+  depleted: 'Reset day. Hydrate, walk, sleep early.',
+  recovering: 'Body is rebuilding. Train light, rest hard.',
+  focused: 'Discipline is the engine. Stack the next day.',
+  charged: 'Energy is up. Press into the workout.',
+  peak: 'Snapshot of who you\'re becoming.',
+  hybrid: 'Strength + endurance + recovery, in balance.',
+};
+
+function isHybrid(stats: TwinStats): boolean {
+  const values = [
+    stats.energy,
+    stats.strength,
+    stats.endurance,
+    stats.recovery,
+    stats.discipline,
+  ];
+  const avg = values.reduce((a, b) => a + b, 0) / 5;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  return avg >= 65 && max - min <= 25;
+}
 
 export function deriveVisualState(
   stats: TwinStats,
   workoutDoneToday: boolean
 ): TwinVisualState {
+  if (isHybrid(stats)) return 'hybrid';
   const overall = twinOverallScore(stats);
   if (overall >= 85 && workoutDoneToday) return 'peak';
   if (overall >= 70) return 'charged';
@@ -173,6 +213,11 @@ const STATE_MESSAGES: Record<TwinVisualState, string[]> = {
     'Your Twin is at peak form. This is the version of you others see.',
     'Elite day. Hold this rhythm and watch the future shift.',
     'Peak vitality. Today is a snapshot of where you\'re heading.',
+  ],
+  hybrid: [
+    'Hybrid mode. Strength, endurance, and recovery, all firing.',
+    'No weak link today. The Twin is integrated.',
+    'This is the complete athlete look — balanced, deliberate, alive.',
   ],
 };
 

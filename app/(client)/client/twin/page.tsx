@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { TwinSilhouette } from '@/components/client/twin/TwinSilhouette';
 import { TwinStatsPanel } from '@/components/client/twin/TwinStatsPanel';
+import { TwinStatusBadge } from '@/components/client/twin/TwinStatusBadge';
+import { AnimatedNumber } from '@/components/client/twin/AnimatedNumber';
 import {
   deriveTwinStats,
   deriveVisualState,
@@ -87,14 +89,12 @@ export default function TwinPage() {
             <div className="flex flex-col items-center">
               <TwinSilhouette stats={stats} state={state} width={280} />
               <div className="mt-6 text-center">
-                <div
-                  className="font-display font-bold text-accent leading-none"
-                  style={{ fontSize: 72 }}
-                >
-                  {overall}
-                </div>
+                <AnimatedNumber value={overall} fontSize={72} />
                 <div className="font-mono uppercase tracking-[0.22em] text-text-muted font-bold mt-1" style={{ fontSize: 11 }}>
-                  Vitality · {state}
+                  Vitality
+                </div>
+                <div className="mt-4 flex justify-center">
+                  <TwinStatusBadge state={state} />
                 </div>
               </div>
 
