@@ -1,0 +1,20 @@
+# Expo build artefacts
+.expo/
+dist/
+web-build/
+
+# Native build outputs
+android/app/build/
+ios/build/
+ios/Pods/
+
+# Dependencies
+node_modules/
+
+# OS / editor
+.DS_Store
+*.log
+
+# Env (will be added in PR A2 when we wire Supabase)
+.env
+.env.local
