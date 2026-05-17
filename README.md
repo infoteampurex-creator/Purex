@@ -194,17 +194,52 @@ After running `00013` + `00014`:
 #### Demo data for screenshots / QA
 Need a populated cohort to demo the leaderboard before real registrations land? Run **`supabase/seeds/mother_strong_demo.sql`** in the SQL editor. It seeds 5 sample participants (WhatsApp numbers in the reserved `999900000X` range), realistic per-day step counts, 3 journey posts, and sets the cohort config to a 14-day-old start date. Idempotent — re-running is a no-op. Cleanup block at the bottom of the file removes it cleanly.
 
-Detailed migration guide lives in `docs/` — follow `01-architecture.md` → `02-database-schema.md`.
+Detailed migration guide lives in `docs/` → follow `01-architecture.md` → `02-database-schema.md`.
+
+## Android app via Capacitor
+
+The Teampurex Android app is a native WebView wrapper around the
+live website — same Next.js code, same Supabase backend, same
+features. Hosted mode (loads `https://www.teampurex.com` live) means
+no separate codebase to maintain and no OTA tooling needed.
+
+**One-time setup** (~10 minutes after installing Android Studio):
+
+```bash
+npm install                  # picks up @capacitor/* packages
+npx cap add android          # scaffolds the android/ folder
+npm run cap:sync             # applies capacitor.config.ts
+npm run cap:open             # opens Android Studio
+```
+
+Then in Android Studio: **Build → Build Bundle(s) / APK(s) →
+Build APK(s)** and install on your phone.
+
+**Daily workflow:**
+- Web code change → nothing to rebuild. The app loads the live site
+  on next open, automatic Vercel deploys propagate.
+- `capacitor.config.ts` change → `npm run cap:sync` then rebuild APK.
+- New Capacitor plugin → `npm install <plugin>` then
+  `npm run cap:sync` then rebuild APK.
+
+**Full runbook** with prerequisites, signing keystore setup, Play
+Store release, and troubleshooting: see `docs/capacitor-setup.md`.
+
+**App identity:**
+- Bundle id: `com.teampurex.app`
+- App name: `Teampurex`
+- Splash background: `#0a0c09` (brand black)
+- Status bar style: dark (white icons on black)
 
 ## Known Phase 1 gaps (intentional)
 
-These are documented in `docs/01-architecture.md` under "Non-goals":
-- No client dashboard after login
-- No workout/meal logging
-- No progress graphs, streaks, adherence
+These are documented in `docs/01-architecture.md` under "Non-goals".
+What's still **deferred** today:
 - No payment gateway (admin assigns plans manually)
-- No real-time coach chat
-- No mobile app
+- No real-time coach chat (Path B-minus deferral; planned v1.1)
+- Health Connect sync, push notifications — scaffolded in Capacitor
+  but not yet wired (Phase 5 + 6)
+- No iOS app (Android-only for v1; iOS later when ROI justifies)
 
 ## Deployment
 
