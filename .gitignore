@@ -36,3 +36,21 @@ android/app/google-services.json
 .capacitor/
 *.keystore
 *.jks
+
+# ─── Capacitor / iOS build artifacts ───
+# Same logic as Android: commit the ios/ source (Info.plist, Swift
+# source, Podfile) but ignore everything Xcode/CocoaPods regenerates.
+# The ios/ folder is created by `npx cap add ios` on macOS — see
+# docs/capacitor-ios-setup.md for the Codemagic cloud-build path.
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+ios/App/Podfile.lock
+ios/.sourcery/
+ios/App/output/
+ios/App/App/public/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.mobileprovision
+*.p12
+*.p8
