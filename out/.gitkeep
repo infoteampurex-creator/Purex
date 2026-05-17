@@ -1,0 +1,3 @@
+# Capacitor's CLI validates that `webDir` exists during `cap sync`.
+# We use hosted mode (server.url overrides webDir at runtime), so
+# this directory stays empty. This file just satisfies the validator.

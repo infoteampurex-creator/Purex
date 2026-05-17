@@ -1,6 +1,7 @@
 node_modules/
 .next/
-out/
+out/*
+!out/.gitkeep
 dist/
 build/
 
@@ -16,3 +17,22 @@ yarn-error.log*
 .vercel
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# ─── Capacitor / Android build artifacts ───
+# We commit the android/ source (Gradle config, AndroidManifest,
+# Java/Kotlin source) for reproducible builds. We ignore everything
+# Gradle/Android Studio regenerates on each build.
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/app/release/
+android/captures/
+android/local.properties
+android/keystore/
+android/*.iml
+android/app/*.iml
+android/app/google-services.json
+.capacitor/
+*.keystore
+*.jks
