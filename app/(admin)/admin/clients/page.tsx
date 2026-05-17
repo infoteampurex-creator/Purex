@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Users, Sparkles, UserCheck, Mail, Phone, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Users, Sparkles, UserCheck, Mail, Phone, Flame, AlertCircle } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { AdminStatCard } from '@/components/admin/AdminStatCard';
 import {
@@ -13,7 +13,8 @@ import { AddClientButton } from '@/components/admin/AddClientButton';
 import { PendingSignupsBanner } from '@/components/admin/PendingSignupsBanner';
 import { getAdminClients } from '@/lib/data/admin-clients';
 import { getPendingSignups } from '@/lib/data/pending-signups';
-import { getMockAdminScores, statusColor, scoreStatus } from '@/lib/data/score';
+import { getRosterStreakStatus } from '@/lib/data/twin-server';
+import { STREAK_THRESHOLD } from '@/lib/data/twin';
 
 export const metadata = { title: 'Admin · Clients' };
 
@@ -23,14 +24,13 @@ export default async function AdminClientsPage() {
     getPendingSignups(),
   ]);
 
+  // Live per-client streak status — one batched query for the whole
+  // roster. Returns Map<clientId, { currentStreak, todayScore,
+  // hitToday, loggedToday }>.
+  const streakByClient = await getRosterStreakStatus(clients.map((c) => c.id));
+
   const active = clients.filter((c) => c.status === 'active');
   const onboarding = clients.filter((c) => c.status === 'onboarding');
-
-  // Map client name → PURE X score (for demo; real app would use clientId)
-  const scoreByName: Record<string, { score: number; delta: number; trend: 'up' | 'down' | 'flat' }> = {};
-  getMockAdminScores().forEach((s) => {
-    scoreByName[s.clientName] = { score: s.score, delta: s.delta, trend: s.trend };
-  });
 
   const planCounts = {
     fit_check: clients.filter((c) => c.planTier === 'fit_check').length,
@@ -84,7 +84,7 @@ export default async function AdminClientsPage() {
       </div>
 
       <AdminTable
-        headers={['Name', 'Contact', 'Plan', 'Coach', 'Score', 'Day', 'Last Check-in', 'Status']}
+        headers={['Name', 'Contact', 'Plan', 'Coach', 'Streak', 'Day', 'Last Check-in', 'Status']}
         isEmpty={clients.length === 0}
         empty={
           <>
@@ -161,15 +161,7 @@ export default async function AdminClientsPage() {
             </AdminTableCell>
 
             <AdminTableCell>
-              {scoreByName[c.fullName] ? (
-                <ScoreCell
-                  score={scoreByName[c.fullName].score}
-                  delta={scoreByName[c.fullName].delta}
-                  trend={scoreByName[c.fullName].trend}
-                />
-              ) : (
-                <span className="text-xs text-text-muted font-mono">—</span>
-              )}
+              <StreakCell status={streakByClient.get(c.id)} />
             </AdminTableCell>
 
             <AdminTableCell>
@@ -225,35 +217,56 @@ function ClientStatusBadge({ status }: { status: string }) {
   );
 }
 
-function ScoreCell({
-  score,
-  delta,
-  trend,
+function StreakCell({
+  status,
 }: {
-  score: number;
-  delta: number;
-  trend: 'up' | 'down' | 'flat';
+  status?: {
+    currentStreak: number;
+    todayScore: number;
+    hitToday: boolean;
+    loggedToday: boolean;
+  };
 }) {
-  const status = scoreStatus(score);
-  const color = statusColor(status);
-  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
+  if (!status) {
+    return <span className="text-xs text-text-muted font-mono">—</span>;
+  }
+  const { currentStreak, todayScore, hitToday, loggedToday } = status;
 
+  // Three visual modes:
+  //   • hitToday (green flame + streak count)
+  //   • loggedToday but below threshold (amber score)
+  //   • didn't log today (grey amber-warning icon)
+  if (!loggedToday) {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-amber font-bold">
+        <AlertCircle size={11} />
+        No log
+      </span>
+    );
+  }
+
+  const color = hitToday ? '#c6ff3d' : '#ff8a4d';
   return (
     <div className="flex items-center gap-2">
-      <div
-        className="font-display font-bold text-base tabular-nums leading-none"
-        style={{ color }}
+      <span
+        className="inline-flex items-center gap-1 font-display font-bold tabular-nums leading-none"
+        style={{ color, fontSize: 16 }}
       >
-        {score}
-      </div>
-      <div
-        className="inline-flex items-center gap-0.5 font-mono text-[9px] font-bold"
-        style={{ color }}
+        <Flame size={13} strokeWidth={2.5} />
+        {currentStreak}
+        <span className="font-mono text-[10px] text-text-muted font-bold ml-0.5">
+          d
+        </span>
+      </span>
+      <span
+        className="font-mono text-[10px] tabular-nums font-bold"
+        style={{ color: hitToday ? '#c6ff3d' : '#a0a69a' }}
       >
-        <TrendIcon size={9} strokeWidth={2.5} />
-        {delta > 0 ? '+' : ''}
-        {delta.toFixed(1)}
-      </div>
+        {todayScore}%
+        {todayScore < STREAK_THRESHOLD && (
+          <span className="text-text-dim ml-0.5">/ {STREAK_THRESHOLD}</span>
+        )}
+      </span>
     </div>
   );
 }
