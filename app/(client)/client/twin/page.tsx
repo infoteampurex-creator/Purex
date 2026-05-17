@@ -9,32 +9,22 @@ import {
   deriveVisualState,
   dailyTwinMessage,
   twinOverallScore,
-  type DailyInputs,
 } from '@/lib/data/twin';
+import { getTwinDailyInputs } from '@/lib/data/twin-server';
+import { getCurrentUserId } from '@/lib/data/client-live';
 
 export const metadata = { title: 'PureX Twin · Your live fitness clone' };
+export const dynamic = 'force-dynamic';
 
-// TODO Phase 4: replace this with real-data fetch (Supabase daily_logs
-// + workout completion + streak). For now we use a deterministic
-// "today's snapshot" derived from inputs we already collect on web.
-function getTodaysInputs(): DailyInputs {
-  return {
-    steps: 8400,
-    stepsGoal: 10000,
-    sleepMinutes: 6 * 60 + 50,
-    sleepGoalMinutes: 8 * 60,
-    waterMl: 2200,
-    waterGoalMl: 3000,
-    workoutCompletedToday: true,
-    workoutsLast7: 5,
-    nutritionAdherencePct: 72,
-    currentStreak: 9,
-    bestStreak: 22,
-  };
-}
+export default async function TwinPage() {
+  // Pull live data when a user is logged in; fall back to empty
+  // inputs (deterministic zeros) so the page renders for anonymous
+  // / preview contexts without crashing.
+  const userId = await getCurrentUserId();
+  const { inputs } = userId
+    ? await getTwinDailyInputs(userId)
+    : { inputs: emptyPreviewInputs() };
 
-export default function TwinPage() {
-  const inputs = getTodaysInputs();
   const stats = deriveTwinStats(inputs);
   const state = deriveVisualState(stats, inputs.workoutCompletedToday);
   const overall = twinOverallScore(stats);
@@ -147,4 +137,26 @@ export default function TwinPage() {
       </div>
     </main>
   );
+}
+
+/**
+ * Deterministic empty inputs used when no user is logged in (e.g.
+ * preview / SSR-only contexts). All zeros — the Twin renders in
+ * 'depleted' state with a clear "no data yet" feel rather than
+ * showing fake numbers.
+ */
+function emptyPreviewInputs() {
+  return {
+    steps: 0,
+    stepsGoal: 10000,
+    sleepMinutes: 0,
+    sleepGoalMinutes: 8 * 60,
+    waterMl: 0,
+    waterGoalMl: 8 * 250,
+    workoutCompletedToday: false,
+    workoutsLast7: 0,
+    nutritionAdherencePct: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+  };
 }

@@ -1,34 +1,20 @@
 import Link from 'next/link';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { FutureCloneViewer } from '@/components/client/twin/FutureCloneViewer';
-import {
-  deriveTwinStats,
-  type DailyInputs,
-} from '@/lib/data/twin';
+import { deriveTwinStats } from '@/lib/data/twin';
+import { getTwinDailyInputs } from '@/lib/data/twin-server';
+import { getCurrentUserId } from '@/lib/data/client-live';
 
 export const metadata = {
   title: 'PureX Future Clone · Your transformation projection',
 };
+export const dynamic = 'force-dynamic';
 
-// TODO Phase 4: real-data fetch. Mirrors /client/twin for now.
-function getTodaysInputs(): DailyInputs {
-  return {
-    steps: 8400,
-    stepsGoal: 10000,
-    sleepMinutes: 6 * 60 + 50,
-    sleepGoalMinutes: 8 * 60,
-    waterMl: 2200,
-    waterGoalMl: 3000,
-    workoutCompletedToday: true,
-    workoutsLast7: 5,
-    nutritionAdherencePct: 72,
-    currentStreak: 9,
-    bestStreak: 22,
-  };
-}
-
-export default function FutureClonePage() {
-  const inputs = getTodaysInputs();
+export default async function FutureClonePage() {
+  const userId = await getCurrentUserId();
+  const { inputs } = userId
+    ? await getTwinDailyInputs(userId)
+    : { inputs: emptyPreviewInputs() };
   const stats = deriveTwinStats(inputs);
 
   return (
@@ -91,4 +77,20 @@ export default function FutureClonePage() {
       </div>
     </main>
   );
+}
+
+function emptyPreviewInputs() {
+  return {
+    steps: 0,
+    stepsGoal: 10000,
+    sleepMinutes: 0,
+    sleepGoalMinutes: 8 * 60,
+    waterMl: 0,
+    waterGoalMl: 8 * 250,
+    workoutCompletedToday: false,
+    workoutsLast7: 0,
+    nutritionAdherencePct: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+  };
 }
