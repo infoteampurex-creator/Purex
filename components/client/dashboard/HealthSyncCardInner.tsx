@@ -63,9 +63,66 @@ export function HealthSyncCardInner() {
     }
   }, [hc.readings.readAt, hc.hasPermissions, hc.readings, pushToSupabase]);
 
-  // Hide on platforms where Health Connect can't run
-  if (hc.availability === 'Unknown' || hc.availability === 'NotSupported') {
-    return null;
+  // Still initializing — show a calibrating shell so the user sees
+  // SOMETHING immediately instead of an empty slot. Also helps debug
+  // when the plugin is stuck.
+  if (hc.availability === 'Unknown') {
+    return (
+      <CardShell tone="connect">
+        <div className="flex items-center gap-3">
+          <Loader2 size={16} className="animate-spin" style={{ color: '#c6ff3d' }} />
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] font-bold text-accent">
+              Health Connect
+            </div>
+            <div
+              className="font-display font-semibold leading-tight mt-0.5"
+              style={{ fontSize: 13 }}
+            >
+              Checking availability…
+            </div>
+          </div>
+        </div>
+      </CardShell>
+    );
+  }
+
+  // Hard fail — show an error card with the reason instead of nothing,
+  // so we can diagnose. (Common cause: device doesn't support HC, or
+  // the plugin failed to load on first mount.)
+  if (hc.availability === 'NotSupported') {
+    return (
+      <CardShell tone="warn">
+        <div className="flex items-start gap-3">
+          <AlertCircle size={16} style={{ color: '#ff8a4d', flexShrink: 0, marginTop: 2 }} />
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] font-bold" style={{ color: '#ff8a4d' }}>
+              Health Connect unavailable
+            </div>
+            <div className="font-display font-semibold leading-tight mt-0.5" style={{ fontSize: 13 }}>
+              Plugin couldn’t initialize on this device
+            </div>
+            {hc.error && (
+              <div className="font-mono mt-1.5 break-words" style={{ fontSize: 11, color: 'rgba(255,138,77,0.85)' }}>
+                {hc.error}
+              </div>
+            )}
+            <button
+              onClick={() => void hc.checkAvailability()}
+              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md font-mono uppercase tracking-[0.16em] font-bold"
+              style={{
+                fontSize: 10,
+                color: '#0a0c09',
+                backgroundColor: '#ff8a4d',
+              }}
+            >
+              <RefreshCw size={11} />
+              Retry
+            </button>
+          </div>
+        </div>
+      </CardShell>
+    );
   }
 
   // ─── NotInstalled state ───
