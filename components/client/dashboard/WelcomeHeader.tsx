@@ -1,5 +1,6 @@
 import { Bell } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { GreetingName } from './GreetingName';
 
 function greeting() {
   const h = new Date().getHours();
@@ -38,15 +39,14 @@ export async function WelcomeHeader() {
         // Use the dedicated first_name column when present; otherwise
         // fall back to the first word of full_name; finally fall back
         // to the email's local-part.
-        const raw =
+        // Pass the raw name to the client renderer — it title-cases
+        // only inside the mobile app. On web we keep the user's
+        // original casing untouched.
+        firstName =
           profile?.first_name ||
           (profile?.full_name?.split(' ')[0] ?? null) ||
           user.email?.split('@')[0] ||
           null;
-        // Title-case the first letter so all-lowercase signups
-        // ("vishnu") still greet as "Vishnu" without overwriting
-        // intentional casing inside the name.
-        firstName = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : null;
       }
     }
   } catch {
@@ -63,7 +63,7 @@ export async function WelcomeHeader() {
           {firstName ? (
             <>
               {greeting()},{' '}
-              <span className="text-accent">{firstName}</span>.
+              <GreetingName raw={firstName} />.
             </>
           ) : (
             <>{greeting()}.</>

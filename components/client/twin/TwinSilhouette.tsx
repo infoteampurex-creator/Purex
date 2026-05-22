@@ -6,6 +6,7 @@ import {
   type TwinStats,
   type TwinVisualState,
 } from '@/lib/data/twin';
+import { useIsApp } from '@/lib/hooks/useIsApp';
 
 interface Props {
   stats: TwinStats;
@@ -72,7 +73,13 @@ export function TwinSilhouette({
   auraOverride,
   hologram = false,
 }: Props) {
-  const viz = STATE_VIZ[state];
+  const isApp = useIsApp();
+  // Web keeps the original dull-gray depleted palette (per "no web
+  // changes" instruction). The app uses the brighter sage palette
+  // so an empty-stats Twin still reads as "resting" rather than
+  // "broken placeholder".
+  const viz =
+    state === 'depleted' && !isApp ? STATE_VIZ_WEB_DEPLETED : STATE_VIZ[state];
   const primaryAura = auraOverride ?? viz.aura;
   const breathingDuration = viz.breathingMs / 1000;
 
@@ -577,6 +584,17 @@ export function TwinSilhouette({
   );
 }
 
+/**
+ * The pre-redesign depleted palette — used on the website only.
+ * Matches what was on `origin/main` before any of today's changes.
+ */
+const STATE_VIZ_WEB_DEPLETED = {
+  aura: '#5a6b50',
+  silhouetteTop: '#3a4438',
+  silhouetteBottom: '#222a20',
+  breathingMs: 4200,
+};
+
 // ─── Body-zone heatmap definitions ────────────────────────────────
 // Each stat "ignites" a region of the silhouette in the hologram
 // treatment. Positioned in SVG coords (200×400 viewBox).
@@ -627,9 +645,8 @@ const STATE_VIZ: Record<
   }
 > = {
   depleted: {
-    // Brightened from the original dull gray-green so an empty-stats
-    // Twin still reads as "alive but resting" rather than "broken
-    // placeholder". Animation is the same; only the palette warms up.
+    // App-only brightened palette. Web uses STATE_VIZ_WEB_DEPLETED
+    // below (the original dull gray-green) so we don't change web.
     aura: '#8ea876',
     silhouetteTop: '#52684a',
     silhouetteBottom: '#2c3429',

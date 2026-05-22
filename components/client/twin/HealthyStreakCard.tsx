@@ -1,3 +1,5 @@
+'use client';
+
 import { Flame, Trophy, CheckCircle2 } from 'lucide-react';
 import {
   STREAK_THRESHOLD,
@@ -5,6 +7,7 @@ import {
   computeCurrentStreak,
   type DayScoreEntry,
 } from '@/lib/data/twin';
+import { useIsApp } from '@/lib/hooks/useIsApp';
 
 interface Props {
   /** Last N days, most-recent first. Typically 7. */
@@ -26,6 +29,7 @@ export function HealthyStreakCard({ history, todayScore }: Props) {
   const current = computeCurrentStreak(history);
   const best = computeBestStreak(history);
   const hitToday = todayScore >= STREAK_THRESHOLD;
+  const isApp = useIsApp();
 
   return (
     <div className="rounded-2xl border border-border bg-bg-card overflow-hidden">
@@ -76,9 +80,9 @@ export function HealthyStreakCard({ history, todayScore }: Props) {
         />
         <Stat
           icon={<CheckCircle2 size={12} />}
-          label="Daily goal"
+          label={isApp ? 'Daily goal' : 'Streak day'}
           value={STREAK_THRESHOLD}
-          suffix="%"
+          suffix={isApp ? '%' : '% +'}
           color="#7dd3ff"
         />
       </div>
