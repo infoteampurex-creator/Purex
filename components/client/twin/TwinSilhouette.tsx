@@ -20,6 +20,9 @@ interface Props {
   evolution?: number;
   /** Override the primary aura colour (used by Future Clone stages). */
   auraOverride?: string;
+  /** Render scan-line hologram overlay + body-zone heatmap. App's
+   *  futuristic look — opt-in so it doesn't affect existing usages. */
+  hologram?: boolean;
 }
 
 /**
@@ -67,6 +70,7 @@ export function TwinSilhouette({
   compact = false,
   evolution = 0,
   auraOverride,
+  hologram = false,
 }: Props) {
   const viz = STATE_VIZ[state];
   const primaryAura = auraOverride ?? viz.aura;
@@ -169,6 +173,47 @@ export function TwinSilhouette({
         <filter id="twin-glow-ambient" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3" />
         </filter>
+
+        {/* Hologram scan-line pattern — only used when hologram=true */}
+        {hologram && (
+          <pattern
+            id="twin-scanlines"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+          >
+            <rect
+              width="6"
+              height="0.6"
+              fill={primaryAura}
+              opacity="0.45"
+            />
+          </pattern>
+        )}
+
+        {/* Body-zone radial gradients — one per stat, anchored to a
+            body region. Opacity proportional to stat value. */}
+        {hologram &&
+          BODY_ZONE_DEFS.map((z) => {
+            const op = Math.min(0.55, (stats[z.key] / 100) * 0.5 + 0.05);
+            return (
+              <radialGradient
+                key={`zone-${z.key}`}
+                id={`twin-zone-${z.key}`}
+                cx="50%"
+                cy="50%"
+                r="50%"
+              >
+                <stop offset="0%" stopColor={TWIN_STAT_META[z.key].color} stopOpacity={op} />
+                <stop
+                  offset="60%"
+                  stopColor={TWIN_STAT_META[z.key].color}
+                  stopOpacity={op * 0.4}
+                />
+                <stop offset="100%" stopColor={TWIN_STAT_META[z.key].color} stopOpacity={0} />
+              </radialGradient>
+            );
+          })}
       </defs>
 
       {/* ═══ LAYER 1: Ambient background particles ═══ */}
@@ -357,6 +402,47 @@ export function TwinSilhouette({
         />
       </motion.g>
 
+      {/* ═══ LAYER 5.5: Hologram scan-lines + body-zone heatmap ═══
+          Only when `hologram` is set. Scan-lines drift slowly upward
+          via a translate animation; body-zone gradients pulse on the
+          dominant stat regions to "ignite" the body. */}
+      {hologram && (
+        <>
+          {/* Scan-line drift overlay, clipped to silhouette bounds */}
+          <motion.rect
+            x={50}
+            y={50}
+            width={100}
+            height={340}
+            fill="url(#twin-scanlines)"
+            opacity={0.18}
+            animate={{ y: [50, 44, 50] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
+            style={{ mixBlendMode: 'screen' }}
+          />
+
+          {/* Body-zone glows */}
+          {BODY_ZONE_DEFS.map((z) => (
+            <motion.ellipse
+              key={`zone-fill-${z.key}`}
+              cx={z.cx}
+              cy={z.cy - postureLift}
+              rx={z.rx}
+              ry={z.ry}
+              fill={`url(#twin-zone-${z.key})`}
+              animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.08, 1] }}
+              transition={{
+                duration: 2.4 + z.delay,
+                delay: z.delay,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+              style={{ transformOrigin: `${z.cx}px ${z.cy}px` }}
+            />
+          ))}
+        </>
+      )}
+
       {/* ═══ LAYER 6: Muscle + recovery pulses ═══ */}
       {/* Chest pulse — Strength */}
       {stats.strength > 60 && (
@@ -490,6 +576,24 @@ export function TwinSilhouette({
     </svg>
   );
 }
+
+// ─── Body-zone heatmap definitions ────────────────────────────────
+// Each stat "ignites" a region of the silhouette in the hologram
+// treatment. Positioned in SVG coords (200×400 viewBox).
+const BODY_ZONE_DEFS: Array<{
+  key: keyof TwinStats;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  delay: number;
+}> = [
+  { key: 'strength',   cx: 100, cy: 140, rx: 28, ry: 18, delay: 0 },    // chest
+  { key: 'recovery',   cx: 88,  cy: 145, rx: 10, ry: 10, delay: 0.4 },  // heart
+  { key: 'energy',     cx: 100, cy: 195, rx: 22, ry: 16, delay: 0.8 },  // abs
+  { key: 'endurance',  cx: 100, cy: 290, rx: 32, ry: 28, delay: 1.2 },  // quads
+  { key: 'discipline', cx: 100, cy: 108, rx: 36, ry: 12, delay: 1.6 },  // shoulders
+];
 
 // ─── Per-stat aura definitions ────────────────────────────────────
 // Each stat's halo is positioned slightly offset so the composite

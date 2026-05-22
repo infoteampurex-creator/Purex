@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { TwinSilhouette } from './TwinSilhouette';
+import { TransformationBeam } from './TransformationBeam';
+import { MilestoneRail } from './MilestoneRail';
+import { ProjectedMetrics } from './ProjectedMetrics';
 import {
   deriveVisualState,
   isTwinEmpty,
@@ -12,58 +16,94 @@ import {
   TWIN_PREVIEW_STATS,
   type TwinStats,
 } from '@/lib/data/twin';
+import { deriveProjectedDeltas } from '@/lib/data/twin-game';
 import { useIsApp } from '@/lib/hooks/useIsApp';
 
 interface Props {
   stats: TwinStats;
   workoutDoneToday: boolean;
+  streakDays: number;
 }
 
 /**
- * Compact dashboard card for the Future Clone. Defaults the preview
- * to the 90-day projection — far enough to feel meaningful, close
- * enough to feel reachable.
+ * Future Clone — the aspirational card. Shows Today's twin and a
+ * 90-day projected twin separated by an animated transformation beam.
+ * Below: milestone rail (Day 1 / 30 / 60 / 90) + projected metric pills.
  *
- * In the app, an empty-stats account swaps in synthetic preview stats
- * so both silhouettes (today + 90 days) render with life. Web stays
- * honest about the empty state.
+ * In the app, an empty-stats account swaps in TWIN_PREVIEW_STATS so
+ * both silhouettes render with visible animation, and the card shows
+ * a "Preview" badge.
  */
-export function FutureCloneDashboardCard({ stats, workoutDoneToday }: Props) {
+export function FutureCloneDashboardCard({
+  stats,
+  workoutDoneToday,
+  streakDays,
+}: Props) {
   const isApp = useIsApp();
   const showPreview = isApp && isTwinEmpty(stats);
   const sourceStats = showPreview ? TWIN_PREVIEW_STATS : stats;
 
-  const preview = FUTURE_STAGES.find((s) => s.key === '90d')!;
-  const projected = projectStats(sourceStats, preview);
+  const future = FUTURE_STAGES.find((s) => s.key === '90d')!;
+  const projected = projectStats(sourceStats, future);
   const projectedState = deriveVisualState(projected, workoutDoneToday);
   const projectedOverall = twinOverallScore(projected);
   const todayOverall = twinOverallScore(sourceStats);
-  const lift = projectedOverall - todayOverall;
+  const lift = Math.max(0, projectedOverall - todayOverall);
+
+  const deltas = deriveProjectedDeltas(sourceStats, projected);
 
   return (
     <div
-      className="rounded-2xl border overflow-hidden"
+      className="relative rounded-3xl overflow-hidden"
       style={{
         background: `
-          radial-gradient(ellipse at 30% 0%, rgba(212, 160, 80, 0.10) 0%, transparent 55%),
+          radial-gradient(ellipse at 50% -20%, rgba(212,160,80,0.16) 0%, transparent 55%),
           linear-gradient(180deg, #15110a 0%, #0a0c09 100%)
         `,
-        borderColor: 'rgba(212, 160, 80, 0.30)',
-        boxShadow: '0 0 0 1px rgba(212, 160, 80, 0.20), 0 8px 24px rgba(212, 160, 80, 0.06)',
+        border: '1px solid rgba(212,160,80,0.30)',
+        boxShadow:
+          '0 0 0 1px rgba(212,160,80,0.18), 0 24px 48px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
       }}
     >
-      {/* Header */}
-      <div className="px-5 pt-5 pb-3">
-        <div
-          className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] font-bold mb-2"
-          style={{ color: '#d4a050' }}
-        >
-          <Sparkles size={11} />
-          PureX Future Clone
+      {/* Ambient gold glow corner */}
+      <div
+        className="absolute -top-24 -right-24 w-64 h-64 rounded-full pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(255,210,77,0.18), transparent 65%)',
+          filter: 'blur(10px)',
+        }}
+      />
+
+      {/* ─── Header ─── */}
+      <div className="relative px-5 pt-5 pb-3">
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <div
+            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] font-bold"
+            style={{ color: '#d4a050' }}
+          >
+            <Sparkles size={11} />
+            PureX Future Clone
+          </div>
+          <span
+            className="font-mono uppercase tracking-[0.18em] px-1.5 py-0.5 rounded"
+            style={{
+              fontSize: 9,
+              color: '#ffd24d',
+              backgroundColor: 'rgba(255,210,77,0.10)',
+              border: '1px solid rgba(255,210,77,0.18)',
+            }}
+          >
+            90-day projection
+          </span>
           {showPreview && (
             <span
-              className="ml-1 px-1.5 py-0.5 rounded text-[8px] tracking-[0.18em]"
-              style={{ backgroundColor: 'rgba(212, 160, 80, 0.18)', color: '#d4a050' }}
+              className="font-mono uppercase tracking-[0.18em] px-1.5 py-0.5 rounded"
+              style={{
+                fontSize: 8,
+                color: '#d4a050',
+                backgroundColor: 'rgba(212,160,80,0.18)',
+              }}
             >
               Preview
             </span>
@@ -71,94 +111,136 @@ export function FutureCloneDashboardCard({ stats, workoutDoneToday }: Props) {
         </div>
         <h3
           className="font-display font-bold tracking-tight"
-          style={{ fontSize: 18 }}
+          style={{ fontSize: 20 }}
         >
           <span
             style={{
               background:
-                'linear-gradient(135deg, #ffffff 0%, #ffe69a 60%, #d4a050 100%)',
+                'linear-gradient(135deg, #ffffff 0%, #ffe69a 50%, #d4a050 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
             }}
           >
-            Your future transformation projection
+            Your upgraded self in 90 days
           </span>
         </h3>
       </div>
 
-      {/* Two silhouettes side by side with the lift indicator */}
-      <div className="px-5 pb-4 grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+      {/* ─── Side-by-side: Today | Beam | Day 90 ─── */}
+      <div className="relative px-5 pb-4 grid grid-cols-[1fr_120px_1fr] gap-2 items-center">
         {/* Today */}
-        <div className="flex flex-col items-center">
+        <motion.div
+          initial={{ opacity: 0, x: -6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex flex-col items-center"
+        >
           <TwinSilhouette
             stats={sourceStats}
             state={deriveVisualState(sourceStats, workoutDoneToday)}
-            width={88}
+            width={90}
             compact
+            hologram
           />
-          <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-text-muted font-bold mt-2">
+          <div
+            className="font-mono uppercase tracking-[0.18em] font-bold mt-2"
+            style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
+          >
             Today
-          </div>
-          <div className="font-display font-bold text-text tabular-nums" style={{ fontSize: 18 }}>
-            {todayOverall}
-          </div>
-        </div>
-
-        {/* Lift arrow */}
-        <div className="flex flex-col items-center px-1">
-          <ArrowRight size={18} style={{ color: '#d4a050' }} />
-          <div
-            className="font-mono text-[10px] uppercase tracking-[0.16em] font-bold mt-2 tabular-nums"
-            style={{ color: '#ffe69a' }}
-          >
-            +{lift}
-          </div>
-        </div>
-
-        {/* 90-day projection */}
-        <div className="flex flex-col items-center">
-          <TwinSilhouette
-            stats={projected}
-            state={projectedState}
-            width={88}
-            compact
-            evolution={0.5}
-            auraOverride={preview.aura}
-          />
-          <div
-            className="font-mono text-[9px] uppercase tracking-[0.16em] font-bold mt-2"
-            style={{ color: preview.aura }}
-          >
-            {preview.label}
           </div>
           <div
             className="font-display font-bold tabular-nums"
-            style={{ fontSize: 18, color: preview.aura }}
+            style={{ fontSize: 22, color: 'rgba(255,255,255,0.92)' }}
+          >
+            {todayOverall}
+          </div>
+          <div
+            className="font-mono uppercase tracking-[0.16em]"
+            style={{ fontSize: 8, color: 'rgba(255,255,255,0.40)' }}
+          >
+            Rookie
+          </div>
+        </motion.div>
+
+        {/* Beam */}
+        <TransformationBeam lift={lift} color="#ffd24d" />
+
+        {/* Day 90 */}
+        <motion.div
+          initial={{ opacity: 0, x: 6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.15 }}
+          className="flex flex-col items-center"
+        >
+          <TwinSilhouette
+            stats={projected}
+            state={projectedState}
+            width={90}
+            compact
+            evolution={0.55}
+            auraOverride={future.aura}
+            hologram
+          />
+          <div
+            className="font-mono uppercase tracking-[0.18em] font-bold mt-2"
+            style={{ fontSize: 9, color: '#ffd24d' }}
+          >
+            Day 90
+          </div>
+          <div
+            className="font-display font-bold tabular-nums"
+            style={{
+              fontSize: 22,
+              color: '#ffd24d',
+              textShadow: '0 0 12px rgba(255,210,77,0.45)',
+            }}
           >
             {projectedOverall}
           </div>
+          <div
+            className="font-mono uppercase tracking-[0.16em] font-bold"
+            style={{ fontSize: 8, color: '#ff8a4d' }}
+          >
+            Prime
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ─── Milestone rail ─── */}
+      <div className="relative px-5 pb-4">
+        <div
+          className="font-mono uppercase tracking-[0.18em] font-bold mb-2.5"
+          style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}
+        >
+          Transformation milestones
         </div>
+        <MilestoneRail streakDays={streakDays} />
       </div>
 
-      {/* Tagline */}
-      <div className="mx-5 mb-4 px-3 py-2.5 rounded-lg bg-bg-elevated/60 border border-border-soft">
-        <p className="text-text leading-relaxed" style={{ fontSize: 13 }}>
-          See yourself at 30, 90, 180, and 365 days from today — projected
-          from your current consistency.
-        </p>
+      {/* ─── Projected metrics ─── */}
+      <div className="relative px-5 pb-4">
+        <div
+          className="font-mono uppercase tracking-[0.18em] font-bold mb-2"
+          style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}
+        >
+          Projected lift
+        </div>
+        <ProjectedMetrics deltas={deltas} />
       </div>
 
-      {/* CTA */}
+      {/* ─── CTA ─── */}
       <Link
         href="/client/future-clone"
-        className="flex items-center justify-between px-5 py-3 border-t font-mono text-[11px] uppercase tracking-[0.18em] font-bold hover:opacity-90 transition-opacity"
+        className="relative flex items-center justify-between px-5 py-3.5 border-t font-mono uppercase tracking-[0.20em] font-bold transition-opacity hover:opacity-90"
         style={{
-          borderColor: 'rgba(212, 160, 80, 0.15)',
-          color: '#d4a050',
+          fontSize: 11,
+          color: '#ffd24d',
+          borderColor: 'rgba(212,160,80,0.15)',
+          backgroundColor: 'rgba(212,160,80,0.04)',
         }}
       >
-        Open the timeline
+        Reveal my Day 90 self
         <ArrowRight size={13} />
       </Link>
     </div>

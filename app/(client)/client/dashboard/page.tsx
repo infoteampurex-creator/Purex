@@ -15,11 +15,17 @@ import { getDailyPlan } from '@/lib/data/daily-plan';
 import { EMPTY_DAILY_PLAN } from '@/lib/data/daily-plan-types';
 import {
   computeHealthScore,
+  computeCurrentStreak,
   deriveTwinStats,
   deriveVisualState,
   dailyTwinMessage,
   type DailyInputs,
 } from '@/lib/data/twin';
+import {
+  deriveLevel,
+  deriveXp,
+  generateMission,
+} from '@/lib/data/twin-game';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 
 interface PageProps {
@@ -83,6 +89,14 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     nutritionAdherencePct: twinInputs.nutritionAdherencePct,
   }).total;
 
+  // ─── Gamification overlays (XP / Level / Mission) ───
+  // XP is derived from the sum of daily health scores in the history
+  // window — no DB changes. Levels are linear (500 XP each).
+  const xp = deriveXp(streakHistory);
+  const level = deriveLevel(xp);
+  const currentStreakDays = computeCurrentStreak(streakHistory);
+  const mission = generateMission(twinInputs, currentStreakDays);
+
   return (
     <div className="space-y-6 md:space-y-7">
       <AdminSwitcher />
@@ -108,16 +122,21 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         todayScore={todayScore}
       />
 
-      {/* PureX Twin + Future Clone — derived from live data */}
+      {/* PureX Twin + Future Clone — redesigned holographic AI body
+          twin with gamified XP/Level/Streak/Mission overlay */}
       <div className="grid lg:grid-cols-2 gap-5 md:gap-6">
         <TwinDashboardCard
           stats={twinStats}
           state={twinState}
           message={twinMessage}
+          level={level}
+          streakDays={currentStreakDays}
+          mission={mission}
         />
         <FutureCloneDashboardCard
           stats={twinStats}
           workoutDoneToday={twinInputs.workoutCompletedToday}
+          streakDays={currentStreakDays}
         />
       </div>
 
