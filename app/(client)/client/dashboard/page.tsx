@@ -1,5 +1,6 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
+import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { AdminSwitcher } from '@/components/client/AdminSwitcher';
 import { CommitmentWidget } from '@/components/client/CommitmentWidget';
 import { ScoreWidget } from '@/components/client/ScoreWidget';
@@ -102,6 +103,12 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       <AdminSwitcher />
 
       <WelcomeHeader />
+
+      {/* Health Connect auto-sync card — app-only (returns null on
+          web, and dynamic-imported so the plugin's JS never lands in
+          the web bundle). Handles install / connect / sync flows and
+          pushes readings to client_daily_logs server-side. */}
+      <HealthSyncCard />
 
       {/* Raw fitness numbers — app-only (renders null on web). Sits
           near the top so steps/sleep/water/nutrition are the first
