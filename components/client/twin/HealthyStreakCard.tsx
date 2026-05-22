@@ -76,9 +76,9 @@ export function HealthyStreakCard({ history, todayScore }: Props) {
         />
         <Stat
           icon={<CheckCircle2 size={12} />}
-          label="Streak day"
+          label="Daily goal"
           value={STREAK_THRESHOLD}
-          suffix="% +"
+          suffix="%"
           color="#7dd3ff"
         />
       </div>

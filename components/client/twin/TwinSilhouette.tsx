@@ -523,10 +523,13 @@ const STATE_VIZ: Record<
   }
 > = {
   depleted: {
-    aura: '#5a6b50',
-    silhouetteTop: '#3a4438',
-    silhouetteBottom: '#222a20',
-    breathingMs: 4200,
+    // Brightened from the original dull gray-green so an empty-stats
+    // Twin still reads as "alive but resting" rather than "broken
+    // placeholder". Animation is the same; only the palette warms up.
+    aura: '#8ea876',
+    silhouetteTop: '#52684a',
+    silhouetteBottom: '#2c3429',
+    breathingMs: 3800,
   },
   recovering: {
     aura: '#7dd3ff',

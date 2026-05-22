@@ -1,4 +1,5 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
+import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
 import { AdminSwitcher } from '@/components/client/AdminSwitcher';
 import { CommitmentWidget } from '@/components/client/CommitmentWidget';
 import { ScoreWidget } from '@/components/client/ScoreWidget';
@@ -87,6 +88,11 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       <AdminSwitcher />
 
       <WelcomeHeader />
+
+      {/* Raw fitness numbers — app-only (renders null on web). Sits
+          near the top so steps/sleep/water/nutrition are the first
+          thing visible after the greeting. */}
+      <AppFitnessTiles inputs={twinInputs} />
 
       {userId && (
         <TodaysPlanCard

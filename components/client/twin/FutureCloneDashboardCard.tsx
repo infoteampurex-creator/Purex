@@ -5,11 +5,14 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import { TwinSilhouette } from './TwinSilhouette';
 import {
   deriveVisualState,
+  isTwinEmpty,
   projectStats,
   twinOverallScore,
   FUTURE_STAGES,
+  TWIN_PREVIEW_STATS,
   type TwinStats,
 } from '@/lib/data/twin';
+import { useIsApp } from '@/lib/hooks/useIsApp';
 
 interface Props {
   stats: TwinStats;
@@ -20,13 +23,21 @@ interface Props {
  * Compact dashboard card for the Future Clone. Defaults the preview
  * to the 90-day projection — far enough to feel meaningful, close
  * enough to feel reachable.
+ *
+ * In the app, an empty-stats account swaps in synthetic preview stats
+ * so both silhouettes (today + 90 days) render with life. Web stays
+ * honest about the empty state.
  */
 export function FutureCloneDashboardCard({ stats, workoutDoneToday }: Props) {
+  const isApp = useIsApp();
+  const showPreview = isApp && isTwinEmpty(stats);
+  const sourceStats = showPreview ? TWIN_PREVIEW_STATS : stats;
+
   const preview = FUTURE_STAGES.find((s) => s.key === '90d')!;
-  const projected = projectStats(stats, preview);
+  const projected = projectStats(sourceStats, preview);
   const projectedState = deriveVisualState(projected, workoutDoneToday);
   const projectedOverall = twinOverallScore(projected);
-  const todayOverall = twinOverallScore(stats);
+  const todayOverall = twinOverallScore(sourceStats);
   const lift = projectedOverall - todayOverall;
 
   return (
@@ -49,6 +60,14 @@ export function FutureCloneDashboardCard({ stats, workoutDoneToday }: Props) {
         >
           <Sparkles size={11} />
           PureX Future Clone
+          {showPreview && (
+            <span
+              className="ml-1 px-1.5 py-0.5 rounded text-[8px] tracking-[0.18em]"
+              style={{ backgroundColor: 'rgba(212, 160, 80, 0.18)', color: '#d4a050' }}
+            >
+              Preview
+            </span>
+          )}
         </div>
         <h3
           className="font-display font-bold tracking-tight"
@@ -73,8 +92,8 @@ export function FutureCloneDashboardCard({ stats, workoutDoneToday }: Props) {
         {/* Today */}
         <div className="flex flex-col items-center">
           <TwinSilhouette
-            stats={stats}
-            state={deriveVisualState(stats, workoutDoneToday)}
+            stats={sourceStats}
+            state={deriveVisualState(sourceStats, workoutDoneToday)}
             width={88}
             compact
           />

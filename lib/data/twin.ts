@@ -25,6 +25,32 @@ export interface TwinStats {
   discipline: number;
 }
 
+/**
+ * Synthetic stats used as the Twin's "preview / demo mode" — shown
+ * inside the mobile app on a brand-new account so the silhouette
+ * renders with a visible aura, breathing rhythm, and stat panel
+ * instead of looking like a dead placeholder. Web doesn't surface
+ * this; only the app uses it.
+ */
+export const TWIN_PREVIEW_STATS: TwinStats = {
+  energy: 55,
+  strength: 50,
+  endurance: 60,
+  recovery: 55,
+  discipline: 45,
+};
+
+/** True if all five stats are exactly zero (= no data logged yet). */
+export function isTwinEmpty(stats: TwinStats): boolean {
+  return (
+    stats.energy === 0 &&
+    stats.strength === 0 &&
+    stats.endurance === 0 &&
+    stats.recovery === 0 &&
+    stats.discipline === 0
+  );
+}
+
 export const TWIN_STAT_META: Record<
   TwinStatKey,
   { label: string; source: string; color: string }
