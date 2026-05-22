@@ -32,6 +32,27 @@ allprojects {
     }
 }
 
+// Force Kotlin jvmTarget to 17 across all subprojects. Gradle runs on
+// Android Studio's bundled JDK 21, but older Kotlin Gradle Plugins
+// (e.g. capacitor-health-connect@0.0.40 pins kotlin 1.8.20) don't
+// recognize "21" as a JVM target — they fail with
+// "Unknown Kotlin JVM target: 21". Pinning here keeps every plugin's
+// Kotlin compile on Java 17 bytecode regardless of daemon JDK.
+subprojects {
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin('kotlin-android') ||
+            project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
+            project.tasks
+                .matching { it.name.startsWith('compile') && it.name.endsWith('Kotlin') }
+                .configureEach { task ->
+                    task.kotlinOptions {
+                        jvmTarget = '17'
+                    }
+                }
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

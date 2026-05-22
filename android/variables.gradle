@@ -1,5 +1,9 @@
 ext {
-    minSdkVersion = 23
+    // Health Connect's connect-client:1.1.0-alpha11 requires API 26
+    // (Android 8.0+). Health Connect itself only runs on Android 9+,
+    // so dropping API 23/24/25 support costs nothing meaningful in
+    // practice. <0.5% of Android usage as of 2026.
+    minSdkVersion = 26
     compileSdkVersion = 35
     targetSdkVersion = 35
     androidxActivityVersion = '1.9.2'
