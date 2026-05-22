@@ -35,10 +35,11 @@ const config: CapacitorConfig = {
   // `npx cap sync` doesn't error on a fresh clone.
   webDir: 'out',
   server: {
-    // Load the live site inside the WebView. When we eventually want
-    // the staging build, override this in capacitor.config.local.ts
-    // (gitignored) and pass --config to cap sync.
-    url: 'https://www.teampurex.com',
+    // Land the app directly on the sign-in screen — skip the marketing
+    // homepage. Already-authenticated users are bounced by middleware
+    // to /client/dashboard (or /admin/dashboard), so this is the
+    // correct deep-link for both first-time and returning users.
+    url: 'https://www.teampurex.com/login',
     androidScheme: 'https',
     cleartext: false,
   },
@@ -75,10 +76,11 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      // Hold the splash screen for 1.5s after WebView is ready.
-      // Long enough to mask the network round-trip on a cold start;
-      // short enough that warm starts don't feel sluggish.
-      launchShowDuration: 1500,
+      // Hold the splash screen for 2.5s after WebView is ready —
+      // covers the cold-start network round-trip to teampurex.com so
+      // users see the brand mark instead of a blank WebView while the
+      // login page loads.
+      launchShowDuration: 2500,
       backgroundColor: '#0a0c09',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
