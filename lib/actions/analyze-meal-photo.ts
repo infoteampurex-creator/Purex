@@ -172,15 +172,15 @@ export async function analyzeMealPhoto(
       return { ok: false, error: `Could not sign URL: ${signError?.message ?? 'unknown'}` };
     }
 
-    // ─── 2. Call Gemini 1.5 Flash ───────────────────────────────
+    // ─── 2. Call Gemini 2.5 Flash ───────────────────────────────
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      // gemini-1.5-flash: older but most-stable free-tier quota in
-      // 2026. gemini-2.0-flash has a known "limit: 0" quota issue
-      // for new free-tier accounts in some regions; 1.5-flash bypasses
-      // that. Slightly slower / older but vision quality is on par
-      // for our food-estimation use case.
-      model: 'gemini-1.5-flash',
+      // gemini-2.5-flash: current flagship low-cost vision model
+      // (mid-2026). gemini-1.5-flash was retired Q4 2025;
+      // gemini-2.0-flash returns quota=0 for new free-tier accounts.
+      // 2.5-flash is the only model with reliable free-tier quota +
+      // current support.
+      model: 'gemini-2.5-flash',
       systemInstruction: SYSTEM_INSTRUCTION,
       generationConfig: {
         responseMimeType: 'application/json',
