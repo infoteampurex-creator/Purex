@@ -99,3 +99,9 @@ create policy "Clients manage own measurements" on public.client_body_measuremen
 drop policy if exists "Admins manage all measurements" on public.client_body_measurements;
 create policy "Admins manage all measurements" on public.client_body_measurements
   for all using (public.is_admin(auth.uid()));
+
+-- Force PostgREST to refresh its schema cache immediately so the new
+-- columns are visible to the API without waiting for the usual
+-- auto-reload. (Without this, the API returns "Could not find the
+-- '...' column in the schema cache" until cache TTL expires.)
+notify pgrst, 'reload schema';
