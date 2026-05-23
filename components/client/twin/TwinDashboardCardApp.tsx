@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { TwinSilhouette } from './TwinSilhouette';
 import { AnimatedNumber } from './AnimatedNumber';
 import { StatRadial } from './StatRadial';
 import { LevelChip } from './LevelChip';
@@ -25,12 +24,11 @@ import {
   type CoachMission,
   type LevelInfo,
 } from '@/lib/data/twin-game';
+
 interface Props {
   stats: TwinStats;
   state: TwinVisualState;
-  /** Free-form coach message — used only when `mission` isn't passed. */
   message: string;
-  /** Gamification overlays — required on the new app dashboard. */
   level: LevelInfo;
   streakDays: number;
   mission: CoachMission;
@@ -45,18 +43,19 @@ const STAT_ORDER: TwinStatKey[] = [
 ];
 
 /**
- * Twin Clone hero card — the redesigned holographic AI body twin.
+ * Twin Clone hero card — Apple-Watch / Whoop style.
  *
  * Layout (top→bottom):
- *   • Status strip: title + LIVE/CALIBRATING badge + Level + Streak
- *   • Hero zone: vitality score (huge) + holographic silhouette centered
- *   • Stat radials: 5 circular meters in a row beneath
+ *   • Status strip: title + state badge + Streak + Level chips
+ *   • Hero zone: giant Vitality score inside a thick glowing ring,
+ *     state-colour tinted
+ *   • 5 stat radials in a row beneath (one per Energy / Strength /
+ *     Endurance / Recovery / Discipline)
  *   • AI Coach mission card
  *   • CTA: "Analyze my Twin"
  *
- * In the app, an empty-stats account swaps in TWIN_PREVIEW_STATS so
- * the silhouette renders with aura/breathing/zones, and the status
- * shows "CALIBRATING".
+ * Deliberately NO human silhouette — premium fitness apps (Whoop,
+ * Oura, Apple Watch, Garmin) use rings + scores, not body shapes.
  */
 export function TwinDashboardCardApp({
   stats,
@@ -67,47 +66,33 @@ export function TwinDashboardCardApp({
   mission,
 }: Props) {
   const isEmpty = isTwinEmpty(stats);
-  // Empty-stats accounts in the app get the synthetic-preview Twin
-  // so the silhouette has visible aura / breathing / body-zone glow.
   const showPreview = isEmpty;
-
   const displayStats = showPreview ? TWIN_PREVIEW_STATS : stats;
   const displayState: TwinVisualState = showPreview
     ? deriveVisualState(TWIN_PREVIEW_STATS, false)
     : state;
   const overall = twinOverallScore(displayStats);
 
-  // Status label — "CALIBRATING" when we have literally no data, else
-  // a gamified state name. Falls back to message when no mission set.
   const statusLabel =
     isEmpty && !showPreview
       ? TWIN_STATUS_CALIBRATING
       : TWIN_STATUS_GAMIFIED[displayState];
+  const statusColor = STATUS_COLORS[displayState];
 
-  // Mission card content — show the generated mission, but in the
-  // showPreview case override with a "waking your Twin" prompt so the
-  // copy matches the synthetic stats.
   const cardMission: CoachMission = showPreview
     ? {
         headline: 'Twin is calibrating',
-        body: 'This is a preview of your Twin. Log today to unlock your real readout.',
+        body: 'This is a preview. Log today to unlock your real readout.',
         tone: 'calibrate',
       }
-    : mission ?? {
-        headline: 'Twin is building',
-        body: message,
-        tone: 'build',
-      };
-
-  // Status accent colour — picks from the brand palette by state.
-  const statusColor = STATUS_COLORS[displayState];
+    : mission ?? { headline: 'Twin is building', body: message, tone: 'build' };
 
   return (
     <div
       className="relative rounded-3xl overflow-hidden"
       style={{
         background: `
-          radial-gradient(ellipse at 50% -20%, rgba(198,255,61,0.10) 0%, transparent 55%),
+          radial-gradient(ellipse at 50% -20%, ${statusColor}1A 0%, transparent 55%),
           linear-gradient(180deg, #10130f 0%, #0a0c09 100%)
         `,
         border: '1px solid rgba(255,255,255,0.06)',
@@ -115,18 +100,17 @@ export function TwinDashboardCardApp({
           '0 0 0 1px rgba(198,255,61,0.04), 0 24px 48px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
       }}
     >
-      {/* Ambient corner glow */}
+      {/* Ambient glow */}
       <div
-        className="absolute -top-24 -left-24 w-64 h-64 rounded-full pointer-events-none"
+        className="absolute -top-32 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full pointer-events-none"
         style={{
-          background:
-            'radial-gradient(circle, rgba(198,255,61,0.14), transparent 65%)',
-          filter: 'blur(8px)',
+          background: `radial-gradient(circle, ${statusColor}26, transparent 65%)`,
+          filter: 'blur(20px)',
         }}
       />
 
       {/* ─── Status strip ─── */}
-      <div className="relative px-5 pt-5 pb-2 flex items-center justify-between gap-3 flex-wrap">
+      <div className="relative px-5 pt-5 pb-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
             <Sparkles size={11} />
@@ -168,43 +152,19 @@ export function TwinDashboardCardApp({
         </div>
       </div>
 
-      {/* ─── Hero zone: silhouette + vitality ─── */}
-      <div className="relative px-5 pt-2 pb-3 grid grid-cols-[1fr_auto] items-center gap-3">
-        {/* Silhouette */}
-        <div className="flex justify-center -my-4">
-          <TwinSilhouette
-            stats={displayStats}
-            state={displayState}
-            width={170}
-            hologram
-          />
-        </div>
-        {/* Vitality readout */}
-        <div className="text-right tabular-nums">
-          <AnimatedNumber value={overall} fontSize={42} />
-          <div
-            className="font-mono uppercase tracking-[0.18em] text-text-muted font-bold mt-1"
-            style={{ fontSize: 9 }}
-          >
-            Vitality
-          </div>
-          <div
-            className="font-mono uppercase tracking-[0.14em] mt-3"
-            style={{ fontSize: 8, color: 'rgba(255,255,255,0.40)' }}
-          >
-            Body battery
-          </div>
-          <div
-            className="font-display font-bold tabular-nums leading-none mt-1"
-            style={{ fontSize: 18, color: statusColor }}
-          >
-            {Math.round((displayStats.energy + displayStats.recovery) / 2)}%
-          </div>
+      {/* ─── Hero: Vitality ring ─── */}
+      <div className="relative flex flex-col items-center pt-2 pb-4">
+        <VitalityRing value={overall} color={statusColor} />
+        <div
+          className="font-mono uppercase tracking-[0.22em] font-bold mt-3"
+          style={{ fontSize: 10, color: 'rgba(245,245,240,0.55)' }}
+        >
+          Vitality
         </div>
       </div>
 
-      {/* ─── Stat radials ─── */}
-      <div className="px-3 pb-4">
+      {/* ─── 5 stat radials ─── */}
+      <div className="relative px-3 pb-4">
         <div className="grid grid-cols-5 gap-1">
           {STAT_ORDER.map((key) => (
             <div key={key} className="flex justify-center">
@@ -212,15 +172,15 @@ export function TwinDashboardCardApp({
                 value={displayStats[key]}
                 color={TWIN_STAT_META[key].color}
                 label={TWIN_STAT_META[key].label}
-                size={56}
+                size={52}
               />
             </div>
           ))}
         </div>
       </div>
 
-      {/* ─── AI Coach mission ─── */}
-      <div className="px-5 pb-4">
+      {/* ─── AI Coach ─── */}
+      <div className="relative px-5 pb-4">
         <AiCoachCard mission={cardMission} />
       </div>
 
@@ -237,6 +197,80 @@ export function TwinDashboardCardApp({
         Analyze my Twin
         <ArrowRight size={13} />
       </Link>
+    </div>
+  );
+}
+
+// ─── Vitality ring — the centerpiece ────────────────────────────────
+
+function VitalityRing({ value, color }: { value: number; color: string }) {
+  const size = 180;
+  const stroke = 14;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, value));
+  const offset = c - (c * clamped) / 100;
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <defs>
+          <linearGradient id={`vit-grad-${color.replace('#', '')}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={1} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.55} />
+          </linearGradient>
+          <filter id="vit-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" />
+          </filter>
+        </defs>
+
+        {/* Track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth={stroke}
+        />
+        {/* Glow under the arc */}
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke + 4}
+          strokeOpacity={0.20}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          initial={{ strokeDashoffset: c }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.4, ease: 'easeOut' }}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ filter: 'url(#vit-glow)' }}
+        />
+        {/* Progress arc */}
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={`url(#vit-grad-${color.replace('#', '')})`}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          initial={{ strokeDashoffset: c }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.4, ease: 'easeOut' }}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+
+      {/* Centre number */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <AnimatedNumber value={value} fontSize={56} />
+      </div>
     </div>
   );
 }

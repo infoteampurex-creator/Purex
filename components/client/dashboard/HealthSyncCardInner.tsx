@@ -261,127 +261,140 @@ export function HealthSyncCardInner() {
     );
   }
 
-  // ─── Connected: show live readings + refresh ───
+  // ─── Connected: thin status strip (numbers belong in the tiles) ───
+  // Previously this card duplicated Steps/Sleep/Water/HR + Calories/
+  // Active/Distance below — same data also lives in the AppFitness-
+  // Tiles. Collapsed to a single horizontal pill so the dashboard
+  // doesn't repeat itself 3 times.
   return (
-    <CardShell tone="connected">
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
-          <motion.div
-            animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: '#c6ff3d', boxShadow: '0 0 6px #c6ff3d' }}
-          />
-          <div
-            className="font-mono uppercase tracking-[0.22em] font-bold"
-            style={{ fontSize: 10, color: '#c6ff3d' }}
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="rounded-full px-3.5 py-2 flex items-center gap-3 flex-wrap"
+      style={{
+        background:
+          'linear-gradient(90deg, rgba(198,255,61,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+        border: '1px solid rgba(198,255,61,0.18)',
+      }}
+    >
+      <motion.div
+        animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ backgroundColor: '#c6ff3d', boxShadow: '0 0 6px #c6ff3d' }}
+      />
+      <span
+        className="font-mono uppercase tracking-[0.20em] font-bold"
+        style={{ fontSize: 9, color: '#c6ff3d' }}
+      >
+        Health Connect
+      </span>
+
+      {/* Compact HR + Active inline — these AREN'T in the fitness
+          tiles below, so keep them visible without repetition. */}
+      {hc.readings.heartRateBpm > 0 && (
+        <span className="flex items-center gap-1 flex-shrink-0">
+          <Heart size={9} style={{ color: '#ff8a4d' }} />
+          <span
+            className="font-mono tabular-nums font-bold"
+            style={{ fontSize: 10, color: 'rgba(245,245,240,0.85)' }}
           >
-            Health Connect · Live
-          </div>
-        </div>
+            {hc.readings.heartRateBpm}
+          </span>
+          <span
+            className="font-mono"
+            style={{ fontSize: 8, color: 'rgba(245,245,240,0.45)' }}
+          >
+            bpm
+          </span>
+        </span>
+      )}
+      {hc.readings.activeMinutes > 0 && (
+        <span className="flex items-center gap-1 flex-shrink-0">
+          <Timer size={9} style={{ color: '#c6ff3d' }} />
+          <span
+            className="font-mono tabular-nums font-bold"
+            style={{ fontSize: 10, color: 'rgba(245,245,240,0.85)' }}
+          >
+            {hc.readings.activeMinutes}
+          </span>
+          <span
+            className="font-mono"
+            style={{ fontSize: 8, color: 'rgba(245,245,240,0.45)' }}
+          >
+            min
+          </span>
+        </span>
+      )}
+      {hc.readings.totalCalories > 0 && (
+        <span className="flex items-center gap-1 flex-shrink-0">
+          <Flame size={9} style={{ color: '#ffd24d' }} />
+          <span
+            className="font-mono tabular-nums font-bold"
+            style={{ fontSize: 10, color: 'rgba(245,245,240,0.85)' }}
+          >
+            {hc.readings.totalCalories.toLocaleString()}
+          </span>
+          <span
+            className="font-mono"
+            style={{ fontSize: 8, color: 'rgba(245,245,240,0.45)' }}
+          >
+            kcal
+          </span>
+        </span>
+      )}
+      {hc.readings.distanceMeters > 0 && (
+        <span className="flex items-center gap-1 flex-shrink-0">
+          <MapPin size={9} style={{ color: '#7dd3ff' }} />
+          <span
+            className="font-mono tabular-nums font-bold"
+            style={{ fontSize: 10, color: 'rgba(245,245,240,0.85)' }}
+          >
+            {formatDistance(hc.readings.distanceMeters)}
+          </span>
+        </span>
+      )}
+
+      <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+        {lastSyncIso && !syncError && (
+          <span
+            className="font-mono"
+            style={{ fontSize: 9, color: 'rgba(245,245,240,0.40)' }}
+          >
+            {formatRelative(lastSyncIso)}
+          </span>
+        )}
+        {syncError && (
+          <span className="flex items-center gap-1">
+            <AlertCircle size={9} style={{ color: '#ff8a4d' }} />
+            <span
+              className="font-mono"
+              style={{ fontSize: 9, color: '#ff8a4d' }}
+            >
+              error
+            </span>
+          </span>
+        )}
         <button
           onClick={() => void hc.readToday()}
           disabled={hc.loading || syncing}
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md font-mono uppercase tracking-[0.16em] font-bold disabled:opacity-50"
+          aria-label="Refresh Health Connect"
+          className="w-6 h-6 rounded-full flex items-center justify-center disabled:opacity-50"
           style={{
-            fontSize: 9,
-            color: 'rgba(245,245,240,0.7)',
-            backgroundColor: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            backgroundColor: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(245,245,240,0.65)',
           }}
         >
           {hc.loading || syncing ? (
-            <Loader2 size={11} className="animate-spin" />
+            <Loader2 size={10} className="animate-spin" />
           ) : (
-            <RefreshCw size={11} />
+            <RefreshCw size={10} />
           )}
-          {hc.loading ? 'Reading' : syncing ? 'Syncing' : 'Refresh'}
         </button>
       </div>
-
-      <div className="grid grid-cols-4 gap-2">
-        <Reading label="Steps" value={hc.readings.steps.toLocaleString()} />
-        <Reading label="Sleep" value={formatSleep(hc.readings.sleepMinutes)} />
-        <Reading label="Water" value={formatWater(hc.readings.waterMl)} />
-        <Reading
-          label="HR"
-          value={hc.readings.heartRateBpm > 0 ? `${hc.readings.heartRateBpm}` : '—'}
-          unit={hc.readings.heartRateBpm > 0 ? 'bpm' : undefined}
-          icon={<Heart size={9} style={{ color: '#ff8a4d' }} />}
-        />
-      </div>
-
-      {/* Second row — calories / active / distance — surfaces what
-          Health Connect already has, no extra logging required. */}
-      <div className="grid grid-cols-3 gap-2 mt-2">
-        <Reading
-          label="Calories"
-          value={
-            hc.readings.totalCalories > 0
-              ? hc.readings.totalCalories.toLocaleString()
-              : '—'
-          }
-          unit={hc.readings.totalCalories > 0 ? 'kcal' : undefined}
-          icon={<Flame size={9} style={{ color: '#ffd24d' }} />}
-        />
-        <Reading
-          label="Active"
-          value={
-            hc.readings.activeMinutes > 0
-              ? `${hc.readings.activeMinutes}`
-              : '—'
-          }
-          unit={hc.readings.activeMinutes > 0 ? 'min' : undefined}
-          icon={<Timer size={9} style={{ color: '#c6ff3d' }} />}
-        />
-        <Reading
-          label="Distance"
-          value={
-            hc.readings.distanceMeters > 0
-              ? formatDistance(hc.readings.distanceMeters)
-              : '—'
-          }
-          icon={<MapPin size={9} style={{ color: '#7dd3ff' }} />}
-        />
-      </div>
-
-      <AnimatePresence>
-        {lastSyncIso && !syncError && (
-          <motion.div
-            key="ok"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-2 flex items-center gap-1.5"
-          >
-            <CheckCircle2 size={10} style={{ color: '#c6ff3d' }} />
-            <span
-              className="font-mono uppercase tracking-[0.16em]"
-              style={{ fontSize: 9, color: 'rgba(245,245,240,0.50)' }}
-            >
-              Synced · {formatRelative(lastSyncIso)}
-            </span>
-          </motion.div>
-        )}
-        {syncError && (
-          <motion.div
-            key="err"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-2 flex items-center gap-1.5"
-          >
-            <AlertCircle size={10} style={{ color: '#ff8a4d' }} />
-            <span
-              className="font-mono uppercase tracking-[0.16em]"
-              style={{ fontSize: 9, color: '#ff8a4d' }}
-            >
-              {syncError}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </CardShell>
+    </motion.div>
   );
 }
 
