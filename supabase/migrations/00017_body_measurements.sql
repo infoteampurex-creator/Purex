@@ -46,39 +46,54 @@ begin
 end $$;
 
 -- ─── client_body_measurements ────────────────────────────────────
+-- IMPORTANT: this table was first created by migration 00004
+-- (hybrid_athlete_system) with a trainer-focused column set
+-- (left_arm_cm, calf_cm, bp_systolic, etc.). We can't `create table
+-- if not exists` with a different column list — it would silently
+-- skip on environments where 00004 ran first. Instead we ensure the
+-- table exists (no-op when it does) then ADD only the columns this
+-- migration's app code needs, via `add column if not exists`. Fully
+-- additive — preserves all the trainer-managed columns 00004 set up.
 
 create table if not exists public.client_body_measurements (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles(id) on delete cascade,
   measured_at date not null default current_date,
-
-  -- Body composition
-  weight_kg          numeric(5,2),
-  body_fat_pct       numeric(4,1) check (body_fat_pct between 0 and 100),
-
-  -- Body sites — all centimeters (canonical), 1 decimal precision
-  neck_cm            numeric(5,1),
-  chest_cm           numeric(5,1),
-  upper_abdomen_cm   numeric(5,1),
-  lower_abdomen_cm   numeric(5,1),
-  waist_cm           numeric(5,1),
-  hips_cm            numeric(5,1),
-  bicep_left_cm      numeric(5,1),
-  bicep_right_cm     numeric(5,1),
-  thigh_left_cm      numeric(5,1),
-  thigh_right_cm     numeric(5,1),
-  calf_left_cm       numeric(5,1),
-  calf_right_cm      numeric(5,1),
-
-  -- Optional notes from the user / trainer
-  note text,
-
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-
-  -- One row per client per measurement date — re-submission overwrites
-  unique(client_id, measured_at)
+  created_at timestamptz default now()
 );
+
+alter table public.client_body_measurements
+  add column if not exists weight_kg          numeric(5,2),
+  add column if not exists body_fat_pct       numeric(4,1),
+  add column if not exists neck_cm            numeric(5,1),
+  add column if not exists chest_cm           numeric(5,1),
+  add column if not exists upper_abdomen_cm   numeric(5,1),
+  add column if not exists lower_abdomen_cm   numeric(5,1),
+  add column if not exists waist_cm           numeric(5,1),
+  add column if not exists hips_cm            numeric(5,1),
+  add column if not exists bicep_left_cm      numeric(5,1),
+  add column if not exists bicep_right_cm     numeric(5,1),
+  add column if not exists thigh_left_cm      numeric(5,1),
+  add column if not exists thigh_right_cm     numeric(5,1),
+  add column if not exists calf_left_cm       numeric(5,1),
+  add column if not exists calf_right_cm      numeric(5,1),
+  add column if not exists note               text,
+  add column if not exists updated_at         timestamptz default now();
+
+-- One row per client per measurement date — re-submission overwrites.
+-- Wrapped in DO block because `add constraint if not exists` doesn't
+-- exist in Postgres; we check first.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'client_body_measurements_client_id_measured_at_key'
+  ) then
+    alter table public.client_body_measurements
+      add constraint client_body_measurements_client_id_measured_at_key
+      unique (client_id, measured_at);
+  end if;
+end $$;
 
 create index if not exists idx_body_meas_client_date
   on public.client_body_measurements(client_id, measured_at desc);
