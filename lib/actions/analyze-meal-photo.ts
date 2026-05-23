@@ -172,13 +172,15 @@ export async function analyzeMealPhoto(
       return { ok: false, error: `Could not sign URL: ${signError?.message ?? 'unknown'}` };
     }
 
-    // ─── 2. Call Gemini 2.0 Flash ───────────────────────────────
+    // ─── 2. Call Gemini 1.5 Flash ───────────────────────────────
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      // gemini-2.0-flash: best price/quality for image understanding
-      // in late 2025 / 2026. Free tier: 1500 req/day. Paid: ~$0.0003
-      // per image-in scan.
-      model: 'gemini-2.0-flash',
+      // gemini-1.5-flash: older but most-stable free-tier quota in
+      // 2026. gemini-2.0-flash has a known "limit: 0" quota issue
+      // for new free-tier accounts in some regions; 1.5-flash bypasses
+      // that. Slightly slower / older but vision quality is on par
+      // for our food-estimation use case.
+      model: 'gemini-1.5-flash',
       systemInstruction: SYSTEM_INSTRUCTION,
       generationConfig: {
         responseMimeType: 'application/json',
