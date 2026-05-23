@@ -13,16 +13,16 @@ const AVATAR_BASE = '/twin/avatars';
 
 const AVATAR_PATHS: Record<'male' | 'female', Record<BodyType, string>> = {
   male: {
-    lean: `${AVATAR_BASE}/male-lean.png`,
-    athletic: `${AVATAR_BASE}/male-athletic.png`,
-    solid: `${AVATAR_BASE}/male-solid.png`,
-    heavy: `${AVATAR_BASE}/male-heavy.png`,
+    lean: `${AVATAR_BASE}/male-lean.webp`,
+    athletic: `${AVATAR_BASE}/male-athletic.webp`,
+    solid: `${AVATAR_BASE}/male-solid.webp`,
+    heavy: `${AVATAR_BASE}/male-heavy.webp`,
   },
   female: {
-    lean: `${AVATAR_BASE}/female-lean.png`,
-    athletic: `${AVATAR_BASE}/female-athletic.png`,
-    solid: `${AVATAR_BASE}/female-solid.png`,
-    heavy: `${AVATAR_BASE}/female-heavy.png`,
+    lean: `${AVATAR_BASE}/female-lean.webp`,
+    athletic: `${AVATAR_BASE}/female-athletic.webp`,
+    solid: `${AVATAR_BASE}/female-solid.webp`,
+    heavy: `${AVATAR_BASE}/female-heavy.webp`,
   },
 };
 
