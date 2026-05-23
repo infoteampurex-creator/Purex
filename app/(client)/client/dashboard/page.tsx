@@ -1,5 +1,6 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
+import { BodyMeasurementsCard } from '@/components/client/dashboard/BodyMeasurementsCard';
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { AdminSwitcher } from '@/components/client/AdminSwitcher';
 import { CommitmentWidget } from '@/components/client/CommitmentWidget';
@@ -31,6 +32,13 @@ import {
 } from '@/lib/data/twin-game';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import { getTodaysMeals, type MealRow } from '@/lib/data/meals';
+import {
+  getLatestMeasurements,
+  getProfileBodySettings,
+  EMPTY_PROFILE_BODY_SETTINGS,
+  type BodyMeasurements,
+  type ProfileBodySettings,
+} from '@/lib/data/body-measurements';
 
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
@@ -73,16 +81,22 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   let streakHistory: Awaited<ReturnType<typeof getStreakHistory>> = [];
   let nutritionSnapshot: NutritionSnapshot = EMPTY_NUTRITION_SNAPSHOT;
   let todaysMeals: MealRow[] = [];
+  let latestMeasurements: BodyMeasurements | null = null;
+  let bodySettings: ProfileBodySettings = EMPTY_PROFILE_BODY_SETTINGS;
   if (userId) {
-    const [inputsResult, history, meals] = await Promise.all([
+    const [inputsResult, history, meals, meas, bodyProfile] = await Promise.all([
       getTwinDailyInputs(userId, today),
       getStreakHistory(userId, 7),
       getTodaysMeals(userId, today),
+      getLatestMeasurements(userId),
+      getProfileBodySettings(userId),
     ]);
     twinInputs = inputsResult.inputs;
     streakHistory = history;
     nutritionSnapshot = inputsResult.nutrition;
     todaysMeals = meals;
+    latestMeasurements = meas;
+    bodySettings = bodyProfile;
   }
   const twinStats = deriveTwinStats(twinInputs);
   const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
@@ -125,6 +139,14 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         inputs={twinInputs}
         nutrition={nutritionSnapshot}
         todaysMeals={todaysMeals}
+      />
+
+      {/* Body measurements — Phase 1 foundation for the parametric
+          live-Twin avatar planned for Phase 2. App-only (returns
+          null on web). */}
+      <BodyMeasurementsCard
+        latest={latestMeasurements}
+        profileSettings={bodySettings}
       />
 
       {userId && (
