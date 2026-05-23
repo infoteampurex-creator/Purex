@@ -6,6 +6,7 @@ import { useIsApp } from '@/lib/hooks/useIsApp';
 import type { TwinStats, TwinVisualState } from '@/lib/data/twin';
 import type { CoachMission, LevelInfo } from '@/lib/data/twin-game';
 import type { BodyProportions } from '@/lib/data/body-proportions';
+import type { Gender } from '@/lib/data/body-measurements';
 
 /**
  * Dispatcher — picks Web vs App layout based on Capacitor detection.
@@ -32,6 +33,8 @@ interface Props {
   proportions?: BodyProportions | null;
   /** True if any body measurement has been logged. */
   hasMeasurements?: boolean;
+  /** User's gender — drives which avatar PNG set we pick from. */
+  gender?: Gender | null;
 }
 
 export function TwinDashboardCard(props: Props) {
@@ -50,6 +53,7 @@ export function TwinDashboardCard(props: Props) {
       {...props}
       proportions={props.proportions ?? null}
       hasMeasurements={props.hasMeasurements ?? false}
+      gender={props.gender ?? null}
     />
   );
 }

@@ -5,6 +5,7 @@ import { FutureCloneDashboardCardWeb } from './FutureCloneDashboardCardWeb';
 import { useIsApp } from '@/lib/hooks/useIsApp';
 import type { TwinStats } from '@/lib/data/twin';
 import type { BodyProportions } from '@/lib/data/body-proportions';
+import type { Gender } from '@/lib/data/body-measurements';
 
 /**
  * Dispatcher — picks Web vs App layout based on Capacitor detection.
@@ -30,6 +31,8 @@ interface Props {
   proportions?: BodyProportions | null;
   /** True if any body measurement has been logged. */
   hasMeasurements?: boolean;
+  /** User's gender — drives avatar PNG selection. */
+  gender?: Gender | null;
 }
 
 export function FutureCloneDashboardCard(props: Props) {
@@ -47,6 +50,7 @@ export function FutureCloneDashboardCard(props: Props) {
       {...props}
       proportions={props.proportions ?? null}
       hasMeasurements={props.hasMeasurements ?? false}
+      gender={props.gender ?? null}
     />
   );
 }

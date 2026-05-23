@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Sparkles, Ruler } from 'lucide-react';
+import { ArrowRight, Lock, Sparkles, Ruler } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { TwinSilhouette } from './TwinSilhouette';
-import { AnimatedNumber } from './AnimatedNumber';
-import { StatRadial } from './StatRadial';
+import { AvatarImage } from './AvatarImage';
+import { EmojiStatBars } from './EmojiStatBars';
 import { LevelChip } from './LevelChip';
 import { StreakChip } from './StreakChip';
 import { AiCoachCard } from './AiCoachCard';
@@ -13,10 +12,8 @@ import {
   deriveVisualState,
   isTwinEmpty,
   TWIN_PREVIEW_STATS,
-  TWIN_STAT_META,
   twinOverallScore,
   type TwinStats,
-  type TwinStatKey,
   type TwinVisualState,
 } from '@/lib/data/twin';
 import {
@@ -26,6 +23,7 @@ import {
   type LevelInfo,
 } from '@/lib/data/twin-game';
 import type { BodyProportions } from '@/lib/data/body-proportions';
+import { avatarFor, bodyTypeLabel } from '@/lib/data/avatar-asset';
 
 interface Props {
   stats: TwinStats;
@@ -34,31 +32,19 @@ interface Props {
   level: LevelInfo;
   streakDays: number;
   mission: CoachMission;
-  /** Live measurement-driven body shape (Phase 2). When null, the
-   *  silhouette falls back to a neutral athletic shape. */
   proportions?: BodyProportions | null;
-  /** True if the user has logged at least one body measurement.
-   *  Used to show a calibration hint. */
   hasMeasurements: boolean;
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
 }
 
-const STAT_ORDER: TwinStatKey[] = [
-  'energy',
-  'strength',
-  'endurance',
-  'recovery',
-  'discipline',
-];
-
 /**
- * Twin Clone hero card — silhouette as live avatar, vitality + stats
- * + AI Coach as supporting chrome.
+ * Twin Clone hero card — Gemini-generated character PNG over
+ * holographic ring base + circuit grid, with emoji stat bars and
+ * the "LOCKED IN" gamification badge from the user's reference.
  *
- * The silhouette's torso, leg, and neck widths morph based on the
- * user's logged body measurements (chest, waist, hips, thighs,
- * neck — Phase 2). When the user hasn't logged measurements yet,
- * the silhouette uses the neutral athletic shape with a small
- * "Log measurements to wake your Twin" hint.
+ * Avatar swaps automatically as the user's BMI changes (heavy →
+ * solid → athletic → lean), giving the "live morph" feeling without
+ * any 3D / Three.js / per-pixel rigging cost.
  */
 export function TwinDashboardCardApp({
   stats,
@@ -69,6 +55,7 @@ export function TwinDashboardCardApp({
   mission,
   proportions,
   hasMeasurements,
+  gender,
 }: Props) {
   const isEmpty = isTwinEmpty(stats);
   const showPreview = isEmpty;
@@ -92,30 +79,25 @@ export function TwinDashboardCardApp({
       }
     : mission ?? { headline: 'Twin is building', body: message, tone: 'build' };
 
+  // Pick the right PNG. Falls back to athletic when no measurements.
+  const bodyType = proportions?.bodyType ?? 'athletic';
+  const avatarSrc = avatarFor(gender ?? null, bodyType);
+
   return (
     <div
       className="relative rounded-3xl overflow-hidden"
       style={{
         background: `
-          radial-gradient(ellipse at 50% -20%, ${statusColor}1A 0%, transparent 55%),
-          linear-gradient(180deg, #10130f 0%, #0a0c09 100%)
+          radial-gradient(ellipse at 50% 0%, ${statusColor}1F 0%, transparent 50%),
+          linear-gradient(180deg, #0e1417 0%, #0a0c09 100%)
         `,
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: `1px solid ${statusColor}26`,
         boxShadow:
-          '0 0 0 1px rgba(198,255,61,0.04), 0 24px 48px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+          `0 0 0 1px ${statusColor}14, 0 24px 48px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)`,
       }}
     >
-      {/* Ambient glow behind the silhouette */}
-      <div
-        className="absolute -top-32 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full pointer-events-none"
-        style={{
-          background: `radial-gradient(circle, ${statusColor}26, transparent 65%)`,
-          filter: 'blur(20px)',
-        }}
-      />
-
       {/* ─── Status strip ─── */}
-      <div className="relative px-5 pt-5 pb-3 flex items-center justify-between gap-3 flex-wrap">
+      <div className="relative px-5 pt-5 pb-2 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
             <Sparkles size={11} />
@@ -138,18 +120,6 @@ export function TwinDashboardCardApp({
             />
             {statusLabel}
           </span>
-          {showPreview && (
-            <span
-              className="font-mono uppercase tracking-[0.18em] px-1.5 py-0.5 rounded"
-              style={{
-                fontSize: 8,
-                color: '#c6ff3d',
-                backgroundColor: 'rgba(198,255,61,0.12)',
-              }}
-            >
-              Preview
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <StreakChip days={streakDays} />
@@ -157,81 +127,82 @@ export function TwinDashboardCardApp({
         </div>
       </div>
 
-      {/* ─── Hero: measurement-driven silhouette + Vitality below ─── */}
-      <div className="relative flex flex-col items-center pt-2 pb-3">
-        <TwinSilhouette
-          stats={displayStats}
-          state={displayState}
-          width={180}
-          hologram
-          proportions={proportions ?? undefined}
-        />
-        <div className="flex items-baseline gap-2 mt-1">
-          <AnimatedNumber value={overall} fontSize={36} />
-          <span
-            className="font-mono uppercase tracking-[0.22em] font-bold"
-            style={{ fontSize: 10, color: 'rgba(245,245,240,0.55)' }}
+      {/* ─── Title + Vitality readout ─── */}
+      <div className="relative px-5 pb-3 flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-display font-semibold text-lg tracking-tight">
+            Your live fitness clone
+          </h3>
+          {hasMeasurements && proportions && (
+            <div
+              className="font-mono uppercase tracking-[0.18em] font-bold mt-1"
+              style={{ fontSize: 9, color: statusColor }}
+            >
+              {bodyTypeLabel(proportions.bodyType)}
+              {proportions.bmi != null && (
+                <span style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  {' '}· BMI {proportions.bmi.toFixed(1)}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="text-right tabular-nums flex-shrink-0">
+          <div
+            className="font-display font-bold leading-none"
+            style={{ fontSize: 36, color: statusColor }}
+          >
+            {overall}
+          </div>
+          <div
+            className="font-mono uppercase tracking-[0.18em] text-text-muted font-bold mt-0.5"
+            style={{ fontSize: 9 }}
           >
             Vitality
-          </span>
-        </div>
-
-        {/* Body-type subtitle when proportions are known */}
-        {proportions && hasMeasurements && (
-          <div
-            className="font-mono uppercase tracking-[0.18em] font-bold mt-1"
-            style={{ fontSize: 9, color: statusColor }}
-          >
-            {proportions.bodyType} build
-            {proportions.bmi != null && (
-              <span style={{ color: 'rgba(245,245,240,0.40)' }}>
-                {' '}· BMI {proportions.bmi.toFixed(1)}
-              </span>
-            )}
           </div>
-        )}
-
-        {/* Calibration nudge when no measurements logged yet */}
-        {!hasMeasurements && (
-          <Link
-            href="#my-body"
-            scroll={false}
-            className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-            style={{
-              fontSize: 10,
-              color: '#7dd3ff',
-              backgroundColor: 'rgba(125,211,255,0.10)',
-              border: '1px solid rgba(125,211,255,0.25)',
-            }}
-          >
-            <Ruler size={10} />
-            <span className="font-mono uppercase tracking-[0.18em] font-bold">
-              Log measurements
-            </span>
-          </Link>
-        )}
-      </div>
-
-      {/* ─── 5 stat radials ─── */}
-      <div className="relative px-3 pb-4">
-        <div className="grid grid-cols-5 gap-1">
-          {STAT_ORDER.map((key) => (
-            <div key={key} className="flex justify-center">
-              <StatRadial
-                value={displayStats[key]}
-                color={TWIN_STAT_META[key].color}
-                label={TWIN_STAT_META[key].label}
-                size={52}
-              />
-            </div>
-          ))}
         </div>
       </div>
 
-      {/* ─── AI Coach ─── */}
+      {/* ─── LOCKED IN badge ─── */}
+      <div className="relative px-5 pb-2">
+        <LockedInBadge active={!isEmpty} />
+      </div>
+
+      {/* ─── Hero zone: avatar + stat bars side by side ─── */}
+      <div className="relative px-3 pb-3 grid grid-cols-[auto_1fr] gap-2 items-end">
+        <div className="flex justify-center">
+          <AvatarImage src={avatarSrc} width={170} accent={statusColor} />
+        </div>
+        <div className="pb-4 pr-2">
+          <EmojiStatBars stats={displayStats} compact />
+        </div>
+      </div>
+
+      {/* ─── AI Coach mission ─── */}
       <div className="relative px-5 pb-4">
         <AiCoachCard mission={cardMission} />
       </div>
+
+      {/* ─── Calibration nudge if no measurements yet ─── */}
+      {!hasMeasurements && (
+        <div className="relative px-5 pb-3">
+          <div
+            className="rounded-xl px-3 py-2.5 flex items-center gap-2"
+            style={{
+              background: 'rgba(125,211,255,0.08)',
+              border: '1px solid rgba(125,211,255,0.25)',
+            }}
+          >
+            <Ruler size={12} style={{ color: '#7dd3ff' }} />
+            <span
+              className="font-mono"
+              style={{ fontSize: 11, color: 'rgba(125,211,255,0.95)' }}
+            >
+              Log your measurements — Twin morphs to match your real body.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ─── CTA ─── */}
       <Link
@@ -243,10 +214,37 @@ export function TwinDashboardCardApp({
           borderColor: 'rgba(255,255,255,0.06)',
         }}
       >
-        Analyze my Twin
+        Open Full Twin View
         <ArrowRight size={13} />
       </Link>
     </div>
+  );
+}
+
+// ─── LOCKED IN badge — matches the gold lock in the reference ────────
+
+function LockedInBadge({ active }: { active: boolean }) {
+  const color = active ? '#ffd24d' : '#a0a69a';
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+      style={{
+        background: `linear-gradient(135deg, ${color}26 0%, ${color}0F 100%)`,
+        border: `1px solid ${color}55`,
+        boxShadow: active ? `0 0 12px ${color}33` : undefined,
+      }}
+    >
+      <Lock size={11} style={{ color }} />
+      <span
+        className="font-mono uppercase tracking-[0.20em] font-bold"
+        style={{ fontSize: 10, color }}
+      >
+        Locked In
+      </span>
+    </motion.div>
   );
 }
 

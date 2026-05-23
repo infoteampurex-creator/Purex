@@ -22,6 +22,7 @@ const nextConfig = {
       { pathname: '/hero/**' },
       { pathname: '/transformations/**' },
       { pathname: '/transformations/**', search: 'v=2' },
+      { pathname: '/twin/**' }, // body-type avatar PNGs
     ],
   },
   experimental: {

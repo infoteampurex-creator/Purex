@@ -185,6 +185,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           mission={mission}
           proportions={proportions}
           hasMeasurements={hasMeasurements}
+          gender={bodySettings.gender}
         />
         <FutureCloneDashboardCard
           stats={twinStats}
@@ -192,6 +193,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           streakDays={currentStreakDays}
           proportions={proportions}
           hasMeasurements={hasMeasurements}
+          gender={bodySettings.gender}
         />
       </div>
 
