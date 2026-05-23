@@ -113,7 +113,13 @@ export function BodyMeasurementsSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Re-convert all values when unit toggles (mid-edit)
+  // Re-convert all values when unit toggles (mid-edit).
+  // When this effect fires, `unit` has just become the NEW value.
+  // The currently-displayed values are still in the OPPOSITE unit
+  // because that's what the user was looking at the instant before
+  // the toggle. So:
+  //   switching TO 'in'  → values were in cm → convert cm → in
+  //   switching TO 'cm'  → values were in in → convert in → cm
   useEffect(() => {
     if (!open) return;
     setMeasurements((prev) => {
@@ -122,17 +128,15 @@ export function BodyMeasurementsSheet({
         const v = prev[f.key];
         if (typeof v !== 'number') continue;
         next[f.key] =
-          unit === 'in'
-            ? (cmToIn(inToCm(v)) ?? '')
-            : (inToCm(cmToIn(v)) ?? '');
+          unit === 'in' ? (cmToIn(v) ?? '') : (inToCm(v) ?? '');
       }
       return next;
     });
     setWeight((prev) => {
       if (typeof prev !== 'number') return prev;
-      // If we're switching FROM in TO cm, prev was lb → kg
-      // If we're switching FROM cm TO in, prev was kg → lb
-      return unit === 'in' ? (kgToLb(lbToKg(prev)) ?? '') : (lbToKg(kgToLb(prev)) ?? '');
+      // Switching TO 'in' → was kg → convert to lb
+      // Switching TO 'cm' → was lb → convert to kg
+      return unit === 'in' ? (kgToLb(prev) ?? '') : (lbToKg(prev) ?? '');
     });
     // intentional: only respond to unit changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
