@@ -62,6 +62,31 @@ const INITIAL: State = {
   error: null,
 };
 
+/**
+ * Group Health Connect records by their source app (dataOrigin)
+ * and return the largest single-source total. Avoids the classic
+ * "Samsung Health says 53, my app shows 102" double-count bug that
+ * happens when multiple apps mirror the same underlying step data
+ * into Health Connect.
+ */
+function maxPerSource<T>(
+  records: T[],
+  extract: (r: T) => number
+): number {
+  if (records.length === 0) return 0;
+  const totalsByOrigin = new Map<string, number>();
+  for (const r of records) {
+    const meta = (r as { metadata?: { dataOrigin?: string } }).metadata;
+    const origin = meta?.dataOrigin ?? '__unknown__';
+    totalsByOrigin.set(origin, (totalsByOrigin.get(origin) ?? 0) + extract(r));
+  }
+  let max = 0;
+  for (const total of totalsByOrigin.values()) {
+    if (total > max) max = total;
+  }
+  return max;
+}
+
 /** Reject a promise if it doesn't settle within `ms` milliseconds. */
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -206,29 +231,34 @@ export function useHealthConnect() {
         safeRead('HeartRateSeries'),
       ]);
 
-      // Steps: sum count across all records in the window
-      const steps = stepsRes.records.reduce(
-        (sum, r) => sum + ((r as { count?: number }).count ?? 0),
-        0
+      // Steps: Health Connect aggregates writes from every app that
+      // touches steps (Samsung Health, the phone pedometer, fitness
+      // trackers, etc.) and each writes its own Steps records. If we
+      // simply sum, we double- or triple-count. Group by dataOrigin
+      // (the source app's package name) and take the max single-source
+      // total — that's the source with the most complete view.
+      const steps = maxPerSource(stepsRes.records, (r) =>
+        (r as { count?: number }).count ?? 0
       );
 
-      // Sleep: sum duration across all SleepSession records today.
-      const sleepMinutes = sleepRes.records.reduce((sum, r) => {
+      // Sleep: same per-source dedupe. If Samsung Health + a wearable
+      // both log overlapping sleep sessions we don't want to sum them.
+      const sleepMinutes = maxPerSource(sleepRes.records, (r) => {
         const session = r as { startTime?: Date | string; endTime?: Date | string };
-        if (!session.startTime || !session.endTime) return sum;
+        if (!session.startTime || !session.endTime) return 0;
         const startMs = new Date(session.startTime).getTime();
         const endMs = new Date(session.endTime).getTime();
-        return sum + Math.max(0, Math.round((endMs - startMs) / 60000));
-      }, 0);
+        return Math.max(0, Math.round((endMs - startMs) / 60000));
+      });
 
-      // Hydration: convert all Volume readings to ml and sum
-      const waterMl = hydrationRes.records.reduce((sum, r) => {
+      // Hydration: same per-source dedupe (in case two apps both
+      // record the same glass of water).
+      const waterMl = maxPerSource(hydrationRes.records, (r) => {
         const h = r as { volume?: { unit?: string; value?: number } };
         const v = h.volume;
-        if (!v || typeof v.value !== 'number') return sum;
-        const ml = v.unit === 'liter' ? v.value * 1000 : v.value;
-        return sum + Math.round(ml);
-      }, 0);
+        if (!v || typeof v.value !== 'number') return 0;
+        return v.unit === 'liter' ? Math.round(v.value * 1000) : Math.round(v.value);
+      });
 
       // Heart rate: take the most recent sample's bpm
       let heartRateBpm = 0;
