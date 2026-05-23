@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { HealthConnect } from '@kiwi-health/capacitor-health-connect';
 
 /**
  * Wraps @kiwi-health/capacitor-health-connect for the read-only flow
@@ -11,10 +12,16 @@ import { Capacitor } from '@capacitor/core';
  * The plugin only works on Android. On web / iOS the hook reports
  * `availability: 'NotSupported'` and the rest is no-ops, so callers
  * can render gracefully degraded UI.
+ *
+ * Every plugin call is wrapped in a timeout — Capacitor's bridge can
+ * silently hang if a permission flow gets interrupted. We surface
+ * those as errors instead of leaving the UI stuck on "Checking…".
  */
 
 const READ_TYPES = ['Steps', 'SleepSession', 'Hydration', 'HeartRateSeries'] as const;
 type ReadType = (typeof READ_TYPES)[number];
+
+const CALL_TIMEOUT_MS = 8000;
 
 export type HealthConnectAvailability =
   | 'Unknown'        // not checked yet
@@ -55,59 +62,64 @@ const INITIAL: State = {
   error: null,
 };
 
+/** Reject a promise if it doesn't settle within `ms` milliseconds. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
 export function useHealthConnect() {
   const [state, setState] = useState<State>(INITIAL);
 
-  /** Dynamic import keeps the native plugin out of the web bundle. */
-  const loadPlugin = useCallback(async () => {
-    if (Capacitor.getPlatform() !== 'android') return null;
-    const mod = await import('@kiwi-health/capacitor-health-connect');
-    return mod.HealthConnect;
-  }, []);
+  /** True only when running on an actual Android Capacitor WebView. */
+  const isAndroid = useCallback(() => Capacitor.getPlatform() === 'android', []);
 
   const checkAvailability = useCallback(async () => {
-    const HC = await loadPlugin();
-    if (!HC) {
+    if (!isAndroid()) {
       setState((s) => ({ ...s, availability: 'NotSupported' }));
       return 'NotSupported' as const;
     }
     try {
-      const { availability } = await HC.checkAvailability();
-      setState((s) => ({ ...s, availability }));
+      const { availability } = await withTimeout(
+        HealthConnect.checkAvailability(),
+        CALL_TIMEOUT_MS,
+        'checkAvailability'
+      );
+      setState((s) => ({ ...s, availability, error: null }));
       return availability;
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       setState((s) => ({
         ...s,
         availability: 'NotSupported',
-        error: err instanceof Error ? err.message : String(err),
+        error: msg,
       }));
       return 'NotSupported' as const;
     }
-  }, [loadPlugin]);
+  }, [isAndroid]);
 
   const checkPermissions = useCallback(async () => {
-    const HC = await loadPlugin();
-    if (!HC) return false;
+    if (!isAndroid()) return false;
     try {
-      const result = await HC.checkHealthPermissions({
-        read: [...READ_TYPES] as ReadType[],
-        write: [],
-      });
-      setState((s) => ({ ...s, hasPermissions: result.hasAllPermissions }));
-      return result.hasAllPermissions;
-    } catch {
-      return false;
-    }
-  }, [loadPlugin]);
-
-  const requestPermissions = useCallback(async () => {
-    const HC = await loadPlugin();
-    if (!HC) return false;
-    try {
-      const result = await HC.requestHealthPermissions({
-        read: [...READ_TYPES] as ReadType[],
-        write: [],
-      });
+      const result = await withTimeout(
+        HealthConnect.checkHealthPermissions({
+          read: [...READ_TYPES] as ReadType[],
+          write: [],
+        }),
+        CALL_TIMEOUT_MS,
+        'checkHealthPermissions'
+      );
       setState((s) => ({ ...s, hasPermissions: result.hasAllPermissions }));
       return result.hasAllPermissions;
     } catch (err) {
@@ -117,26 +129,51 @@ export function useHealthConnect() {
       }));
       return false;
     }
-  }, [loadPlugin]);
+  }, [isAndroid]);
+
+  const requestPermissions = useCallback(async () => {
+    if (!isAndroid()) return false;
+    try {
+      const result = await withTimeout(
+        HealthConnect.requestHealthPermissions({
+          read: [...READ_TYPES] as ReadType[],
+          write: [],
+        }),
+        // Permission UI needs more time — user-driven
+        60_000,
+        'requestHealthPermissions'
+      );
+      setState((s) => ({ ...s, hasPermissions: result.hasAllPermissions, error: null }));
+      return result.hasAllPermissions;
+    } catch (err) {
+      setState((s) => ({
+        ...s,
+        error: err instanceof Error ? err.message : String(err),
+      }));
+      return false;
+    }
+  }, [isAndroid]);
 
   const openSettings = useCallback(async () => {
-    const HC = await loadPlugin();
-    if (!HC) return;
+    if (!isAndroid()) return;
     try {
-      await HC.openHealthConnectSetting();
+      await withTimeout(
+        HealthConnect.openHealthConnectSetting(),
+        CALL_TIMEOUT_MS,
+        'openHealthConnectSetting'
+      );
     } catch {
-      // Plugin throws if Health Connect isn't installed — handled by
-      // the availability flow elsewhere.
+      // Plugin throws if Health Connect isn't installed — handled
+      // separately via the availability flow.
     }
-  }, [loadPlugin]);
+  }, [isAndroid]);
 
   /**
    * Read all four record types for today (local midnight → now) and
    * normalize them into HealthConnectReadings.
    */
   const readToday = useCallback(async (): Promise<HealthConnectReadings> => {
-    const HC = await loadPlugin();
-    if (!HC) return EMPTY_READINGS;
+    if (!isAndroid()) return EMPTY_READINGS;
 
     setState((s) => ({ ...s, loading: true, error: null }));
 
@@ -149,20 +186,24 @@ export function useHealthConnect() {
       endTime: now,
     };
 
+    const safeRead = async (type: ReadType) => {
+      try {
+        return await withTimeout(
+          HealthConnect.readRecords({ type, timeRangeFilter }),
+          CALL_TIMEOUT_MS,
+          `readRecords(${type})`
+        );
+      } catch {
+        return { records: [] };
+      }
+    };
+
     try {
       const [stepsRes, sleepRes, hydrationRes, hrRes] = await Promise.all([
-        HC.readRecords({ type: 'Steps', timeRangeFilter }).catch(() => ({
-          records: [],
-        })),
-        HC.readRecords({ type: 'SleepSession', timeRangeFilter }).catch(() => ({
-          records: [],
-        })),
-        HC.readRecords({ type: 'Hydration', timeRangeFilter }).catch(() => ({
-          records: [],
-        })),
-        HC.readRecords({ type: 'HeartRateSeries', timeRangeFilter }).catch(
-          () => ({ records: [] })
-        ),
+        safeRead('Steps'),
+        safeRead('SleepSession'),
+        safeRead('Hydration'),
+        safeRead('HeartRateSeries'),
       ]);
 
       // Steps: sum count across all records in the window
@@ -172,8 +213,6 @@ export function useHealthConnect() {
       );
 
       // Sleep: sum duration across all SleepSession records today.
-      // Some users have a single long overnight session; others have
-      // multiple naps. We sum all of them to total minutes asleep.
       const sleepMinutes = sleepRes.records.reduce((sum, r) => {
         const session = r as { startTime?: Date | string; endTime?: Date | string };
         if (!session.startTime || !session.endTime) return sum;
@@ -184,9 +223,7 @@ export function useHealthConnect() {
 
       // Hydration: convert all Volume readings to ml and sum
       const waterMl = hydrationRes.records.reduce((sum, r) => {
-        const h = r as {
-          volume?: { unit?: string; value?: number };
-        };
+        const h = r as { volume?: { unit?: string; value?: number } };
         const v = h.volume;
         if (!v || typeof v.value !== 'number') return sum;
         const ml = v.unit === 'liter' ? v.value * 1000 : v.value;
@@ -224,9 +261,9 @@ export function useHealthConnect() {
       }));
       return EMPTY_READINGS;
     }
-  }, [loadPlugin]);
+  }, [isAndroid]);
 
-  // On first mount, check availability + permissions
+  // On first mount, check availability + permissions + auto-read
   useEffect(() => {
     (async () => {
       const avail = await checkAvailability();
