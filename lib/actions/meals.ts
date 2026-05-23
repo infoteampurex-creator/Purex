@@ -20,6 +20,10 @@ const addMealSchema = z.object({
   fiberG: z.number().int().min(0).max(200).default(0),
   source: SOURCE.default('manual'),
   note: z.string().max(500).optional().nullable(),
+  /** Phase 2 — present when the meal came from the AI photo flow. */
+  photoUrl: z.string().url().optional().nullable(),
+  aiRaw: z.unknown().optional().nullable(),
+  aiConfidence: z.number().min(0).max(1).optional().nullable(),
 });
 
 export type AddMealInput = z.infer<typeof addMealSchema>;
@@ -65,6 +69,9 @@ export async function addMeal(input: AddMealInput): Promise<AddMealResult> {
         fiber_g: data.fiberG,
         source: data.source,
         note: data.note ?? null,
+        photo_url: data.photoUrl ?? null,
+        ai_raw: data.aiRaw ?? null,
+        ai_confidence: data.aiConfidence ?? null,
       })
       .select('id')
       .single();

@@ -17,8 +17,10 @@
     "cap:run:ios": "npx cap run ios"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.98.0",
     "@capacitor/android": "^7.0.0",
     "@capacitor/app": "^7.0.0",
+    "@capacitor/camera": "^7.0.5",
     "@capacitor/core": "^7.0.0",
     "@capacitor/ios": "^7.0.0",
     "@capacitor/splash-screen": "^7.0.0",

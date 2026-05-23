@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Apple, Camera, Loader2, X } from 'lucide-react';
+import Image from 'next/image';
+import { Apple, Camera, Edit3, Loader2, RotateCcw, Sparkles, X } from 'lucide-react';
 import { addMeal } from '@/lib/actions/meals';
+import { analyzeMealPhoto } from '@/lib/actions/analyze-meal-photo';
 
 interface Props {
   open: boolean;
@@ -51,7 +53,10 @@ const ACCENT = '#ff8a4d'; // orange — matches Nutrition tile palette
  * data shape that lands in client_meals is identical so the daily
  * roll-up trigger and Twin scoring don't change.
  */
+type Mode = 'choose' | 'analyzing' | 'review';
+
 export function MealLogSheet({ open, onClose, today }: Props) {
+  const [mode, setMode] = useState<Mode>('choose');
   const [mealType, setMealType] = useState<MealType>(() => guessMealType());
   const [name, setName] = useState('');
   const [calories, setCalories] = useState(0);
@@ -62,9 +67,16 @@ export function MealLogSheet({ open, onClose, today }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // AI photo flow state
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [aiRaw, setAiRaw] = useState<unknown>(null);
+  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
+  const [aiDescription, setAiDescription] = useState<string>('');
+
   useEffect(() => {
     if (open) {
       // Reset on each open
+      setMode('choose');
       setMealType(guessMealType());
       setName('');
       setCalories(0);
@@ -73,8 +85,91 @@ export function MealLogSheet({ open, onClose, today }: Props) {
       setFatsG(0);
       setFiberG(0);
       setError(null);
+      setPhotoUrl(null);
+      setAiRaw(null);
+      setAiConfidence(null);
+      setAiDescription('');
     }
   }, [open]);
+
+  // ─── Photo capture + AI analysis ───
+  const capturePhoto = async (source: 'camera' | 'gallery') => {
+    setError(null);
+    try {
+      // Dynamic import keeps the Capacitor camera plugin out of the
+      // initial bundle. Only loads when the user taps "Take photo".
+      const { Camera, CameraSource, CameraResultType } = await import(
+        '@capacitor/camera'
+      );
+      const photo = await Camera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: source === 'camera' ? CameraSource.Camera : CameraSource.Photos,
+        width: 1024,
+        correctOrientation: true,
+      });
+      if (!photo.base64String || !photo.format) {
+        setError('Could not read photo data');
+        return;
+      }
+      const mediaType: 'image/jpeg' | 'image/png' | 'image/webp' =
+        photo.format === 'png'
+          ? 'image/png'
+          : photo.format === 'webp'
+          ? 'image/webp'
+          : 'image/jpeg';
+
+      setMode('analyzing');
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await analyzeMealPhoto({
+        photoBase64: photo.base64String,
+        mediaType,
+        logDate: today,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        setMode('choose');
+        return;
+      }
+      // Populate state from AI response — user can still edit before saving
+      setPhotoUrl(res.photoUrl);
+      setAiRaw(res.analysis);
+      setAiConfidence(res.analysis.confidence);
+      setAiDescription(res.analysis.description);
+      setName(res.analysis.name);
+      setCalories(res.analysis.calories);
+      setProteinG(res.analysis.protein_g);
+      setCarbsG(res.analysis.carbs_g);
+      setFatsG(res.analysis.fats_g);
+      setFiberG(res.analysis.fiber_g);
+      setMode('review');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // User cancelling the camera throws a "User cancelled photos app" —
+      // don't treat as a real error.
+      if (/cancel/i.test(msg)) {
+        setMode('choose');
+        return;
+      }
+      setError(msg);
+      setMode('choose');
+    }
+  };
+
+  const clearPhoto = () => {
+    setPhotoUrl(null);
+    setAiRaw(null);
+    setAiConfidence(null);
+    setAiDescription('');
+    setName('');
+    setCalories(0);
+    setProteinG(0);
+    setCarbsG(0);
+    setFatsG(0);
+    setFiberG(0);
+    setMode('choose');
+  };
 
   const applyPreset = (p: MealPreset) => {
     setCalories(p.calories);
@@ -101,7 +196,10 @@ export function MealLogSheet({ open, onClose, today }: Props) {
       carbsG,
       fatsG,
       fiberG,
-      source: 'manual',
+      source: photoUrl ? 'ai_photo' : 'manual',
+      photoUrl: photoUrl ?? null,
+      aiRaw: aiRaw ?? null,
+      aiConfidence: aiConfidence ?? null,
     });
     setSaving(false);
     if (res.ok) {
@@ -194,6 +292,167 @@ export function MealLogSheet({ open, onClose, today }: Props) {
 
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto px-5 pb-3">
+              {/* ─── Photo / AI flow ─── */}
+              {mode === 'choose' && !photoUrl && (
+                <div
+                  className="rounded-2xl p-4 mb-4"
+                  style={{
+                    background:
+                      'linear-gradient(135deg, rgba(125,211,255,0.10) 0%, rgba(198,255,61,0.06) 100%)',
+                    border: '1px solid rgba(125,211,255,0.20)',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={14} style={{ color: '#7dd3ff' }} />
+                    <span
+                      className="font-mono uppercase tracking-[0.22em] font-bold"
+                      style={{ fontSize: 10, color: '#7dd3ff' }}
+                    >
+                      AI Meal Scan
+                    </span>
+                  </div>
+                  <p
+                    className="leading-relaxed mb-3"
+                    style={{ fontSize: 12, color: 'rgba(245,245,240,0.75)' }}
+                  >
+                    Snap a photo of your plate — Claude will estimate the
+                    calories and macros. You can edit before saving.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void capturePhoto('camera')}
+                      className="rounded-xl py-3 font-mono uppercase tracking-[0.16em] font-bold flex items-center justify-center gap-2"
+                      style={{
+                        fontSize: 11,
+                        color: '#0a0c09',
+                        backgroundColor: '#7dd3ff',
+                        boxShadow: '0 0 16px rgba(125,211,255,0.30)',
+                      }}
+                    >
+                      <Camera size={13} />
+                      Camera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void capturePhoto('gallery')}
+                      className="rounded-xl py-3 font-mono uppercase tracking-[0.16em] font-bold flex items-center justify-center gap-2"
+                      style={{
+                        fontSize: 11,
+                        color: '#7dd3ff',
+                        backgroundColor: 'rgba(125,211,255,0.08)',
+                        border: '1px solid rgba(125,211,255,0.30)',
+                      }}
+                    >
+                      <Apple size={13} />
+                      Gallery
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {mode === 'analyzing' && (
+                <div
+                  className="rounded-2xl p-5 mb-4 flex flex-col items-center text-center"
+                  style={{
+                    background:
+                      'linear-gradient(135deg, rgba(125,211,255,0.10) 0%, transparent 100%)',
+                    border: '1px solid rgba(125,211,255,0.20)',
+                  }}
+                >
+                  <Loader2 size={28} className="animate-spin mb-3" style={{ color: '#7dd3ff' }} />
+                  <div
+                    className="font-display font-semibold"
+                    style={{ fontSize: 14, color: '#f5f5f0' }}
+                  >
+                    Analyzing your meal…
+                  </div>
+                  <div
+                    className="font-mono mt-1"
+                    style={{ fontSize: 11, color: 'rgba(245,245,240,0.55)' }}
+                  >
+                    Usually 3–6 seconds
+                  </div>
+                </div>
+              )}
+
+              {mode === 'review' && photoUrl && (
+                <div
+                  className="rounded-2xl overflow-hidden mb-4"
+                  style={{
+                    background:
+                      'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%)',
+                    border: '1px solid rgba(125,211,255,0.20)',
+                  }}
+                >
+                  <div className="relative w-full" style={{ height: 160 }}>
+                    {/* next/image handles signed URLs fine; unoptimized
+                        because the URL is dynamic per upload. */}
+                    <Image
+                      src={photoUrl}
+                      alt="Meal"
+                      fill
+                      sizes="100vw"
+                      unoptimized
+                      style={{ objectFit: 'cover' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={clearPhoto}
+                      className="absolute top-2 right-2 px-2.5 py-1.5 rounded-full flex items-center gap-1.5 font-mono uppercase tracking-[0.16em] font-bold"
+                      style={{
+                        fontSize: 9,
+                        color: '#f5f5f0',
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        backdropFilter: 'blur(8px)',
+                      }}
+                    >
+                      <RotateCcw size={10} />
+                      Retake
+                    </button>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles size={11} style={{ color: '#7dd3ff' }} />
+                      <span
+                        className="font-mono uppercase tracking-[0.22em] font-bold"
+                        style={{ fontSize: 9, color: '#7dd3ff' }}
+                      >
+                        AI Estimate
+                      </span>
+                      {aiConfidence !== null && (
+                        <span
+                          className="font-mono uppercase tracking-[0.16em] font-bold ml-auto px-1.5 py-0.5 rounded"
+                          style={{
+                            fontSize: 9,
+                            color: confidenceColor(aiConfidence),
+                            backgroundColor: confidenceColor(aiConfidence) + '1A',
+                          }}
+                        >
+                          {Math.round(aiConfidence * 100)}% confident
+                        </span>
+                      )}
+                    </div>
+                    {aiDescription && (
+                      <p
+                        className="leading-snug mt-1 flex items-start gap-1.5"
+                        style={{ fontSize: 12, color: 'rgba(245,245,240,0.75)' }}
+                      >
+                        <Edit3 size={11} style={{ color: 'rgba(245,245,240,0.4)', marginTop: 2, flexShrink: 0 }} />
+                        <span>
+                          {aiDescription}
+                          {aiConfidence !== null && aiConfidence < 0.6 && (
+                            <span style={{ color: '#ff8a4d' }}>
+                              {' '}— please double-check below.
+                            </span>
+                          )}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Today's progress */}
               <div
                 className="rounded-xl px-4 py-3 mb-4"
@@ -334,23 +593,6 @@ export function MealLogSheet({ open, onClose, today }: Props) {
                   {error}
                 </div>
               )}
-
-              {/* Phase 2 teaser */}
-              <div
-                className="rounded-xl px-4 py-3 flex items-center gap-2"
-                style={{
-                  background: 'rgba(125,211,255,0.05)',
-                  border: '1px solid rgba(125,211,255,0.15)',
-                }}
-              >
-                <Camera size={14} style={{ color: '#7dd3ff' }} />
-                <span
-                  className="font-mono"
-                  style={{ fontSize: 11, color: 'rgba(125,211,255,0.85)' }}
-                >
-                  Coming soon: snap a photo, AI fills the macros.
-                </span>
-              </div>
             </div>
 
             {/* Save (sticky bottom) */}
@@ -490,4 +732,10 @@ function guessMealType(): MealType {
   if (h < 16) return 'lunch';
   if (h < 19) return 'snack';
   return 'dinner';
+}
+
+function confidenceColor(c: number): string {
+  if (c >= 0.7) return '#c6ff3d';   // strong → brand green
+  if (c >= 0.4) return '#ffd24d';   // medium → amber
+  return '#ff8a4d';                 // low → warm warning
 }
