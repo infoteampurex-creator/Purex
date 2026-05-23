@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Footprints, Moon, Droplets, Apple, Plus } from 'lucide-react';
-import type { DailyInputs } from '@/lib/data/twin';
+import type { DailyInputs, NutritionSnapshot } from '@/lib/data/twin';
 import { QuickLogSheet, type QuickLogType } from './QuickLogSheet';
+import { MealLogSheet } from './MealLogSheet';
 
 interface Props {
   inputs: DailyInputs;
+  nutrition: NutritionSnapshot;
 }
 
 /**
@@ -19,8 +21,9 @@ interface Props {
  * opens a QuickLogSheet to log manually for users without auto-source
  * apps. Nutrition tile is read-only — it's an admin-tracked metric.
  */
-export function AppFitnessTilesInner({ inputs }: Props) {
+export function AppFitnessTilesInner({ inputs, nutrition }: Props) {
   const [sheetType, setSheetType] = useState<QuickLogType | null>(null);
+  const [mealOpen, setMealOpen] = useState(false);
   const sheetCurrent =
     sheetType === 'steps'
       ? inputs.steps
@@ -40,6 +43,8 @@ export function AppFitnessTilesInner({ inputs }: Props) {
     color: string;
     /** When set, tapping the tile opens the quick-log sheet for this type. */
     quickLog?: QuickLogType;
+    /** Custom tap handler — used for the meal log sheet on Nutrition. */
+    onTap?: () => void;
   }> = [
     {
       icon: <Footprints size={14} />,
@@ -71,10 +76,15 @@ export function AppFitnessTilesInner({ inputs }: Props) {
     {
       icon: <Apple size={14} />,
       label: 'Nutrition',
-      value: `${Math.round(inputs.nutritionAdherencePct)}%`,
-      goal: '/ 100%',
-      pct: inputs.nutritionAdherencePct,
+      // Show real calories consumed vs target instead of the derived
+      // adherence %. Tap to log a meal.
+      value: nutrition.caloriesConsumed.toLocaleString(),
+      goal: `/ ${nutrition.caloriesTarget.toLocaleString()}`,
+      pct: nutrition.caloriesTarget
+        ? Math.min(100, (nutrition.caloriesConsumed / nutrition.caloriesTarget) * 100)
+        : 0,
       color: '#ff8a4d',
+      onTap: () => setMealOpen(true),
     },
   ];
 
@@ -87,11 +97,15 @@ export function AppFitnessTilesInner({ inputs }: Props) {
         className="grid grid-cols-2 gap-3"
       >
         {tiles.map((t, i) => {
-          const TileWrapper = t.quickLog
+          // A tile is interactive if it has either a quickLog target
+          // (Steps/Sleep/Water) or a custom onTap handler (Nutrition).
+          const handleTap = t.onTap ?? (t.quickLog ? () => setSheetType(t.quickLog!) : null);
+          const interactive = handleTap !== null;
+          const TileWrapper = interactive
             ? ({ children }: { children: React.ReactNode }) => (
                 <button
                   type="button"
-                  onClick={() => setSheetType(t.quickLog!)}
+                  onClick={handleTap!}
                   className="text-left rounded-2xl border border-border bg-bg-card overflow-hidden w-full active:scale-[0.98] transition-transform"
                 >
                   {children}
@@ -112,7 +126,7 @@ export function AppFitnessTilesInner({ inputs }: Props) {
               <TileWrapper>
                 <div className="px-4 pt-3.5 pb-3 relative">
                   {/* + chip in the top-right of tappable tiles */}
-                  {t.quickLog && (
+                  {interactive && (
                     <div
                       className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center"
                       style={{
@@ -163,6 +177,17 @@ export function AppFitnessTilesInner({ inputs }: Props) {
         type={sheetType}
         currentValue={sheetCurrent}
         onClose={() => setSheetType(null)}
+      />
+
+      <MealLogSheet
+        open={mealOpen}
+        onClose={() => setMealOpen(false)}
+        today={{
+          caloriesConsumed: nutrition.caloriesConsumed,
+          caloriesTarget: nutrition.caloriesTarget,
+          proteinG: nutrition.proteinG,
+          proteinTargetG: nutrition.proteinTargetG,
+        }}
       />
     </>
   );

@@ -40,6 +40,32 @@ export const TWIN_PREVIEW_STATS: TwinStats = {
   discipline: 45,
 };
 
+/**
+ * Today's calories + protein targets surfaced for the meal logging
+ * UI. Sits alongside the Twin stats — separate concept (raw food
+ * input vs derived adherence) so we keep it in its own type rather
+ * than shoehorning into DailyInputs.
+ */
+export interface NutritionSnapshot {
+  caloriesConsumed: number;
+  caloriesTarget: number;
+  proteinG: number;
+  proteinTargetG: number;
+  carbsG: number;
+  fatsG: number;
+  fiberG: number;
+}
+
+export const EMPTY_NUTRITION_SNAPSHOT: NutritionSnapshot = {
+  caloriesConsumed: 0,
+  caloriesTarget: 2000,
+  proteinG: 0,
+  proteinTargetG: 120,
+  carbsG: 0,
+  fatsG: 0,
+  fiberG: 0,
+};
+
 /** True if all five stats are exactly zero (= no data logged yet). */
 export function isTwinEmpty(stats: TwinStats): boolean {
   return (

@@ -20,7 +20,9 @@ import {
   deriveTwinStats,
   deriveVisualState,
   dailyTwinMessage,
+  EMPTY_NUTRITION_SNAPSHOT,
   type DailyInputs,
+  type NutritionSnapshot,
 } from '@/lib/data/twin';
 import {
   deriveLevel,
@@ -68,6 +70,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   // yet" feel rather than fake numbers.
   let twinInputs: DailyInputs = emptyTwinInputs();
   let streakHistory: Awaited<ReturnType<typeof getStreakHistory>> = [];
+  let nutritionSnapshot: NutritionSnapshot = EMPTY_NUTRITION_SNAPSHOT;
   if (userId) {
     const [inputsResult, history] = await Promise.all([
       getTwinDailyInputs(userId, today),
@@ -75,6 +78,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     ]);
     twinInputs = inputsResult.inputs;
     streakHistory = history;
+    nutritionSnapshot = inputsResult.nutrition;
   }
   const twinStats = deriveTwinStats(twinInputs);
   const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
@@ -113,7 +117,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       {/* Raw fitness numbers — app-only (renders null on web). Sits
           near the top so steps/sleep/water/nutrition are the first
           thing visible after the greeting. */}
-      <AppFitnessTiles inputs={twinInputs} />
+      <AppFitnessTiles inputs={twinInputs} nutrition={nutritionSnapshot} />
 
       {userId && (
         <TodaysPlanCard

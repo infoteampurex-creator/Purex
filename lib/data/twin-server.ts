@@ -2,8 +2,10 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import {
   computeHealthScore,
+  EMPTY_NUTRITION_SNAPSHOT,
   type DailyInputs,
   type DayScoreEntry,
+  type NutritionSnapshot,
 } from '@/lib/data/twin';
 
 /**
@@ -36,6 +38,8 @@ interface DailyLogRow {
   calories_target: number | null;
   protein_g: number | null;
   protein_target_g: number | null;
+  carbs_g: number | null;
+  fats_g: number | null;
 }
 
 interface WorkoutRow {
@@ -126,10 +130,13 @@ function addDaysIso(iso: string, days: number): string {
 
 // ─── Main fetchers ────────────────────────────────────────────────
 
+// Note: fiber_g is added by migration 00015 — not included here yet
+// so the dashboard keeps working before the migration runs. Once
+// 00015 is applied across environments, add 'fiber_g' to this list.
 const LOG_COLS =
   'log_date, steps, steps_target, sleep_hours, sleep_target_hours, ' +
   'water_glasses, water_target, calories_consumed, calories_target, ' +
-  'protein_g, protein_target_g';
+  'protein_g, protein_target_g, carbs_g, fats_g';
 
 /**
  * Returns the DailyInputs structure for the Twin and Future Clone,
@@ -140,7 +147,11 @@ const LOG_COLS =
 export async function getTwinDailyInputs(
   clientId: string,
   date?: string
-): Promise<{ inputs: DailyInputs; source: 'supabase' | 'empty' }> {
+): Promise<{
+  inputs: DailyInputs;
+  source: 'supabase' | 'empty';
+  nutrition: NutritionSnapshot;
+}> {
   const targetDate = date ?? todayIsoIST();
   const sevenDaysAgo = addDaysIso(targetDate, -6);
   const ninetyDaysAgo = addDaysIso(targetDate, -89);
@@ -252,13 +263,30 @@ export async function getTwinDailyInputs(
     );
 
     const hasAnyData = todayLog != null || last7Logs.length > 0;
-    return { inputs, source: hasAnyData ? 'supabase' : 'empty' };
+
+    const nutrition: NutritionSnapshot = {
+      caloriesConsumed: todayLog?.calories_consumed ?? 0,
+      caloriesTarget: todayLog?.calories_target ?? EMPTY_NUTRITION_SNAPSHOT.caloriesTarget,
+      proteinG: todayLog?.protein_g ?? 0,
+      proteinTargetG:
+        todayLog?.protein_target_g ?? EMPTY_NUTRITION_SNAPSHOT.proteinTargetG,
+      carbsG: todayLog?.carbs_g ?? 0,
+      fatsG: todayLog?.fats_g ?? 0,
+      fiberG: 0, // wired once migration 00015 adds fiber_g to LOG_COLS
+    };
+
+    return {
+      inputs,
+      source: hasAnyData ? 'supabase' : 'empty',
+      nutrition,
+    };
   } catch (err) {
     console.error('[twin-server] getTwinDailyInputs failed', err);
     // On error, return an empty-state inputs so the Twin still renders.
     return {
       inputs: emptyInputs(),
       source: 'empty',
+      nutrition: EMPTY_NUTRITION_SNAPSHOT,
     };
   }
 }
