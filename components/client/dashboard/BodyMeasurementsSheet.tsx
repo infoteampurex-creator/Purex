@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Ruler, X } from 'lucide-react';
+import { AlertCircle, Copy, Loader2, Ruler, X } from 'lucide-react';
 import {
   upsertMyMeasurements,
   updateProfileBodySettings,
@@ -207,6 +207,14 @@ export function BodyMeasurementsSheet({
       // eslint-disable-next-line no-console
       console.error('[PURE X] measurements save failed:', { profileRes, measRes });
       setError(msg);
+      // Native alert as a belt-and-suspenders fallback — in Capacitor
+      // this shows a system dialog that can't be missed or animated
+      // away. User taps OK to dismiss; the sticky banner above keeps
+      // the message visible afterwards too.
+      if (typeof window !== 'undefined') {
+        // eslint-disable-next-line no-alert
+        window.alert('Save failed:\n\n' + msg);
+      }
       return;
     }
     onClose();
@@ -320,6 +328,80 @@ export function BodyMeasurementsSheet({
               </div>
             </div>
 
+            {/* STICKY error banner — outside the scroll area so it
+                always stays in view, even if user scrolls or the
+                WebView's keyboard shifts focus. Has a Copy button
+                so the user can paste the raw message back to us. */}
+            {error && (
+              <div
+                className="mx-5 mb-3 rounded-xl px-3 py-3 flex items-start gap-2 flex-shrink-0"
+                style={{
+                  background: 'rgba(255,138,77,0.10)',
+                  border: '1px solid rgba(255,138,77,0.40)',
+                  boxShadow: '0 4px 16px rgba(255,138,77,0.15)',
+                }}
+              >
+                <AlertCircle
+                  size={14}
+                  style={{ color: '#ff8a4d', flexShrink: 0, marginTop: 1 }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="font-mono uppercase tracking-[0.18em] font-bold mb-0.5"
+                    style={{ fontSize: 9, color: '#ff8a4d' }}
+                  >
+                    Save failed
+                  </div>
+                  <div
+                    className="leading-snug break-words"
+                    style={{ fontSize: 12, color: 'rgba(255,180,140,1)' }}
+                  >
+                    {error}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(error)
+                      .then(() => {
+                        // brief feedback by reusing the error text
+                        // window.alert is intrusive but unmissable
+                        // for the user to confirm copy worked
+                        // eslint-disable-next-line no-alert
+                        if (typeof window !== 'undefined') alert('Error copied');
+                      })
+                      .catch(() => {
+                        // eslint-disable-next-line no-alert
+                        if (typeof window !== 'undefined') alert(error);
+                      });
+                  }}
+                  className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center"
+                  style={{
+                    background: 'rgba(255,138,77,0.15)',
+                    border: '1px solid rgba(255,138,77,0.40)',
+                    color: '#ff8a4d',
+                  }}
+                  aria-label="Copy error"
+                >
+                  <Copy size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center"
+                  style={{
+                    background: 'rgba(255,138,77,0.15)',
+                    border: '1px solid rgba(255,138,77,0.40)',
+                    color: '#ff8a4d',
+                  }}
+                  aria-label="Dismiss error"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto px-5 pb-3">
               {/* Height + Weight row */}
@@ -360,34 +442,8 @@ export function BodyMeasurementsSheet({
                 ))}
               </div>
 
-              {error && (
-                <div
-                  className="rounded-xl px-3 py-3 mt-3 flex items-start gap-2"
-                  style={{
-                    background: 'rgba(255,138,77,0.08)',
-                    border: '1px solid rgba(255,138,77,0.30)',
-                  }}
-                >
-                  <AlertCircle
-                    size={14}
-                    style={{ color: '#ff8a4d', flexShrink: 0, marginTop: 1 }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="font-mono uppercase tracking-[0.18em] font-bold mb-0.5"
-                      style={{ fontSize: 9, color: '#ff8a4d' }}
-                    >
-                      Save failed
-                    </div>
-                    <div
-                      className="leading-snug break-words"
-                      style={{ fontSize: 12, color: 'rgba(255,138,77,0.95)' }}
-                    >
-                      {error}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Error moved to a STICKY banner above this body
+                  (see below) so it can't be lost in a scroll shift. */}
 
               <div
                 className="font-mono mt-3 text-center"
