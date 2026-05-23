@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
-const ML_PER_GLASS = 250;
-
 const schema = z.object({
   logDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   field: z.enum(['steps', 'sleep_hours', 'water_glasses']),
@@ -99,7 +97,3 @@ export async function manualFitnessEntry(
   }
 }
 
-/** Convert milliliters into glasses (250 ml each, rounded). */
-export function mlToGlasses(ml: number): number {
-  return Math.round(ml / ML_PER_GLASS);
-}
