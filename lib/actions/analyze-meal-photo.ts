@@ -1,39 +1,22 @@
 'use server';
 
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 
 // ─── AI prompt ──────────────────────────────────────────────────────
 
 /**
- * System prompt tuned for Indian food + portion sizes. Asks Claude
- * to return a strict JSON shape we can parse without further regex.
- * Crucially: includes a confidence field so we can surface "I'm not
- * sure" UI to the user and let them edit.
+ * System prompt tuned for Indian food + portion sizes. Gemini's
+ * JSON Mode + responseSchema enforce shape; the prompt focuses on
+ * domain calibration rather than format wrangling.
  */
-const SYSTEM_PROMPT = `You are a nutrition analyst specialised in Indian cuisine.
+const SYSTEM_INSTRUCTION = `You are a nutrition analyst specialised in Indian cuisine.
 
 Identify the food visible in the user's photo and estimate the
 macros for the visible portion. Use Indian serving conventions
 (katori, cup, roti pieces, idli count, etc.) and assume typical
 Indian home-cooking preparations unless visual cues suggest otherwise.
-
-Output STRICT JSON only, no prose, no markdown, this exact shape:
-
-{
-  "name": "<short human label of the dish(es) — max 80 chars>",
-  "description": "<one sentence describing what you see and the portion>",
-  "calories": <int kcal>,
-  "protein_g": <int>,
-  "carbs_g": <int>,
-  "fats_g": <int>,
-  "fiber_g": <int>,
-  "confidence": <float 0..1, your confidence in the macro estimate>,
-  "items": [
-    { "name": "<food item>", "portion": "<e.g. '1 cup'>", "calories": <int> }
-  ]
-}
 
 Rules:
 - If the photo is NOT food (random object, screen, person, blank),
@@ -45,6 +28,46 @@ Rules:
   should be 0.7 or higher.
 - Never refuse — always return the JSON. Use 0s + name "Unknown" if
   you genuinely can't tell.`;
+
+// Strict JSON shape — Gemini honours this via responseSchema.
+const responseSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    name: { type: SchemaType.STRING, description: 'Short human label of the dish, max 80 chars' },
+    description: { type: SchemaType.STRING, description: 'One sentence describing the dish and portion' },
+    calories: { type: SchemaType.INTEGER, description: 'Estimated total calories (kcal)' },
+    protein_g: { type: SchemaType.INTEGER, description: 'Grams of protein' },
+    carbs_g: { type: SchemaType.INTEGER, description: 'Grams of carbohydrates' },
+    fats_g: { type: SchemaType.INTEGER, description: 'Grams of fat' },
+    fiber_g: { type: SchemaType.INTEGER, description: 'Grams of fiber' },
+    confidence: {
+      type: SchemaType.NUMBER,
+      description: '0 to 1 — confidence in the macro estimate',
+    },
+    items: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          name: { type: SchemaType.STRING },
+          portion: { type: SchemaType.STRING },
+          calories: { type: SchemaType.INTEGER },
+        },
+        required: ['name', 'calories'],
+      },
+    },
+  },
+  required: [
+    'name',
+    'description',
+    'calories',
+    'protein_g',
+    'carbs_g',
+    'fats_g',
+    'fiber_g',
+    'confidence',
+  ],
+};
 
 // ─── Schemas ────────────────────────────────────────────────────────
 
@@ -91,10 +114,14 @@ export type AnalyzeMealPhotoResult =
 
 /**
  * End-to-end: takes a base64 photo from the camera, uploads it to
- * the meal-photos bucket, sends it to Claude Sonnet vision, parses
- * the structured JSON response, and returns both the photo URL +
- * AI analysis. The meal is NOT saved yet — the client can edit the
- * AI's macros first and then call addMeal() to persist.
+ * the meal-photos bucket, sends it to Gemini 2.0 Flash, parses the
+ * structured JSON response, returns both the photo URL + AI analysis.
+ *
+ * Gemini was chosen over Claude / GPT-4o because cost-per-scan is
+ * ~100x lower (~₹0.025 vs ₹0.80) and Google's free tier (1500
+ * req/day) covers early-stage usage with no spend at all. Quality
+ * on Indian portions is slightly weaker than Claude — acceptable
+ * since the user reviews and edits the macros before saving.
  */
 export async function analyzeMealPhoto(
   input: AnalyzeMealPhotoInput
@@ -105,11 +132,11 @@ export async function analyzeMealPhoto(
   }
   const { photoBase64, mediaType, logDate } = parsed.data;
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
     return {
       ok: false,
-      error: 'AI vision is not configured (ANTHROPIC_API_KEY missing on server).',
+      error: 'AI vision is not configured (GOOGLE_AI_API_KEY missing on server).',
     };
   }
 
@@ -145,51 +172,40 @@ export async function analyzeMealPhoto(
       return { ok: false, error: `Could not sign URL: ${signError?.message ?? 'unknown'}` };
     }
 
-    // ─── 2. Call Claude Sonnet vision ───────────────────────────
-    const anthropic = new Anthropic({ apiKey });
-    const message = await anthropic.messages.create({
-      // claude-sonnet-4-5 — current Sonnet generation, strong on
-      // structured output and image understanding.
-      model: 'claude-sonnet-4-5',
-      max_tokens: 800,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: photoBase64,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Analyse this meal. Return only the JSON.',
-            },
-          ],
-        },
-      ],
+    // ─── 2. Call Gemini 2.0 Flash ───────────────────────────────
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      // gemini-2.0-flash: best price/quality for image understanding
+      // in late 2025 / 2026. Free tier: 1500 req/day. Paid: ~$0.0003
+      // per image-in scan.
+      model: 'gemini-2.0-flash',
+      systemInstruction: SYSTEM_INSTRUCTION,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema,
+        // Conservative — encourages estimates over creativity
+        temperature: 0.2,
+        maxOutputTokens: 800,
+      },
     });
 
-    // ─── 3. Parse the JSON response ─────────────────────────────
-    const text = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-      .trim();
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: mediaType,
+          data: photoBase64,
+        },
+      },
+      {
+        text: 'Analyse this meal. Return only the JSON object — no prose.',
+      },
+    ]);
 
-    // Sometimes models wrap JSON in markdown — strip if present.
-    const jsonText = text
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
+    const text = result.response.text().trim();
 
     let raw: unknown;
     try {
-      raw = JSON.parse(jsonText);
+      raw = JSON.parse(text);
     } catch {
       return {
         ok: false,
