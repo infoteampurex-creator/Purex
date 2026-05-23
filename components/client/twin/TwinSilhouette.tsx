@@ -7,6 +7,7 @@ import {
   type TwinVisualState,
 } from '@/lib/data/twin';
 import { useIsApp } from '@/lib/hooks/useIsApp';
+import type { BodyProportions } from '@/lib/data/body-proportions';
 
 interface Props {
   stats: TwinStats;
@@ -24,6 +25,11 @@ interface Props {
   /** Render scan-line hologram overlay + body-zone heatmap. App's
    *  futuristic look — opt-in so it doesn't affect existing usages. */
   hologram?: boolean;
+  /** Live measurement-driven body proportions. When provided, the
+   *  silhouette morphs to reflect the user's real body — wider/
+   *  narrower chest, waist, arms, legs per their logged numbers.
+   *  When omitted, falls back to the static neutral athletic shape. */
+  proportions?: BodyProportions;
 }
 
 /**
@@ -72,6 +78,7 @@ export function TwinSilhouette({
   evolution = 0,
   auraOverride,
   hologram = false,
+  proportions,
 }: Props) {
   const isApp = useIsApp();
   // Web keeps the original dull-gray depleted palette (per "no web
@@ -94,8 +101,22 @@ export function TwinSilhouette({
   // ─── Evolution-driven transforms ───
   // (silhouette gets progressively more athletic across the timeline)
   const postureLift = evolution * 6; // upward translate in px
-  const shoulderWidthScale = 1 + evolution * 0.06; // shoulders widen
   const stanceWidthDeg = evolution * 2.5; // legs rotate outward
+
+  // ─── Live measurement-driven scales ───
+  // When `proportions` is passed, the silhouette morphs to the user's
+  // real body. When omitted, falls back to neutral 1.0 (the original
+  // generic silhouette). Evolution adds on top — Day-90 self stays
+  // 6% wider in shoulders than today's self regardless of measurements.
+  const torsoScale = (proportions?.chestScale ?? 1) * (1 + evolution * 0.06);
+  const legScale = (proportions?.thighScale ?? 1) * (1 + evolution * 0.05);
+  const neckScaleX = proportions?.neckScale ?? 1;
+  // armScale + bicep-specific scaling deferred to a future iteration
+  // (would need to extract the arms from the torso group). For now
+  // arms inherit torsoScale via their parent group.
+  // Backwards-compat alias for callers that didn't pass proportions —
+  // keep the original "shoulders widen with evolution" behaviour.
+  const shoulderWidthScale = torsoScale;
 
   // Aura intensity blends overall vitality + evolution boost.
   const auraOpacityBase = Math.min(
@@ -366,8 +387,16 @@ export function TwinSilhouette({
           strokeOpacity={0.35 + evolution * 0.25}
           strokeWidth={1}
         />
-        {/* Neck */}
-        <rect x={94} y={92} width={12} height={10} fill="url(#twin-silhouette)" />
+        {/* Neck — width scales with neck measurement */}
+        <motion.rect
+          x={100 - 6 * neckScaleX}
+          y={92}
+          width={12 * neckScaleX}
+          height={10}
+          fill="url(#twin-silhouette)"
+          animate={{ x: 100 - 6 * neckScaleX, width: 12 * neckScaleX }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+        />
 
         {/* Upper body — torso + arms — widens with evolution */}
         <motion.g
@@ -392,18 +421,18 @@ export function TwinSilhouette({
           />
         </motion.g>
 
-        {/* Legs — stance widens with evolution */}
+        {/* Legs — stance widens with evolution, thickness scales with thigh measurement */}
         <motion.path
           d="M 80 232 L 76 320 L 82 380 L 96 380 L 96 320 L 96 232 Z"
           fill="url(#twin-silhouette)"
-          animate={{ rotate: -stanceWidthDeg }}
+          animate={{ rotate: -stanceWidthDeg, scaleX: legScale }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
           style={{ transformOrigin: '88px 232px' }}
         />
         <motion.path
           d="M 120 232 L 124 320 L 118 380 L 104 380 L 104 320 L 104 232 Z"
           fill="url(#twin-silhouette)"
-          animate={{ rotate: stanceWidthDeg }}
+          animate={{ rotate: stanceWidthDeg, scaleX: legScale }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
           style={{ transformOrigin: '112px 232px' }}
         />

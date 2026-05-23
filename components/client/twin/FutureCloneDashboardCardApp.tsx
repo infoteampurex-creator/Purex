@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { TwinSilhouette } from './TwinSilhouette';
 import { MilestoneRail } from './MilestoneRail';
 import { ProjectedMetrics } from './ProjectedMetrics';
 import {
+  deriveVisualState,
   isTwinEmpty,
   projectStats,
   twinOverallScore,
@@ -14,26 +16,36 @@ import {
   type TwinStats,
 } from '@/lib/data/twin';
 import { deriveProjectedDeltas, MILESTONE_RAIL } from '@/lib/data/twin-game';
+import {
+  projectBodyProportions,
+  type BodyProportions,
+} from '@/lib/data/body-proportions';
 
 interface Props {
   stats: TwinStats;
   workoutDoneToday: boolean;
   streakDays: number;
+  /** Today's measurement-driven body shape. */
+  proportions?: BodyProportions | null;
+  hasMeasurements: boolean;
 }
 
 /**
- * Future Clone — the aspirational card.
+ * Future Clone — Today vs Day-90 silhouettes side by side.
  *
- * Hero visual is two glowing score circles (Today + Day 90) with a
- * trajectory line chart underneath showing the slope across the
- * 90-day window with milestone markers. No human silhouettes —
- * users responded poorly to the abstract stick figures; charts +
- * scores feel like Whoop / Strava / Garmin (premium fitness).
+ * Both silhouettes are measurement-driven via TwinSilhouette's
+ * `proportions` prop. Today's silhouette = user's current real
+ * proportions. Day-90 silhouette = projectBodyProportions(today) —
+ * narrower waist, wider shoulders, etc.
+ *
+ * Below the silhouettes: milestone rail + projected metric pills.
  */
 export function FutureCloneDashboardCardApp({
   stats,
-  workoutDoneToday: _workoutDoneToday,
+  workoutDoneToday,
   streakDays,
+  proportions,
+  hasMeasurements: _hasMeasurements,
 }: Props) {
   const showPreview = isTwinEmpty(stats);
   const sourceStats = showPreview ? TWIN_PREVIEW_STATS : stats;
@@ -45,6 +57,14 @@ export function FutureCloneDashboardCardApp({
   const lift = Math.max(0, projectedOverall - todayOverall);
 
   const deltas = deriveProjectedDeltas(sourceStats, projected);
+
+  // Today's silhouette uses real proportions; Day-90 uses the
+  // projected proportions (narrower waist, wider shoulders, etc.)
+  const todayProps = proportions ?? undefined;
+  const projectedProps = proportions ? projectBodyProportions(proportions) : undefined;
+
+  const todayState = deriveVisualState(sourceStats, workoutDoneToday);
+  const projectedState = deriveVisualState(projected, true);
 
   return (
     <div
@@ -121,22 +141,85 @@ export function FutureCloneDashboardCardApp({
         </h3>
       </div>
 
-      {/* ─── Hero: Today ⟶ Day 90 score circles ─── */}
-      <div className="relative px-5 pb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <ScoreCircle
-          score={todayOverall}
-          label="Today"
-          sublabel="Rookie"
-          color="#a0a69a"
-        />
+      {/* ─── Hero: Today silhouette ⟶ Day 90 silhouette ─── */}
+      <div className="relative px-5 pb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        {/* Today's silhouette — driven by current measurements */}
+        <motion.div
+          initial={{ opacity: 0, x: -6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex flex-col items-center"
+        >
+          <TwinSilhouette
+            stats={sourceStats}
+            state={todayState}
+            width={88}
+            compact
+            hologram
+            proportions={todayProps}
+          />
+          <div
+            className="font-mono uppercase tracking-[0.18em] font-bold mt-1"
+            style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
+          >
+            Today
+          </div>
+          <div
+            className="font-display font-bold tabular-nums"
+            style={{ fontSize: 18, color: 'rgba(245,245,240,0.9)' }}
+          >
+            {todayOverall}
+          </div>
+          <div
+            className="font-mono uppercase tracking-[0.14em]"
+            style={{ fontSize: 8, color: 'rgba(255,255,255,0.40)' }}
+          >
+            {todayProps?.bodyType ?? 'Rookie'}
+          </div>
+        </motion.div>
+
         <LiftBeam lift={lift} />
-        <ScoreCircle
-          score={projectedOverall}
-          label="Day 90"
-          sublabel="Prime"
-          color="#ffd24d"
-          glow
-        />
+
+        {/* Day-90 silhouette — driven by projected proportions */}
+        <motion.div
+          initial={{ opacity: 0, x: 6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.15 }}
+          className="flex flex-col items-center"
+        >
+          <TwinSilhouette
+            stats={projected}
+            state={projectedState}
+            width={88}
+            compact
+            evolution={0.55}
+            auraOverride={future.aura}
+            hologram
+            proportions={projectedProps}
+          />
+          <div
+            className="font-mono uppercase tracking-[0.18em] font-bold mt-1"
+            style={{ fontSize: 9, color: '#ffd24d' }}
+          >
+            Day 90
+          </div>
+          <div
+            className="font-display font-bold tabular-nums"
+            style={{
+              fontSize: 18,
+              color: '#ffd24d',
+              textShadow: '0 0 8px rgba(255,210,77,0.4)',
+            }}
+          >
+            {projectedOverall}
+          </div>
+          <div
+            className="font-mono uppercase tracking-[0.14em] font-bold"
+            style={{ fontSize: 8, color: '#ff8a4d' }}
+          >
+            {projectedProps?.bodyType ?? 'Prime'}
+          </div>
+        </motion.div>
       </div>
 
       {/* ─── Trajectory line chart ─── */}

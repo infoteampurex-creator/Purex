@@ -5,6 +5,7 @@ import { TwinDashboardCardWeb } from './TwinDashboardCardWeb';
 import { useIsApp } from '@/lib/hooks/useIsApp';
 import type { TwinStats, TwinVisualState } from '@/lib/data/twin';
 import type { CoachMission, LevelInfo } from '@/lib/data/twin-game';
+import type { BodyProportions } from '@/lib/data/body-proportions';
 
 /**
  * Dispatcher — picks Web vs App layout based on Capacitor detection.
@@ -26,6 +27,11 @@ interface Props {
   level: LevelInfo;
   streakDays: number;
   mission: CoachMission;
+  /** Live measurement-driven body proportions (app-only). Web
+   *  doesn't use this — the simple web card has no avatar. */
+  proportions?: BodyProportions | null;
+  /** True if any body measurement has been logged. */
+  hasMeasurements?: boolean;
 }
 
 export function TwinDashboardCard(props: Props) {
@@ -39,5 +45,11 @@ export function TwinDashboardCard(props: Props) {
       />
     );
   }
-  return <TwinDashboardCardApp {...props} />;
+  return (
+    <TwinDashboardCardApp
+      {...props}
+      proportions={props.proportions ?? null}
+      hasMeasurements={props.hasMeasurements ?? false}
+    />
+  );
 }

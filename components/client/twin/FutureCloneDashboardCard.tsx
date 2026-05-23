@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { FutureCloneDashboardCardWeb } from './FutureCloneDashboardCardWeb';
 import { useIsApp } from '@/lib/hooks/useIsApp';
 import type { TwinStats } from '@/lib/data/twin';
+import type { BodyProportions } from '@/lib/data/body-proportions';
 
 /**
  * Dispatcher — picks Web vs App layout based on Capacitor detection.
@@ -25,6 +26,10 @@ interface Props {
   stats: TwinStats;
   workoutDoneToday: boolean;
   streakDays: number;
+  /** Live measurement-driven body proportions (app-only). */
+  proportions?: BodyProportions | null;
+  /** True if any body measurement has been logged. */
+  hasMeasurements?: boolean;
 }
 
 export function FutureCloneDashboardCard(props: Props) {
@@ -37,5 +42,11 @@ export function FutureCloneDashboardCard(props: Props) {
       />
     );
   }
-  return <FutureCloneDashboardCardApp {...props} />;
+  return (
+    <FutureCloneDashboardCardApp
+      {...props}
+      proportions={props.proportions ?? null}
+      hasMeasurements={props.hasMeasurements ?? false}
+    />
+  );
 }

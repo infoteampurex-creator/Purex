@@ -39,6 +39,10 @@ import {
   type BodyMeasurements,
   type ProfileBodySettings,
 } from '@/lib/data/body-measurements';
+import {
+  deriveBodyProportions,
+  type BodyProportions,
+} from '@/lib/data/body-proportions';
 
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
@@ -112,6 +116,12 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     nutritionAdherencePct: twinInputs.nutritionAdherencePct,
   }).total;
 
+  // ─── Phase 2 — derive live body proportions for the avatar ───
+  const proportions: BodyProportions | null = userId
+    ? deriveBodyProportions(latestMeasurements, bodySettings.heightCm, bodySettings.gender)
+    : null;
+  const hasMeasurements = latestMeasurements != null;
+
   // ─── Gamification overlays (XP / Level / Mission) ───
   // XP is derived from the sum of daily health scores in the history
   // window — no DB changes. Levels are linear (500 XP each).
@@ -173,11 +183,15 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           level={level}
           streakDays={currentStreakDays}
           mission={mission}
+          proportions={proportions}
+          hasMeasurements={hasMeasurements}
         />
         <FutureCloneDashboardCard
           stats={twinStats}
           workoutDoneToday={twinInputs.workoutCompletedToday}
           streakDays={currentStreakDays}
+          proportions={proportions}
+          hasMeasurements={hasMeasurements}
         />
       </div>
 

@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Ruler } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { TwinSilhouette } from './TwinSilhouette';
 import { AnimatedNumber } from './AnimatedNumber';
 import { StatRadial } from './StatRadial';
 import { LevelChip } from './LevelChip';
@@ -24,6 +25,7 @@ import {
   type CoachMission,
   type LevelInfo,
 } from '@/lib/data/twin-game';
+import type { BodyProportions } from '@/lib/data/body-proportions';
 
 interface Props {
   stats: TwinStats;
@@ -32,6 +34,12 @@ interface Props {
   level: LevelInfo;
   streakDays: number;
   mission: CoachMission;
+  /** Live measurement-driven body shape (Phase 2). When null, the
+   *  silhouette falls back to a neutral athletic shape. */
+  proportions?: BodyProportions | null;
+  /** True if the user has logged at least one body measurement.
+   *  Used to show a calibration hint. */
+  hasMeasurements: boolean;
 }
 
 const STAT_ORDER: TwinStatKey[] = [
@@ -43,19 +51,14 @@ const STAT_ORDER: TwinStatKey[] = [
 ];
 
 /**
- * Twin Clone hero card — Apple-Watch / Whoop style.
+ * Twin Clone hero card — silhouette as live avatar, vitality + stats
+ * + AI Coach as supporting chrome.
  *
- * Layout (top→bottom):
- *   • Status strip: title + state badge + Streak + Level chips
- *   • Hero zone: giant Vitality score inside a thick glowing ring,
- *     state-colour tinted
- *   • 5 stat radials in a row beneath (one per Energy / Strength /
- *     Endurance / Recovery / Discipline)
- *   • AI Coach mission card
- *   • CTA: "Analyze my Twin"
- *
- * Deliberately NO human silhouette — premium fitness apps (Whoop,
- * Oura, Apple Watch, Garmin) use rings + scores, not body shapes.
+ * The silhouette's torso, leg, and neck widths morph based on the
+ * user's logged body measurements (chest, waist, hips, thighs,
+ * neck — Phase 2). When the user hasn't logged measurements yet,
+ * the silhouette uses the neutral athletic shape with a small
+ * "Log measurements to wake your Twin" hint.
  */
 export function TwinDashboardCardApp({
   stats,
@@ -64,6 +67,8 @@ export function TwinDashboardCardApp({
   level,
   streakDays,
   mission,
+  proportions,
+  hasMeasurements,
 }: Props) {
   const isEmpty = isTwinEmpty(stats);
   const showPreview = isEmpty;
@@ -100,7 +105,7 @@ export function TwinDashboardCardApp({
           '0 0 0 1px rgba(198,255,61,0.04), 0 24px 48px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
       }}
     >
-      {/* Ambient glow */}
+      {/* Ambient glow behind the silhouette */}
       <div
         className="absolute -top-32 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full pointer-events-none"
         style={{
@@ -152,15 +157,59 @@ export function TwinDashboardCardApp({
         </div>
       </div>
 
-      {/* ─── Hero: Vitality ring ─── */}
-      <div className="relative flex flex-col items-center pt-2 pb-4">
-        <VitalityRing value={overall} color={statusColor} />
-        <div
-          className="font-mono uppercase tracking-[0.22em] font-bold mt-3"
-          style={{ fontSize: 10, color: 'rgba(245,245,240,0.55)' }}
-        >
-          Vitality
+      {/* ─── Hero: measurement-driven silhouette + Vitality below ─── */}
+      <div className="relative flex flex-col items-center pt-2 pb-3">
+        <TwinSilhouette
+          stats={displayStats}
+          state={displayState}
+          width={180}
+          hologram
+          proportions={proportions ?? undefined}
+        />
+        <div className="flex items-baseline gap-2 mt-1">
+          <AnimatedNumber value={overall} fontSize={36} />
+          <span
+            className="font-mono uppercase tracking-[0.22em] font-bold"
+            style={{ fontSize: 10, color: 'rgba(245,245,240,0.55)' }}
+          >
+            Vitality
+          </span>
         </div>
+
+        {/* Body-type subtitle when proportions are known */}
+        {proportions && hasMeasurements && (
+          <div
+            className="font-mono uppercase tracking-[0.18em] font-bold mt-1"
+            style={{ fontSize: 9, color: statusColor }}
+          >
+            {proportions.bodyType} build
+            {proportions.bmi != null && (
+              <span style={{ color: 'rgba(245,245,240,0.40)' }}>
+                {' '}· BMI {proportions.bmi.toFixed(1)}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Calibration nudge when no measurements logged yet */}
+        {!hasMeasurements && (
+          <Link
+            href="#my-body"
+            scroll={false}
+            className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+            style={{
+              fontSize: 10,
+              color: '#7dd3ff',
+              backgroundColor: 'rgba(125,211,255,0.10)',
+              border: '1px solid rgba(125,211,255,0.25)',
+            }}
+          >
+            <Ruler size={10} />
+            <span className="font-mono uppercase tracking-[0.18em] font-bold">
+              Log measurements
+            </span>
+          </Link>
+        )}
       </div>
 
       {/* ─── 5 stat radials ─── */}
@@ -197,80 +246,6 @@ export function TwinDashboardCardApp({
         Analyze my Twin
         <ArrowRight size={13} />
       </Link>
-    </div>
-  );
-}
-
-// ─── Vitality ring — the centerpiece ────────────────────────────────
-
-function VitalityRing({ value, color }: { value: number; color: string }) {
-  const size = 180;
-  const stroke = 14;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const clamped = Math.max(0, Math.min(100, value));
-  const offset = c - (c * clamped) / 100;
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <defs>
-          <linearGradient id={`vit-grad-${color.replace('#', '')}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={1} />
-            <stop offset="100%" stopColor={color} stopOpacity={0.55} />
-          </linearGradient>
-          <filter id="vit-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" />
-          </filter>
-        </defs>
-
-        {/* Track */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth={stroke}
-        />
-        {/* Glow under the arc */}
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke + 4}
-          strokeOpacity={0.20}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.4, ease: 'easeOut' }}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{ filter: 'url(#vit-glow)' }}
-        />
-        {/* Progress arc */}
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={`url(#vit-grad-${color.replace('#', '')})`}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.4, ease: 'easeOut' }}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </svg>
-
-      {/* Centre number */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <AnimatedNumber value={value} fontSize={56} />
-      </div>
     </div>
   );
 }
