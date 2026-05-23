@@ -3,6 +3,13 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { FutureCloneViewer } from '@/components/client/twin/FutureCloneViewer';
 import { deriveTwinStats } from '@/lib/data/twin';
 import { getTwinDailyInputs } from '@/lib/data/twin-server';
+import {
+  getLatestMeasurements,
+  getProfileBodySettings,
+  EMPTY_PROFILE_BODY_SETTINGS,
+} from '@/lib/data/body-measurements';
+import { deriveBodyProportions } from '@/lib/data/body-proportions';
+import { projectedAvatarFor } from '@/lib/data/avatar-asset';
 import { getCurrentUserId } from '@/lib/data/client-live';
 
 export const metadata = {
@@ -12,10 +19,21 @@ export const dynamic = 'force-dynamic';
 
 export default async function FutureClonePage() {
   const userId = await getCurrentUserId();
-  const { inputs } = userId
-    ? await getTwinDailyInputs(userId)
-    : { inputs: emptyPreviewInputs() };
+  const [twinData, latestMeas, bodySettings] = await Promise.all([
+    userId ? getTwinDailyInputs(userId) : Promise.resolve({ inputs: emptyPreviewInputs() }),
+    userId ? getLatestMeasurements(userId) : Promise.resolve(null),
+    userId ? getProfileBodySettings(userId) : Promise.resolve(EMPTY_PROFILE_BODY_SETTINGS),
+  ]);
+  const { inputs } = twinData;
   const stats = deriveTwinStats(inputs);
+
+  // Future Clone shows the user's projected (one tier slimmer) avatar
+  const proportions = deriveBodyProportions(
+    latestMeas,
+    bodySettings.heightCm,
+    bodySettings.gender
+  );
+  const avatarSrc = projectedAvatarFor(bodySettings.gender, proportions.bodyType);
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
@@ -73,6 +91,7 @@ export default async function FutureClonePage() {
         <FutureCloneViewer
           todayStats={stats}
           workoutDoneToday={inputs.workoutCompletedToday}
+          avatarSrc={avatarSrc}
         />
       </div>
     </main>

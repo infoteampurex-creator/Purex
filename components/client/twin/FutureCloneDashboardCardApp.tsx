@@ -123,7 +123,7 @@ export function FutureCloneDashboardCardApp({
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="flex flex-col items-center"
         >
-          <AvatarImage src={todayAvatar} width={130} accent="#7dd3ff" />
+          <AvatarImage src={todayAvatar} width={150} accent="#7dd3ff" />
           <div
             className="font-mono uppercase tracking-[0.18em] font-bold mt-2"
             style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
@@ -172,7 +172,7 @@ export function FutureCloneDashboardCardApp({
           transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
           className="flex flex-col items-center"
         >
-          <AvatarImage src={projectedAvatar} width={130} accent="#ffd24d" glow />
+          <AvatarImage src={projectedAvatar} width={150} accent="#ffd24d" glow />
           <div
             className="font-mono uppercase tracking-[0.18em] font-bold mt-2"
             style={{ fontSize: 9, color: '#ffd24d' }}

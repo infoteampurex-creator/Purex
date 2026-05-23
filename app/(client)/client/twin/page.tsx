@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
-import { TwinSilhouette } from '@/components/client/twin/TwinSilhouette';
+import { AvatarImage } from '@/components/client/twin/AvatarImage';
 import { TwinStatsPanel } from '@/components/client/twin/TwinStatsPanel';
 import { TwinStatusBadge } from '@/components/client/twin/TwinStatusBadge';
 import { AnimatedNumber } from '@/components/client/twin/AnimatedNumber';
@@ -11,6 +11,13 @@ import {
   twinOverallScore,
 } from '@/lib/data/twin';
 import { getTwinDailyInputs } from '@/lib/data/twin-server';
+import {
+  getLatestMeasurements,
+  getProfileBodySettings,
+  EMPTY_PROFILE_BODY_SETTINGS,
+} from '@/lib/data/body-measurements';
+import { deriveBodyProportions } from '@/lib/data/body-proportions';
+import { avatarFor } from '@/lib/data/avatar-asset';
 import { getCurrentUserId } from '@/lib/data/client-live';
 
 export const metadata = { title: 'PureX Twin · Your live fitness clone' };
@@ -21,15 +28,26 @@ export default async function TwinPage() {
   // inputs (deterministic zeros) so the page renders for anonymous
   // / preview contexts without crashing.
   const userId = await getCurrentUserId();
-  const { inputs } = userId
-    ? await getTwinDailyInputs(userId)
-    : { inputs: emptyPreviewInputs() };
+  const [twinData, latestMeas, bodySettings] = await Promise.all([
+    userId ? getTwinDailyInputs(userId) : Promise.resolve({ inputs: emptyPreviewInputs() }),
+    userId ? getLatestMeasurements(userId) : Promise.resolve(null),
+    userId ? getProfileBodySettings(userId) : Promise.resolve(EMPTY_PROFILE_BODY_SETTINGS),
+  ]);
+  const { inputs } = twinData;
 
   const stats = deriveTwinStats(inputs);
   const state = deriveVisualState(stats, inputs.workoutCompletedToday);
   const overall = twinOverallScore(stats);
   const today = new Date().toISOString().slice(0, 10);
   const message = dailyTwinMessage(state, today);
+
+  // Pick the right avatar PNG based on the user's body type + gender
+  const proportions = deriveBodyProportions(
+    latestMeas,
+    bodySettings.heightCm,
+    bodySettings.gender
+  );
+  const avatarSrc = avatarFor(bodySettings.gender, proportions.bodyType);
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
@@ -74,10 +92,10 @@ export default async function TwinPage() {
 
         {/* Main grid: silhouette on left, stats on right */}
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 md:gap-12 items-start">
-          {/* Silhouette + vitality */}
+          {/* Avatar + vitality */}
           <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-6 md:p-8">
             <div className="flex flex-col items-center">
-              <TwinSilhouette stats={stats} state={state} width={280} />
+              <AvatarImage src={avatarSrc} width={320} accent="#c6ff3d" />
               <div className="mt-6 text-center">
                 <AnimatedNumber value={overall} fontSize={72} />
                 <div className="font-mono uppercase tracking-[0.22em] text-text-muted font-bold mt-1" style={{ fontSize: 11 }}>

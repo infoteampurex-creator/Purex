@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { TwinSilhouette } from './TwinSilhouette';
+import { AvatarImage } from './AvatarImage';
 import { TwinStatsPanel } from './TwinStatsPanel';
 import { TwinStatusBadge } from './TwinStatusBadge';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -24,6 +24,8 @@ interface Props {
   workoutDoneToday: boolean;
   /** Optional initial stage. Defaults to '30d'. */
   initialStage?: FutureStageKey;
+  /** Projected avatar PNG src — shown as the centerpiece for all stages. */
+  avatarSrc?: string;
 }
 
 /**
@@ -39,6 +41,7 @@ export function FutureCloneViewer({
   todayStats,
   workoutDoneToday,
   initialStage = '30d',
+  avatarSrc,
 }: Props) {
   const initialIndex = Math.max(
     0,
@@ -73,13 +76,14 @@ export function FutureCloneViewer({
         {/* Silhouette panel */}
         <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-6 md:p-8">
           <div className="flex flex-col items-center">
-            <TwinSilhouette
-              stats={projectedStats}
-              state={projectedState}
-              width={280}
-              evolution={evolution}
-              auraOverride={activeStage.aura}
-            />
+            {avatarSrc ? (
+              <AvatarImage
+                src={avatarSrc}
+                width={320}
+                accent={activeStage.aura}
+                glow={stageIndex >= 2}
+              />
+            ) : null}
 
             {/* Vitality + status — number animates with spring */}
             <div className="mt-6 text-center">

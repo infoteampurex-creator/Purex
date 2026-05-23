@@ -28,7 +28,8 @@ export function AvatarImage({
   accent = '#7dd3ff',
   glow = false,
 }: Props) {
-  const height = Math.round(width * 1.05); // characters are ~1:1 with slight headroom
+  // PNGs were cropped to portrait — aspect ratio ~0.92:1 (W:H)
+  const height = Math.round(width / 0.92);
   return (
     <div
       className="relative flex items-end justify-center"
@@ -84,16 +85,25 @@ export function AvatarImage({
       </svg>
 
       {/* ─── Character PNG with breathing animation ─── */}
+      {/* Larger Y movement + scale + subtle rotation = visibly alive */}
       <motion.div
-        animate={{ y: [0, -2, 0], scale: [1, 1.005, 1] }}
-        transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+        animate={{
+          y: [0, -5, 0],
+          scale: [1, 1.015, 1],
+          rotate: [0, 0.5, 0, -0.5, 0],
+        }}
+        transition={{
+          y: { duration: 3.6, repeat: Infinity, ease: 'easeInOut' },
+          scale: { duration: 3.6, repeat: Infinity, ease: 'easeInOut' },
+          rotate: { duration: 7.2, repeat: Infinity, ease: 'easeInOut' },
+        }}
         className="relative"
         style={{
           width,
           height,
           filter: glow
-            ? `drop-shadow(0 0 18px ${accent}aa) drop-shadow(0 0 32px ${accent}55)`
-            : `drop-shadow(0 4px 12px rgba(0,0,0,0.5))`,
+            ? `drop-shadow(0 0 22px ${accent}cc) drop-shadow(0 0 40px ${accent}66)`
+            : `drop-shadow(0 0 14px ${accent}55) drop-shadow(0 6px 16px rgba(0,0,0,0.6))`,
         }}
       >
         <Image
