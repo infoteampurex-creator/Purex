@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Ruler, X } from 'lucide-react';
+import { AlertCircle, Loader2, Ruler, X } from 'lucide-react';
 import {
   upsertMyMeasurements,
   updateProfileBodySettings,
@@ -75,7 +75,11 @@ export function BodyMeasurementsSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Hydrate on open from latest measurements + profile
+  // Hydrate ONLY on open transition (not on every prop change).
+  // Earlier this re-fired whenever latest/profileSettings changed,
+  // which happened after a successful revalidatePath — and the
+  // setError(null) inside silently wiped any "save failed" message
+  // before the user could read it. Now we initialise once per open.
   useEffect(() => {
     if (!open) return;
     setUnit(profileSettings.unitPref);
@@ -101,11 +105,13 @@ export function BodyMeasurementsSheet({
       if (cm == null) {
         init[f.key] = '';
       } else {
-        init[f.key] = unit === 'in' ? (cmToIn(cm) ?? '') : cm;
+        init[f.key] =
+          profileSettings.unitPref === 'in' ? (cmToIn(cm) ?? '') : cm;
       }
     }
     setMeasurements(init);
-  }, [open, latest, profileSettings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Re-convert all values when unit toggles (mid-edit)
   useEffect(() => {
@@ -178,12 +184,29 @@ export function BodyMeasurementsSheet({
 
     const [profileRes, measRes] = await Promise.all([profilePromise, measPromise]);
     setSaving(false);
-    if (!profileRes.ok) {
-      setError(profileRes.error ?? 'Failed to save profile');
-      return;
-    }
-    if (!measRes.ok) {
-      setError(measRes.error ?? 'Failed to save measurements');
+
+    // Helper — translate known Supabase errors into actionable copy
+    const friendly = (raw: string): string => {
+      if (/does not exist|relation .* does not exist/i.test(raw)) {
+        return (
+          'Database table missing. Apply Supabase migration ' +
+          '00017_body_measurements.sql in the SQL Editor, then try again.'
+        );
+      }
+      if (/permission denied|row level security/i.test(raw)) {
+        return 'Permission denied — RLS policy mismatch. Re-apply migration 00017.';
+      }
+      return raw;
+    };
+
+    if (!profileRes.ok || !measRes.ok) {
+      const msg =
+        (!profileRes.ok && friendly(profileRes.error ?? 'Failed to save profile')) ||
+        (!measRes.ok && friendly(measRes.error ?? 'Failed to save measurements')) ||
+        'Save failed';
+      // eslint-disable-next-line no-console
+      console.error('[PURE X] measurements save failed:', { profileRes, measRes });
+      setError(msg);
       return;
     }
     onClose();
@@ -339,10 +362,30 @@ export function BodyMeasurementsSheet({
 
               {error && (
                 <div
-                  className="font-mono mt-3"
-                  style={{ fontSize: 11, color: '#ff8a4d' }}
+                  className="rounded-xl px-3 py-3 mt-3 flex items-start gap-2"
+                  style={{
+                    background: 'rgba(255,138,77,0.08)',
+                    border: '1px solid rgba(255,138,77,0.30)',
+                  }}
                 >
-                  {error}
+                  <AlertCircle
+                    size={14}
+                    style={{ color: '#ff8a4d', flexShrink: 0, marginTop: 1 }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="font-mono uppercase tracking-[0.18em] font-bold mb-0.5"
+                      style={{ fontSize: 9, color: '#ff8a4d' }}
+                    >
+                      Save failed
+                    </div>
+                    <div
+                      className="leading-snug break-words"
+                      style={{ fontSize: 12, color: 'rgba(255,138,77,0.95)' }}
+                    >
+                      {error}
+                    </div>
+                  </div>
                 </div>
               )}
 
