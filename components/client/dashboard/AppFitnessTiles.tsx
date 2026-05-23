@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useIsApp } from '@/lib/hooks/useIsApp';
 import type { DailyInputs, NutritionSnapshot } from '@/lib/data/twin';
+import type { MealRow } from '@/lib/data/meals';
 
 /**
  * App-only 2×2 fitness tiles (Steps / Sleep / Water / Nutrition).
@@ -20,10 +21,17 @@ const AppFitnessTilesInner = dynamic(
 interface Props {
   inputs: DailyInputs;
   nutrition: NutritionSnapshot;
+  todaysMeals: MealRow[];
 }
 
-export function AppFitnessTiles({ inputs, nutrition }: Props) {
+export function AppFitnessTiles({ inputs, nutrition, todaysMeals }: Props) {
   const isApp = useIsApp();
   if (!isApp) return null;
-  return <AppFitnessTilesInner inputs={inputs} nutrition={nutrition} />;
+  return (
+    <AppFitnessTilesInner
+      inputs={inputs}
+      nutrition={nutrition}
+      todaysMeals={todaysMeals}
+    />
+  );
 }

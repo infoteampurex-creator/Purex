@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Footprints, Moon, Droplets, Apple, Plus } from 'lucide-react';
 import type { DailyInputs, NutritionSnapshot } from '@/lib/data/twin';
+import type { MealRow } from '@/lib/data/meals';
 import { QuickLogSheet, type QuickLogType } from './QuickLogSheet';
 import { MealLogSheet } from './MealLogSheet';
 
 interface Props {
   inputs: DailyInputs;
   nutrition: NutritionSnapshot;
+  todaysMeals: MealRow[];
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  * opens a QuickLogSheet to log manually for users without auto-source
  * apps. Nutrition tile is read-only — it's an admin-tracked metric.
  */
-export function AppFitnessTilesInner({ inputs, nutrition }: Props) {
+export function AppFitnessTilesInner({ inputs, nutrition, todaysMeals }: Props) {
   const [sheetType, setSheetType] = useState<QuickLogType | null>(null);
   const [mealOpen, setMealOpen] = useState(false);
   const sheetCurrent =
@@ -188,6 +190,7 @@ export function AppFitnessTilesInner({ inputs, nutrition }: Props) {
           proteinG: nutrition.proteinG,
           proteinTargetG: nutrition.proteinTargetG,
         }}
+        todaysMeals={todaysMeals}
       />
     </>
   );

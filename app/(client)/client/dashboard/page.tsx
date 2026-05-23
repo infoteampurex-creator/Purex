@@ -30,6 +30,7 @@ import {
   generateMission,
 } from '@/lib/data/twin-game';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
+import { getTodaysMeals, type MealRow } from '@/lib/data/meals';
 
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
@@ -71,14 +72,17 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   let twinInputs: DailyInputs = emptyTwinInputs();
   let streakHistory: Awaited<ReturnType<typeof getStreakHistory>> = [];
   let nutritionSnapshot: NutritionSnapshot = EMPTY_NUTRITION_SNAPSHOT;
+  let todaysMeals: MealRow[] = [];
   if (userId) {
-    const [inputsResult, history] = await Promise.all([
+    const [inputsResult, history, meals] = await Promise.all([
       getTwinDailyInputs(userId, today),
       getStreakHistory(userId, 7),
+      getTodaysMeals(userId, today),
     ]);
     twinInputs = inputsResult.inputs;
     streakHistory = history;
     nutritionSnapshot = inputsResult.nutrition;
+    todaysMeals = meals;
   }
   const twinStats = deriveTwinStats(twinInputs);
   const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
@@ -117,7 +121,11 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       {/* Raw fitness numbers — app-only (renders null on web). Sits
           near the top so steps/sleep/water/nutrition are the first
           thing visible after the greeting. */}
-      <AppFitnessTiles inputs={twinInputs} nutrition={nutritionSnapshot} />
+      <AppFitnessTiles
+        inputs={twinInputs}
+        nutrition={nutritionSnapshot}
+        todaysMeals={todaysMeals}
+      />
 
       {userId && (
         <TodaysPlanCard

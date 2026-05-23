@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { Apple, Camera, Edit3, Loader2, RotateCcw, Sparkles, X } from 'lucide-react';
-import { addMeal } from '@/lib/actions/meals';
+import {
+  Apple, Camera, Edit3, Loader2, RotateCcw, Sparkles, Trash2, X,
+} from 'lucide-react';
+import { addMeal, deleteMeal } from '@/lib/actions/meals';
 import { analyzeMealPhoto } from '@/lib/actions/analyze-meal-photo';
+import type { MealRow } from '@/lib/data/meals';
 
 interface Props {
   open: boolean;
@@ -17,6 +20,8 @@ interface Props {
     proteinG: number;
     proteinTargetG: number;
   };
+  /** Already-logged meals for today (most-recent first). */
+  todaysMeals: MealRow[];
 }
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';
@@ -55,8 +60,9 @@ const ACCENT = '#ff8a4d'; // orange — matches Nutrition tile palette
  */
 type Mode = 'choose' | 'analyzing' | 'review';
 
-export function MealLogSheet({ open, onClose, today }: Props) {
+export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
   const [mode, setMode] = useState<Mode>('choose');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [mealType, setMealType] = useState<MealType>(() => guessMealType());
   const [name, setName] = useState('');
   const [calories, setCalories] = useState(0);
@@ -182,6 +188,18 @@ export function MealLogSheet({ open, onClose, today }: Props) {
     setFiberG(p.fiberG);
   };
 
+  const handleDelete = async (meal: MealRow) => {
+    if (deletingId) return;
+    setDeletingId(meal.id);
+    const res = await deleteMeal(meal.id);
+    setDeletingId(null);
+    if (!res.ok) {
+      setError(res.error ?? 'Delete failed');
+    }
+    // Page revalidates via revalidatePath in deleteMeal — list refreshes
+    // on next render. Sheet stays open so user can keep editing.
+  };
+
   const submit = async () => {
     if (calories <= 0) {
       setError('Enter calories or pick a preset');
@@ -295,6 +313,108 @@ export function MealLogSheet({ open, onClose, today }: Props) {
 
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto px-5 pb-3">
+              {/* ─── Today's meals (with delete) ─── */}
+              {todaysMeals.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <div
+                      className="font-mono uppercase tracking-[0.16em] font-bold"
+                      style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}
+                    >
+                      Today’s meals
+                    </div>
+                    <div
+                      className="font-mono tabular-nums"
+                      style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)' }}
+                    >
+                      {todaysMeals.length} {todaysMeals.length === 1 ? 'entry' : 'entries'}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {todaysMeals.map((m) => (
+                      <div
+                        key={m.id}
+                        className="rounded-xl px-3 py-2.5 flex items-center gap-3"
+                        style={{
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          opacity: deletingId === m.id ? 0.4 : 1,
+                          transition: 'opacity 0.15s',
+                        }}
+                      >
+                        {/* Photo thumbnail (if AI) or meal-type emoji */}
+                        {m.photo_url ? (
+                          <div
+                            className="relative flex-shrink-0 rounded-md overflow-hidden"
+                            style={{ width: 36, height: 36 }}
+                          >
+                            <Image
+                              src={m.photo_url}
+                              alt={m.name ?? 'meal'}
+                              fill
+                              sizes="36px"
+                              unoptimized
+                              style={{ objectFit: 'cover' }}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className="flex-shrink-0 rounded-md flex items-center justify-center"
+                            style={{
+                              width: 36,
+                              height: 36,
+                              background: `${ACCENT}1A`,
+                              border: `1px solid ${ACCENT}33`,
+                              fontSize: 16,
+                            }}
+                          >
+                            {mealEmoji(m.meal_type)}
+                          </div>
+                        )}
+
+                        {/* Name + sub-line */}
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className="font-display font-semibold truncate"
+                            style={{ fontSize: 13, color: '#f5f5f0' }}
+                          >
+                            {m.name?.trim() || labelForType(m.meal_type)}
+                          </div>
+                          <div
+                            className="font-mono tabular-nums mt-0.5"
+                            style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}
+                          >
+                            {labelForType(m.meal_type)} ·{' '}
+                            <span style={{ color: ACCENT }}>{m.calories.toLocaleString()} kcal</span>{' '}
+                            · {formatTime(m.created_at)}
+                          </div>
+                        </div>
+
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(m)}
+                          disabled={deletingId !== null}
+                          aria-label={`Delete ${m.name ?? 'meal'}`}
+                          className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center disabled:opacity-40"
+                          style={{
+                            background: 'rgba(255,138,77,0.08)',
+                            border: '1px solid rgba(255,138,77,0.20)',
+                            color: '#ff8a4d',
+                          }}
+                        >
+                          {deletingId === m.id ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={13} />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* ─── Photo / AI flow ─── */}
               {mode === 'choose' && !photoUrl && (
                 <div
@@ -446,6 +566,27 @@ export function MealLogSheet({ open, onClose, today }: Props) {
                 </div>
               )}
 
+              {/* Macros (moved up — most important, AI fills these) */}
+              <div className="mb-4">
+                <div
+                  className="font-mono uppercase tracking-[0.14em] font-bold mb-2"
+                  style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}
+                >
+                  Macros {photoUrl && (
+                    <span style={{ color: '#7dd3ff', marginLeft: 6 }}>· AI-filled, edit if needed</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <MacroInput label="Calories" unit="kcal" value={calories} onChange={setCalories} color={ACCENT} />
+                  <MacroInput label="Protein" unit="g" value={proteinG} onChange={setProteinG} color="#c6ff3d" />
+                  <MacroInput label="Carbs" unit="g" value={carbsG} onChange={setCarbsG} color="#7dd3ff" />
+                  <MacroInput label="Fats" unit="g" value={fatsG} onChange={setFatsG} color="#ffd24d" />
+                  <div className="col-span-2">
+                    <MacroInput label="Fiber" unit="g" value={fiberG} onChange={setFiberG} color="#a78bfa" />
+                  </div>
+                </div>
+              </div>
+
               {/* Today's progress */}
               <div
                 className="rounded-xl px-4 py-3 mb-4"
@@ -566,17 +707,6 @@ export function MealLogSheet({ open, onClose, today }: Props) {
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
               />
-
-              {/* Macros */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <MacroInput label="Calories" unit="kcal" value={calories} onChange={setCalories} color={ACCENT} />
-                <MacroInput label="Protein" unit="g" value={proteinG} onChange={setProteinG} color="#c6ff3d" />
-                <MacroInput label="Carbs" unit="g" value={carbsG} onChange={setCarbsG} color="#7dd3ff" />
-                <MacroInput label="Fats" unit="g" value={fatsG} onChange={setFatsG} color="#ffd24d" />
-                <div className="col-span-2">
-                  <MacroInput label="Fiber" unit="g" value={fiberG} onChange={setFiberG} color="#a78bfa" />
-                </div>
-              </div>
 
               {error && (
                 <div
@@ -717,6 +847,39 @@ function ProgressLine({
       </div>
     </div>
   );
+}
+
+function mealEmoji(type: MealType): string {
+  switch (type) {
+    case 'breakfast': return '🥚';
+    case 'lunch':     return '🍛';
+    case 'dinner':    return '🍽️';
+    case 'snack':     return '🍪';
+    default:          return '🍴';
+  }
+}
+
+function labelForType(type: MealType): string {
+  switch (type) {
+    case 'breakfast': return 'Breakfast';
+    case 'lunch':     return 'Lunch';
+    case 'dinner':    return 'Dinner';
+    case 'snack':     return 'Snack';
+    default:          return 'Meal';
+  }
+}
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return '';
+  }
 }
 
 function guessMealType(): MealType {
