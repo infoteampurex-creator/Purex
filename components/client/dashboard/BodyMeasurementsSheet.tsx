@@ -160,10 +160,13 @@ export function BodyMeasurementsSheet({
     };
 
     // 1) profile settings (height + unit pref)
+    // NOTE: heightCm in state is ALREADY stored in cm (canonical).
+    // The NumberField for height converts on input — we don't
+    // convert again here, otherwise we'd double-convert (172 cm
+    // would become inToCm(172) = 437 cm → exceeds 260 max → save
+    // fails with "Number must be less than or equal to 260").
     const profilePromise = updateProfileBodySettings({
-      heightCm: typeof heightCm === 'number'
-        ? (unit === 'in' ? inToCm(heightCm) : heightCm)
-        : null,
+      heightCm: typeof heightCm === 'number' ? heightCm : null,
       unitPref: unit,
     });
 
