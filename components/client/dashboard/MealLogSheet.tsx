@@ -93,7 +93,10 @@ export function MealLogSheet({ open, onClose, today }: Props) {
   }, [open]);
 
   // ─── Photo capture + AI analysis ───
-  const capturePhoto = async (source: 'camera' | 'gallery') => {
+  // Camera ONLY — gallery is intentionally disabled so users can't
+  // upload old/stale food photos and game the food log. Every meal
+  // photo must be captured in the moment.
+  const capturePhoto = async () => {
     setError(null);
     try {
       // Dynamic import keeps the Capacitor camera plugin out of the
@@ -105,7 +108,7 @@ export function MealLogSheet({ open, onClose, today }: Props) {
         quality: 80,
         allowEditing: false,
         resultType: CameraResultType.Base64,
-        source: source === 'camera' ? CameraSource.Camera : CameraSource.Photos,
+        source: CameraSource.Camera,
         width: 1024,
         correctOrientation: true,
       });
@@ -315,39 +318,29 @@ export function MealLogSheet({ open, onClose, today }: Props) {
                     className="leading-relaxed mb-3"
                     style={{ fontSize: 12, color: 'rgba(245,245,240,0.75)' }}
                   >
-                    Snap a photo of your plate — Claude will estimate the
-                    calories and macros. You can edit before saving.
+                    Snap a photo of your plate <b>right now</b> — Claude will
+                    estimate the calories and macros. You can edit before saving.
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void capturePhoto('camera')}
-                      className="rounded-xl py-3 font-mono uppercase tracking-[0.16em] font-bold flex items-center justify-center gap-2"
-                      style={{
-                        fontSize: 11,
-                        color: '#0a0c09',
-                        backgroundColor: '#7dd3ff',
-                        boxShadow: '0 0 16px rgba(125,211,255,0.30)',
-                      }}
-                    >
-                      <Camera size={13} />
-                      Camera
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void capturePhoto('gallery')}
-                      className="rounded-xl py-3 font-mono uppercase tracking-[0.16em] font-bold flex items-center justify-center gap-2"
-                      style={{
-                        fontSize: 11,
-                        color: '#7dd3ff',
-                        backgroundColor: 'rgba(125,211,255,0.08)',
-                        border: '1px solid rgba(125,211,255,0.30)',
-                      }}
-                    >
-                      <Apple size={13} />
-                      Gallery
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void capturePhoto()}
+                    className="w-full rounded-xl py-3.5 font-mono uppercase tracking-[0.18em] font-bold flex items-center justify-center gap-2"
+                    style={{
+                      fontSize: 12,
+                      color: '#0a0c09',
+                      backgroundColor: '#7dd3ff',
+                      boxShadow: '0 0 16px rgba(125,211,255,0.30)',
+                    }}
+                  >
+                    <Camera size={14} />
+                    Open Camera
+                  </button>
+                  <p
+                    className="font-mono mt-2 text-center"
+                    style={{ fontSize: 10, color: 'rgba(245,245,240,0.35)' }}
+                  >
+                    Live capture only — gallery uploads disabled
+                  </p>
                 </div>
               )}
 
