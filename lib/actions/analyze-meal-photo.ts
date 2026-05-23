@@ -187,7 +187,12 @@ export async function analyzeMealPhoto(
         responseSchema,
         // Conservative — encourages estimates over creativity
         temperature: 0.2,
-        maxOutputTokens: 800,
+        // Gemini 2.5 silently spends a chunk of the output budget on
+        // internal "thinking tokens" before emitting the response.
+        // 800 was getting consumed by thinking, leaving the JSON
+        // truncated mid-string. 4096 gives plenty of headroom for
+        // both thinking + the actual ~300-token JSON we want.
+        maxOutputTokens: 4096,
       },
     });
 
