@@ -7,9 +7,13 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
+  Flame,
   Heart,
   Loader2,
+  MapPin,
   RefreshCw,
+  Timer,
+  Zap,
 } from 'lucide-react';
 import { useHealthConnect } from '@/lib/hooks/useHealthConnect';
 import { syncHealthConnectDay } from '@/lib/actions/health-connect-sync';
@@ -62,6 +66,56 @@ export function HealthSyncCardInner() {
       void pushToSupabase(hc.readings);
     }
   }, [hc.readings.readAt, hc.hasPermissions, hc.readings, pushToSupabase]);
+
+  // Periodic auto-refresh — re-poll Health Connect every 60s while
+  // the dashboard tab is visible. Pauses when the user switches apps
+  // (visibilitychange = hidden) and resumes on return. The first poll
+  // happens via the hook's mount effect; this only handles the loop.
+  useEffect(() => {
+    if (!hc.hasPermissions || hc.availability !== 'Available') return;
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        if (typeof document === 'undefined' || !document.hidden) {
+          void hc.readToday();
+        }
+      }, 60_000);
+    };
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    start();
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        // Coming back into focus — read immediately + restart loop
+        void hc.readToday();
+        start();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [hc.hasPermissions, hc.availability, hc.readToday, hc]);
+
+  // Ticker so "Synced 12s ago" updates continuously without waiting
+  // for the next readToday(). Re-renders every 15s, very cheap.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 15_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Still initializing — show a calibrating shell so the user sees
   // SOMETHING immediately instead of an empty slot. Also helps debug
@@ -257,6 +311,40 @@ export function HealthSyncCardInner() {
         />
       </div>
 
+      {/* Second row — calories / active / distance — surfaces what
+          Health Connect already has, no extra logging required. */}
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <Reading
+          label="Calories"
+          value={
+            hc.readings.totalCalories > 0
+              ? hc.readings.totalCalories.toLocaleString()
+              : '—'
+          }
+          unit={hc.readings.totalCalories > 0 ? 'kcal' : undefined}
+          icon={<Flame size={9} style={{ color: '#ffd24d' }} />}
+        />
+        <Reading
+          label="Active"
+          value={
+            hc.readings.activeMinutes > 0
+              ? `${hc.readings.activeMinutes}`
+              : '—'
+          }
+          unit={hc.readings.activeMinutes > 0 ? 'min' : undefined}
+          icon={<Timer size={9} style={{ color: '#c6ff3d' }} />}
+        />
+        <Reading
+          label="Distance"
+          value={
+            hc.readings.distanceMeters > 0
+              ? formatDistance(hc.readings.distanceMeters)
+              : '—'
+          }
+          icon={<MapPin size={9} style={{ color: '#7dd3ff' }} />}
+        />
+      </div>
+
       <AnimatePresence>
         {lastSyncIso && !syncError && (
           <motion.div
@@ -375,6 +463,11 @@ function formatWater(ml: number): string {
   if (ml <= 0) return '—';
   if (ml >= 1000) return `${(ml / 1000).toFixed(1)}L`;
   return `${ml}ml`;
+}
+
+function formatDistance(meters: number): string {
+  if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
+  return `${meters} m`;
 }
 
 function formatRelative(iso: string): string {

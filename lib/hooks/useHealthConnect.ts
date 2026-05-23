@@ -18,7 +18,16 @@ import { HealthConnect } from '@kiwi-health/capacitor-health-connect';
  * those as errors instead of leaving the UI stuck on "Checking…".
  */
 
-const READ_TYPES = ['Steps', 'SleepSession', 'Hydration', 'HeartRateSeries'] as const;
+const READ_TYPES = [
+  'Steps',
+  'SleepSession',
+  'Hydration',
+  'HeartRateSeries',
+  'TotalCaloriesBurned',
+  'ActiveCaloriesBurned',
+  'Distance',
+  'ExerciseSession',
+] as const;
 type ReadType = (typeof READ_TYPES)[number];
 
 const CALL_TIMEOUT_MS = 8000;
@@ -30,10 +39,14 @@ export type HealthConnectAvailability =
   | 'NotSupported';  // device / OS doesn't support it (or we're on web/iOS)
 
 export interface HealthConnectReadings {
-  steps: number;          // total steps today
-  sleepMinutes: number;   // total sleep duration today (last completed session)
-  waterMl: number;        // hydration logged today (ml)
-  heartRateBpm: number;   // most recent heart-rate sample today (0 if none)
+  steps: number;             // total steps today
+  sleepMinutes: number;      // total sleep duration today (last session)
+  waterMl: number;           // hydration logged today (ml)
+  heartRateBpm: number;      // most recent heart-rate sample today
+  totalCalories: number;     // total kcal burned today (BMR + activity)
+  activeCalories: number;    // kcal burned from activity only
+  distanceMeters: number;    // total distance today (m)
+  activeMinutes: number;     // sum of exercise session durations (min)
   /** ISO timestamp of when these readings were taken. */
   readAt: string;
 }
@@ -43,6 +56,10 @@ const EMPTY_READINGS: HealthConnectReadings = {
   sleepMinutes: 0,
   waterMl: 0,
   heartRateBpm: 0,
+  totalCalories: 0,
+  activeCalories: 0,
+  distanceMeters: 0,
+  activeMinutes: 0,
   readAt: '',
 };
 
@@ -224,11 +241,24 @@ export function useHealthConnect() {
     };
 
     try {
-      const [stepsRes, sleepRes, hydrationRes, hrRes] = await Promise.all([
+      const [
+        stepsRes,
+        sleepRes,
+        hydrationRes,
+        hrRes,
+        totalCalRes,
+        activeCalRes,
+        distanceRes,
+        exerciseRes,
+      ] = await Promise.all([
         safeRead('Steps'),
         safeRead('SleepSession'),
         safeRead('Hydration'),
         safeRead('HeartRateSeries'),
+        safeRead('TotalCaloriesBurned'),
+        safeRead('ActiveCaloriesBurned'),
+        safeRead('Distance'),
+        safeRead('ExerciseSession'),
       ]);
 
       // Steps: Health Connect aggregates writes from every app that
@@ -274,11 +304,50 @@ export function useHealthConnect() {
         }
       }
 
+      // Calories: per-source-max in kcal. Energy comes as { unit, value }.
+      const toKcal = (r: unknown) => {
+        const e = (r as { energy?: { unit?: string; value?: number } }).energy;
+        if (!e || typeof e.value !== 'number') return 0;
+        // Health Connect's Energy is always kcal in this plugin; defensive
+        // anyway in case the unit field is ever something else.
+        return e.unit === 'kcal' || !e.unit ? Math.round(e.value) : Math.round(e.value);
+      };
+      const totalCalories = maxPerSource(totalCalRes.records, toKcal);
+      const activeCalories = maxPerSource(activeCalRes.records, toKcal);
+
+      // Distance: sum per source, convert to meters. Length unit is
+      // typically 'meter' but may be 'kilometer'/'mile' from some apps.
+      const distanceMeters = maxPerSource(distanceRes.records, (r) => {
+        const d = (r as { distance?: { unit?: string; value?: number } }).distance;
+        if (!d || typeof d.value !== 'number') return 0;
+        switch (d.unit) {
+          case 'kilometer': return Math.round(d.value * 1000);
+          case 'mile':      return Math.round(d.value * 1609.344);
+          case 'feet':      return Math.round(d.value * 0.3048);
+          case 'inch':      return Math.round(d.value * 0.0254);
+          case 'meter':
+          default:          return Math.round(d.value);
+        }
+      });
+
+      // Active minutes: sum the duration of ExerciseSession records.
+      const activeMinutes = maxPerSource(exerciseRes.records, (r) => {
+        const s = r as { startTime?: Date | string; endTime?: Date | string };
+        if (!s.startTime || !s.endTime) return 0;
+        const startMs = new Date(s.startTime).getTime();
+        const endMs = new Date(s.endTime).getTime();
+        return Math.max(0, Math.round((endMs - startMs) / 60000));
+      });
+
       const readings: HealthConnectReadings = {
         steps,
         sleepMinutes,
         waterMl,
         heartRateBpm,
+        totalCalories,
+        activeCalories,
+        distanceMeters,
+        activeMinutes,
         readAt: new Date().toISOString(),
       };
       setState((s) => ({ ...s, readings, loading: false }));
