@@ -318,7 +318,7 @@ export function MealLogSheet({ open, onClose, today }: Props) {
                     className="leading-relaxed mb-3"
                     style={{ fontSize: 12, color: 'rgba(245,245,240,0.75)' }}
                   >
-                    Snap a photo of your plate <b>right now</b> — Claude will
+                    Snap a photo of your plate <b>right now</b> — AI will
                     estimate the calories and macros. You can edit before saving.
                   </p>
                   <button
