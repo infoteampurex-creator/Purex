@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { TwinAvatar } from './TwinAvatar';
+import { AvatarImage } from './AvatarImage';
 import { MilestoneRail } from './MilestoneRail';
 import { ProjectedMetrics } from './ProjectedMetrics';
 import {
@@ -56,17 +56,10 @@ export function FutureCloneDashboardCardApp({
 
   const deltas = deriveProjectedDeltas(sourceStats, projected);
 
-  // Pick today's and projected avatars (PNG fallbacks for the 3D
-  // canvas — used if WebGL is unavailable on the device).
+  // Pick today's and projected avatars (photorealistic PNG).
   const todayBodyType = proportions?.bodyType ?? 'athletic';
   const todayAvatar = avatarFor(gender ?? null, todayBodyType);
   const projectedAvatar = projectedAvatarFor(gender ?? null, todayBodyType);
-  // Derive the projected body type (one tier slimmer, capped at lean)
-  // for the 3D Day-90 capsule scaling — keeps the visual story
-  // consistent with the PNG fallback.
-  const TYPE_ORDER = ['lean', 'athletic', 'solid', 'heavy'] as const;
-  const todayIdx = TYPE_ORDER.indexOf(todayBodyType);
-  const projectedBodyType = TYPE_ORDER[Math.max(0, todayIdx - 1)];
 
   return (
     <div
@@ -130,12 +123,7 @@ export function FutureCloneDashboardCardApp({
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="flex flex-col items-center"
         >
-          <TwinAvatar
-            fallbackSrc={todayAvatar}
-            bodyType={todayBodyType}
-            width={150}
-            accent="#7dd3ff"
-          />
+          <AvatarImage src={todayAvatar} width={150} accent="#7dd3ff" />
           <div
             className="font-mono uppercase tracking-[0.18em] font-bold mt-2"
             style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
@@ -184,13 +172,7 @@ export function FutureCloneDashboardCardApp({
           transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
           className="flex flex-col items-center"
         >
-          <TwinAvatar
-            fallbackSrc={projectedAvatar}
-            bodyType={projectedBodyType}
-            width={150}
-            accent="#ffd24d"
-            glow
-          />
+          <AvatarImage src={projectedAvatar} width={150} accent="#ffd24d" glow />
           <div
             className="font-mono uppercase tracking-[0.18em] font-bold mt-2"
             style={{ fontSize: 9, color: '#ffd24d' }}
