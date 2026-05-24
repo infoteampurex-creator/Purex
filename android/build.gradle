@@ -1,7 +1,8 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    
+    ext.kotlin_version = '1.8.22'
+
     repositories {
         google()
         mavenCentral()
@@ -9,6 +10,13 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.7.2'
         classpath 'com.google.gms:google-services:4.4.2'
+        // Kotlin Gradle Plugin — needed because UnityBridgePlugin.kt
+        // in the :app module is written in Kotlin. Version pinned to
+        // 1.8.22 to match the stdlib already excluded/forced elsewhere
+        // and to stay compatible with the jvmTarget=17 override below
+        // (Kotlin 1.8.x is the latest series that accepts "17" without
+        // also requiring JDK-21-only flags).
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
