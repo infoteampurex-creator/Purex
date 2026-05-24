@@ -7,8 +7,7 @@ import { CommitmentWidget } from '@/components/client/CommitmentWidget';
 import { ScoreWidget } from '@/components/client/ScoreWidget';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
-import { TwinDashboardCard } from '@/components/client/twin/TwinDashboardCard';
-import { FutureCloneDashboardCard } from '@/components/client/twin/FutureCloneDashboardCard';
+import { TwinSection } from '@/components/client/twin/TwinSection';
 import { HealthyStreakCard } from '@/components/client/twin/HealthyStreakCard';
 import { getMockClientPact } from '@/lib/data/commitment';
 import { getMockClientScore } from '@/lib/data/score';
@@ -173,29 +172,22 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         todayScore={todayScore}
       />
 
-      {/* PureX Twin + Future Clone — redesigned holographic AI body
-          twin with gamified XP/Level/Streak/Mission overlay */}
-      <div className="grid lg:grid-cols-2 gap-5 md:gap-6">
-        <TwinDashboardCard
-          stats={twinStats}
-          state={twinState}
-          message={twinMessage}
-          level={level}
-          streakDays={currentStreakDays}
-          mission={mission}
-          proportions={proportions}
-          hasMeasurements={hasMeasurements}
-          gender={bodySettings.gender}
-        />
-        <FutureCloneDashboardCard
-          stats={twinStats}
-          workoutDoneToday={twinInputs.workoutCompletedToday}
-          streakDays={currentStreakDays}
-          proportions={proportions}
-          hasMeasurements={hasMeasurements}
-          gender={bodySettings.gender}
-        />
-      </div>
+      {/* PureX Twin + Future Clone — APP-ONLY. Web visitors see
+          nothing here (no silhouette, no skeleton) — by product
+          decision the premium gamified body twin is reserved for the
+          mobile app surface. */}
+      <TwinSection
+        stats={twinStats}
+        state={twinState}
+        message={twinMessage}
+        level={level}
+        streakDays={currentStreakDays}
+        mission={mission}
+        workoutDoneToday={twinInputs.workoutCompletedToday}
+        proportions={proportions}
+        hasMeasurements={hasMeasurements}
+        gender={bodySettings.gender}
+      />
 
       <CommitmentWidget pact={pact} />
 

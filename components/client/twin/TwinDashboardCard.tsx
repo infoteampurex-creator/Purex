@@ -1,7 +1,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { TwinDashboardCardWeb } from './TwinDashboardCardWeb';
 import { useIsApp } from '@/lib/hooks/useIsApp';
 import type { TwinStats, TwinVisualState } from '@/lib/data/twin';
 import type { CoachMission, LevelInfo } from '@/lib/data/twin-game';
@@ -9,12 +8,17 @@ import type { BodyProportions } from '@/lib/data/body-proportions';
 import type { Gender } from '@/lib/data/body-measurements';
 
 /**
- * Dispatcher — picks Web vs App layout based on Capacitor detection.
+ * Dispatcher — Twin card is APP-ONLY by product decision.
  *
- * The gamified holographic app card lives in TwinDashboardCardApp.tsx
- * and is **lazy-loaded only when the user is in the mobile app**.
- * Browser visitors never pay the bundle cost for the gamification
- * primitives (StatRadial, LevelChip, StreakChip, AiCoachCard, etc.).
+ * Renders nothing on web (desktop browsers, marketing visitors). The
+ * gamified holographic experience — WebP avatar, ambient animation
+ * layers, level / streak chips, AI coach mission — only ships inside
+ * the Capacitor app. Browser visitors don't pay the bundle cost AND
+ * don't see a stripped-down silhouette that would set a confusing
+ * "this is what PureX looks like" impression.
+ *
+ * Lazy-load the app implementation via next/dynamic with ssr:false so
+ * @capacitor/core never lands in the server-side React tree.
  */
 const TwinDashboardCardApp = dynamic(
   () => import('./TwinDashboardCardApp').then((m) => m.TwinDashboardCardApp),
@@ -28,8 +32,7 @@ interface Props {
   level: LevelInfo;
   streakDays: number;
   mission: CoachMission;
-  /** Live measurement-driven body proportions (app-only). Web
-   *  doesn't use this — the simple web card has no avatar. */
+  /** Live measurement-driven body proportions (app-only). */
   proportions?: BodyProportions | null;
   /** True if any body measurement has been logged. */
   hasMeasurements?: boolean;
@@ -39,15 +42,7 @@ interface Props {
 
 export function TwinDashboardCard(props: Props) {
   const isApp = useIsApp();
-  if (!isApp) {
-    return (
-      <TwinDashboardCardWeb
-        stats={props.stats}
-        state={props.state}
-        message={props.message}
-      />
-    );
-  }
+  if (!isApp) return null;
   return (
     <TwinDashboardCardApp
       {...props}
