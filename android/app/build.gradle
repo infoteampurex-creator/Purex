@@ -25,8 +25,21 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // Both compiles target JVM 21 to match the Gradle daemon JDK
+    // (Android Studio's bundled JBR 21). Kotlin 1.9.24 (pinned in
+    // android/build.gradle) is the minimum version that accepts
+    // jvmTarget="21". Plugin subprojects stuck on older Kotlin stay
+    // at 17 — see the subprojects override in root build.gradle.
+    //
+    // Setting these explicitly (instead of relying on AGP defaults)
+    // satisfies AGP's Java↔Kotlin target compatibility check that
+    // fires for any module containing both Java and Kotlin source.
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '21'
     }
 }
 

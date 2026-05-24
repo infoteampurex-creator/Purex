@@ -1,7 +1,12 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.8.22'
+    // Kotlin 1.9.24 — chosen because it supports jvmTarget="21" (added
+    // in 1.9.20). Required for the :app module: its Kotlin compile must
+    // align with AGP's Java compile, which runs on the JDK 21 daemon
+    // and cannot easily be downgraded under AGP 8.7 + JDK 21 without
+    // toolchain headaches that AGP intermittently ignores.
+    ext.kotlin_version = '1.9.24'
 
     repositories {
         google()
@@ -11,11 +16,7 @@ buildscript {
         classpath 'com.android.tools.build:gradle:8.7.2'
         classpath 'com.google.gms:google-services:4.4.2'
         // Kotlin Gradle Plugin — needed because UnityBridgePlugin.kt
-        // in the :app module is written in Kotlin. Version pinned to
-        // 1.8.22 to match the stdlib already excluded/forced elsewhere
-        // and to stay compatible with the jvmTarget=17 override below
-        // (Kotlin 1.8.x is the latest series that accepts "17" without
-        // also requiring JDK-21-only flags).
+        // in the :app module is written in Kotlin.
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -40,14 +41,27 @@ allprojects {
     }
 }
 
-// Force Kotlin jvmTarget to 17 across all subprojects. Gradle runs on
-// Android Studio's bundled JDK 21, but older Kotlin Gradle Plugins
+// Force Kotlin jvmTarget to 17 across plugin subprojects (capacitor-*,
+// kiwi-health-*). Gradle daemon runs on Android Studio's bundled
+// JDK 21, but older Kotlin Gradle Plugins bundled with these plugins
 // (e.g. capacitor-health-connect@0.0.40 pins kotlin 1.8.20) don't
 // recognize "21" as a JVM target — they fail with
 // "Unknown Kotlin JVM target: 21". Pinning here keeps every plugin's
 // Kotlin compile on Java 17 bytecode regardless of daemon JDK.
+//
+// :app is EXEMPT — it uses Kotlin 1.9.24 (set in buildscript above)
+// which does accept jvmTarget="21", letting the :app Kotlin compile
+// align with AGP's Java compile (which AGP defaults to the daemon
+// JDK = 21 and refuses to let us downgrade via --release flag).
+//
+// Plugin subprojects only have Java NO-SOURCE in :app dependencies'
+// JavaCompile tasks, so the Java↔Kotlin compatibility check doesn't
+// fire there even when their Kotlin emits 17 bytecode under a 21
+// daemon (17 bytecode is forward-compatible on a 21 JVM at runtime).
 subprojects {
     afterEvaluate { project ->
+        if (project.name == 'app') return  // :app sets its own target
+
         if (project.plugins.hasPlugin('kotlin-android') ||
             project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
             project.tasks
