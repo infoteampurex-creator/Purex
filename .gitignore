@@ -37,6 +37,19 @@ android/app/google-services.json
 *.keystore
 *.jks
 
+# ─── Unity-as-Library build artifacts ───
+# When Phase 1 of the Unity 3D avatar lands (see docs/unity-as-library.md),
+# Unity Editor's "Export Project" drops a unityLibrary/ Gradle module
+# into android/. We commit the SOURCE of that module (build.gradle, the
+# Java/Kotlin/.so files Unity generated, AndroidManifest) but ignore
+# everything Gradle regenerates when AGP rebuilds the .aar.
+# Without these excludes, a single build commits +200 MB of Gradle cache.
+android/unityLibrary/build/
+android/unityLibrary/.gradle/
+android/unityLibrary/local.properties
+android/unityLibrary/*.iml
+android/unityLibrary/.idea/
+
 # ─── Capacitor / iOS build artifacts ───
 # Same logic as Android: commit the ios/ source (Info.plist, Swift
 # source, Podfile) but ignore everything Xcode/CocoaPods regenerates.
