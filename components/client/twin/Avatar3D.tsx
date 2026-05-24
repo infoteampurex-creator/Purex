@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, useAnimations, useGLTF } from '@react-three/drei';
+import { Bounds, OrbitControls, Environment, useAnimations, useGLTF } from '@react-three/drei';
 import { useEffect, useMemo, useRef, Suspense } from 'react';
 import { Group, Mesh, SkinnedMesh, type AnimationClip } from 'three';
 import { SkeletonUtils } from 'three-stdlib';
@@ -53,7 +53,12 @@ export function Avatar3D({ bodyType, size = 220, accent = '#7dd3ff', glow = fals
   return (
     <div style={{ width: size, height: size }} className="relative">
       <Canvas
-        camera={{ position: [0, 1.2, 3.8], fov: 28 }}
+        // Camera starts far back — drei's <Bounds fit> below will
+        // re-position it to perfectly frame the character bounding
+        // box. This avoids the "only legs visible" bug that hard-
+        // coded coords cause when the model's actual scale differs
+        // from assumptions.
+        camera={{ position: [0, 1.4, 6], fov: 32 }}
         dpr={[1, 2]}
         gl={{
           antialias: true,
@@ -79,18 +84,24 @@ export function Avatar3D({ bodyType, size = 220, accent = '#7dd3ff', glow = fals
         />
 
         <Suspense fallback={null}>
-          <Character bodyType={bodyType} accent={accent} glow={glow} />
+          {/* Bounds auto-fits the camera to the character's bounding
+              box on first render with a 1.15 margin — so we always
+              see the whole figure regardless of model scale or body-
+              type morph. `clip` adjusts near/far planes too. */}
+          <Bounds fit clip observe margin={1.15}>
+            <Character bodyType={bodyType} accent={accent} glow={glow} />
+          </Bounds>
           <Environment preset="city" />
         </Suspense>
 
-        {/* Auto-rotate provides the depth cue without needing drag */}
+        {/* Auto-rotate provides the depth cue without needing drag.
+            Target is set by Bounds automatically. */}
         <OrbitControls
           enabled={false}
           autoRotate
           autoRotateSpeed={0.7}
           enableZoom={false}
           enablePan={false}
-          target={[0, 1.0, 0]}
         />
       </Canvas>
     </div>
