@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight, Lock, Sparkles, Ruler } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { AvatarImage } from './AvatarImage';
+import { TwinAvatar } from './TwinAvatar';
 import { EmojiStatBars } from './EmojiStatBars';
 import { LevelChip } from './LevelChip';
 import { StreakChip } from './StreakChip';
@@ -171,7 +171,12 @@ export function TwinDashboardCardApp({
       {/* ─── Hero zone: avatar large + stat bars beside ─── */}
       <div className="relative px-3 pb-3 grid grid-cols-[1fr_1fr] gap-3 items-end">
         <div className="flex justify-center -ml-2">
-          <AvatarImage src={avatarSrc} width={200} accent={statusColor} />
+          <TwinAvatar
+            fallbackSrc={avatarSrc}
+            bodyType={bodyType}
+            width={200}
+            accent={statusColor}
+          />
         </div>
         <div className="pb-5">
           <EmojiStatBars stats={displayStats} compact />
