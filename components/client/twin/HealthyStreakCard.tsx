@@ -1,6 +1,6 @@
 'use client';
 
-import { Flame, Trophy, CheckCircle2 } from 'lucide-react';
+import { Shield, ShieldAlert, ShieldCheck, Trophy, Target } from 'lucide-react';
 import {
   STREAK_THRESHOLD,
   computeBestStreak,
@@ -17,13 +17,19 @@ interface Props {
 }
 
 /**
- * Healthy Streak summary — sits on the client dashboard.
+ * Streak Shield — gamified streak tracker.
  *
- * Shows:
- *   • Current streak (consecutive days at ≥70%)
- *   • Best streak (longest run in the lookback window)
- *   • Today's score with the streak-day badge if applicable
- *   • 7-day calendar grid with colour-coded cells (green/amber/red/grey)
+ * Replaces the previous "Healthy Streak" framing with a defensive
+ * "shield you protect daily" mental model:
+ *   • Current Shield = current consecutive streak days
+ *   • Best Shield    = longest run in lookback window
+ *   • Shield Goal    = daily score threshold (≥70%)
+ *   • Save action    = when streak is alive but today's score is
+ *     below threshold, surface a CTA to push the day over the line
+ *
+ * Same underlying math as before (computeCurrentStreak /
+ * computeBestStreak / STREAK_THRESHOLD); only the copy + CTA layer
+ * is new. The 7-day calendar grid is unchanged.
  */
 export function HealthyStreakCard({ history, todayScore }: Props) {
   const current = computeCurrentStreak(history);
@@ -31,19 +37,60 @@ export function HealthyStreakCard({ history, todayScore }: Props) {
   const hitToday = todayScore >= STREAK_THRESHOLD;
   const isApp = useIsApp();
 
+  // Risk states:
+  //   - shieldAtRisk : has an active streak, today's score below
+  //     threshold — they could break the streak today
+  //   - buildingFirst: no current streak — they're at zero, action
+  //     copy nudges them to START rather than SAVE
+  const shieldAtRisk = current > 0 && !hitToday;
+  const buildingFirst = current === 0 && !hitToday;
+
+  // Title + shield icon mood
+  let heading: string;
+  let HeadIcon = Shield;
+  let headColor = '#a0a69a';
+
+  if (hitToday && current > 0) {
+    heading = `Shield active · ${current} day${current === 1 ? '' : 's'}`;
+    HeadIcon = ShieldCheck;
+    headColor = '#c6ff3d';
+  } else if (hitToday && current === 0) {
+    heading = 'Shield raised today';
+    HeadIcon = ShieldCheck;
+    headColor = '#c6ff3d';
+  } else if (shieldAtRisk) {
+    heading = `${current}-day shield at risk`;
+    HeadIcon = ShieldAlert;
+    headColor = '#ff8a4d';
+  } else {
+    heading = 'Raise your first shield';
+    HeadIcon = Shield;
+    headColor = '#7dd3ff';
+  }
+
   return (
-    <div className="rounded-2xl border border-border bg-bg-card overflow-hidden">
+    <div
+      className="rounded-2xl border overflow-hidden"
+      style={{
+        background: `
+          radial-gradient(ellipse at 50% 0%, ${headColor}14 0%, transparent 60%),
+          var(--color-bg-card, #11140f)
+        `,
+        borderColor: `${headColor}30`,
+      }}
+    >
       {/* Header */}
       <div className="px-5 pt-5 pb-3 flex items-baseline justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-2">
-            <Flame size={11} />
-            Healthy Streak
+          <div
+            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] font-bold mb-2"
+            style={{ color: headColor }}
+          >
+            <HeadIcon size={11} />
+            Streak Shield
           </div>
           <h3 className="font-display font-semibold text-lg tracking-tight">
-            {current > 0
-              ? `${current}-day streak alive`
-              : "Today's the start"}
+            {heading}
           </h3>
         </div>
         <div className="text-right tabular-nums flex-shrink-0">
@@ -65,27 +112,95 @@ export function HealthyStreakCard({ history, todayScore }: Props) {
       {/* Stat row — current + best + threshold reminder */}
       <div className="px-5 pb-4 grid grid-cols-3 gap-2">
         <Stat
-          icon={<Flame size={12} />}
-          label="Current"
+          icon={<Shield size={12} />}
+          label="Shield"
           value={current}
           suffix={current === 1 ? 'day' : 'days'}
           color={current > 0 ? '#c6ff3d' : '#a0a69a'}
         />
         <Stat
           icon={<Trophy size={12} />}
-          label="Best"
+          label="Best shield"
           value={best}
           suffix={best === 1 ? 'day' : 'days'}
           color="#ffd24d"
         />
         <Stat
-          icon={<CheckCircle2 size={12} />}
-          label={isApp ? 'Daily goal' : 'Streak day'}
+          icon={<Target size={12} />}
+          label={isApp ? 'Shield goal' : 'Goal'}
           value={STREAK_THRESHOLD}
           suffix={isApp ? '%' : '% +'}
           color="#7dd3ff"
         />
       </div>
+
+      {/* Save your shield — visible only when shield is at risk */}
+      {shieldAtRisk && (
+        <div className="px-5 pb-4">
+          <div
+            className="flex items-start gap-3 rounded-xl px-3 py-2.5"
+            style={{
+              background: 'rgba(255,138,77,0.10)',
+              border: '1px solid rgba(255,138,77,0.30)',
+            }}
+          >
+            <ShieldAlert
+              size={16}
+              style={{ color: '#ff8a4d', flexShrink: 0, marginTop: 2 }}
+            />
+            <div className="min-w-0">
+              <div
+                className="font-mono uppercase tracking-[0.18em] font-bold"
+                style={{ fontSize: 9, color: '#ff8a4d' }}
+              >
+                Save your shield
+              </div>
+              <div
+                className="mt-1 leading-snug"
+                style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}
+              >
+                You&apos;re at {todayScore}% — need {STREAK_THRESHOLD}%.
+                Drink 500ml water + take a 12-minute walk before bed to
+                push the score over the line.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* First-shield nudge — visible when no active streak AND below threshold */}
+      {buildingFirst && (
+        <div className="px-5 pb-4">
+          <div
+            className="flex items-start gap-3 rounded-xl px-3 py-2.5"
+            style={{
+              background: 'rgba(125,211,255,0.08)',
+              border: '1px solid rgba(125,211,255,0.25)',
+            }}
+          >
+            <Shield
+              size={16}
+              style={{ color: '#7dd3ff', flexShrink: 0, marginTop: 2 }}
+            />
+            <div className="min-w-0">
+              <div
+                className="font-mono uppercase tracking-[0.18em] font-bold"
+                style={{ fontSize: 9, color: '#7dd3ff' }}
+              >
+                Start your first shield
+              </div>
+              <div
+                className="mt-1 leading-snug"
+                style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}
+              >
+                Hit {STREAK_THRESHOLD}% today and your first shield is up.
+                Log steps, sleep, water, a workout, or a meal — every input
+                counts toward the score.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 7-day calendar */}
       <div className="px-5 pb-5">
@@ -176,7 +291,7 @@ function CalendarCell({
   const dayNum = date.getDate();
 
   const title = day.hasData
-    ? `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · score ${day.score}%${day.hitGoal ? ' (streak day)' : ''}`
+    ? `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · score ${day.score}%${day.hitGoal ? ' (shield day)' : ''}`
     : `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · no log`;
 
   return (
