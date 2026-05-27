@@ -65,14 +65,92 @@ export function TaskChecklist({ tasks, readOnly = false }: TaskChecklistProps) {
       : 0;
 
   if (taskList.length === 0) {
+    // Smart empty state — instead of dead-end "coach will set up soon"
+    // copy, surface 4 self-driven actions so the user can protect their
+    // streak even when no coach-assigned task exists. Each action maps
+    // to an existing screen / log-sheet on the dashboard, so this is
+    // pure navigation, not a new feature.
+    const selfChallenges: Array<{
+      icon: React.ComponentType<{ size?: number }>;
+      label: string;
+      sub: string;
+      color: string;
+      bg: string;
+    }> = [
+      {
+        icon: Dumbbell,
+        label: 'Start a 15-min walk',
+        sub: 'Quick win for movement + endurance',
+        color: '#c6ff3d',
+        bg: 'rgba(198, 255, 61, 0.10)',
+      },
+      {
+        icon: Utensils,
+        label: 'Log your next meal',
+        sub: 'One photo = full nutrition log',
+        color: '#ffb84d',
+        bg: 'rgba(255, 184, 77, 0.10)',
+      },
+      {
+        icon: Moon,
+        label: 'Set tonight\'s sleep target',
+        sub: 'Wind-down by 10:30 PM',
+        color: '#7dd3ff',
+        bg: 'rgba(125, 211, 255, 0.10)',
+      },
+      {
+        icon: Heart,
+        label: 'Log mood + soreness',
+        sub: 'Helps your coach plan tomorrow',
+        color: '#ff6b9d',
+        bg: 'rgba(255, 107, 157, 0.10)',
+      },
+    ];
+
     return (
       <section className="bg-bg-card border border-border rounded-2xl p-5 md:p-6">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-2">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-1.5">
           Today&rsquo;s Tasks
         </div>
-        <p className="text-sm text-text-muted">
-          No tasks assigned for today. Your coach will set these up soon.
+        <h3 className="font-display font-semibold text-base text-text leading-tight mb-1">
+          No mission from your coach yet
+        </h3>
+        <p className="text-sm text-text-muted leading-relaxed mb-4">
+          Start a self-challenge to protect your streak — pick any one.
         </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {selfChallenges.map((c) => {
+            const Icon = c.icon;
+            return (
+              <div
+                key={c.label}
+                className="flex items-start gap-3 rounded-xl p-3 border"
+                style={{
+                  background: c.bg,
+                  borderColor: `${c.color}33`,
+                }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${c.color}22`, color: c.color }}
+                >
+                  <Icon size={14} />
+                </div>
+                <div className="min-w-0">
+                  <div
+                    className="font-semibold text-sm leading-tight"
+                    style={{ color: c.color }}
+                  >
+                    {c.label}
+                  </div>
+                  <div className="text-[11px] text-text-muted leading-snug mt-0.5">
+                    {c.sub}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
     );
   }

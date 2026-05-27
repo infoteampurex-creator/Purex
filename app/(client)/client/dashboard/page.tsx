@@ -4,7 +4,6 @@ import { BodyMeasurementsCard } from '@/components/client/dashboard/BodyMeasurem
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { AdminSwitcher } from '@/components/client/AdminSwitcher';
 import { CommitmentWidget } from '@/components/client/CommitmentWidget';
-import { ScoreWidget } from '@/components/client/ScoreWidget';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
 import { TwinSection } from '@/components/client/twin/TwinSection';
@@ -12,7 +11,6 @@ import { HealthyStreakCard } from '@/components/client/twin/HealthyStreakCard';
 import { PureXScoreCard } from '@/components/client/dashboard/PureXScoreCard';
 import { computePureXScore } from '@/lib/data/purex-score';
 import { getMockClientPact } from '@/lib/data/commitment';
-import { getMockClientScore } from '@/lib/data/score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
 import { EMPTY_DAILY_PLAN } from '@/lib/data/daily-plan-types';
@@ -53,7 +51,6 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function ClientDashboardPage({ searchParams }: PageProps) {
   const pact = getMockClientPact();
-  const score = getMockClientScore();
 
   const userId = await getCurrentUserId();
   const today = new Date().toISOString().slice(0, 10);
@@ -205,7 +202,11 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
       <CommitmentWidget pact={pact} />
 
-      <ScoreWidget score={score} />
+      {/* ScoreWidget removed — PureXScoreCard at the top of the
+          dashboard now serves as the single hero score. Keeping both
+          was redundant (two big-number cards on one screen) and the
+          old widget's "Your score will appear here" empty state was
+          confusing once the new one was present. */}
 
       <TaskChecklist tasks={tasks} />
     </div>
