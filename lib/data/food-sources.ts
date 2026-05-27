@@ -21,6 +21,24 @@
 export type MacroCategory = 'carbs' | 'protein' | 'fat' | 'fiber';
 
 /**
+ * Cuisine / regional grouping. Used for the optional cuisine filter
+ * chip in the food browser — clients with global preferences can
+ * narrow to their kitchen (Mediterranean, East Asian, etc.) instead
+ * of scrolling past unfamiliar foods.
+ *
+ * 'universal' = items that read across all cuisines (eggs, chicken,
+ * banana, olive oil, etc.) — always shown regardless of cuisine filter.
+ */
+export type Cuisine =
+  | 'universal'
+  | 'indian'
+  | 'mediterranean'
+  | 'western'
+  | 'east_asian'
+  | 'middle_eastern'
+  | 'latin';
+
+/**
  * Extended meal type — adds pre_workout to the DB enum's set
  * (breakfast/lunch/dinner/snack/other). Pre-workout is a UI-only
  * affordance for now; saved meals still use the DB enum (we store
@@ -47,9 +65,35 @@ export interface FoodSource {
   fiber: number;
   /** True if the item is vegetarian (no fish/meat/egg). */
   veg: boolean;
-  /** Common Indian-context staple — used for sort prioritisation. */
+  /** Cuisine context. Optional — items without cuisine default to
+   *  'universal' (always shown). Existing Indian-staple items can
+   *  use indianStaple alone without restating cuisine='indian'. */
+  cuisine?: Cuisine;
+  /** Common Indian-context staple — used for sort prioritisation when
+   *  the user hasn't picked a cuisine yet. Implies cuisine='indian'
+   *  unless an explicit cuisine is set. */
   indianStaple?: boolean;
 }
+
+/** Resolve a food's effective cuisine, defaulting smartly. */
+export function effectiveCuisine(food: FoodSource): Cuisine {
+  if (food.cuisine) return food.cuisine;
+  if (food.indianStaple) return 'indian';
+  return 'universal';
+}
+
+export const CUISINE_META: Record<
+  Cuisine,
+  { label: string; flag: string }
+> = {
+  universal:      { label: 'All cuisines',  flag: '🌍' },
+  indian:         { label: 'Indian',        flag: '🇮🇳' },
+  mediterranean:  { label: 'Mediterranean', flag: '🫒' },
+  western:        { label: 'Western',       flag: '🥗' },
+  east_asian:     { label: 'East Asian',    flag: '🥢' },
+  middle_eastern: { label: 'Middle East',   flag: '🥙' },
+  latin:          { label: 'Latin',         flag: '🌮' },
+};
 
 // ─── Display metadata ───────────────────────────────────────────
 
@@ -720,6 +764,411 @@ export const FOOD_SOURCES: FoodSource[] = [
     portion: '1 bowl',
     kcal: 50, protein: 2, carbs: 10, fats: 0.5, fiber: 4,
     veg: true,
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GLOBAL EXPANSION — for clients outside India (Mediterranean,
+  // Western, East Asian, Middle Eastern, Latin). Items tagged with
+  // explicit cuisine; universal items (eggs, banana, chicken, etc.)
+  // were already in the Indian section above and serve global users
+  // as-is — no need to duplicate them.
+  // ═══════════════════════════════════════════════════════════════
+
+  // ─── MEDITERRANEAN ──────────────────────────────────────────
+  {
+    id: 'pita-bread',
+    name: 'Pita bread (whole wheat)',
+    category: 'carbs',
+    mealTypes: ['breakfast', 'lunch', 'snack'],
+    portion: '1 medium (~60 g)',
+    kcal: 165, protein: 6, carbs: 33, fats: 1.6, fiber: 5,
+    veg: true, cuisine: 'mediterranean',
+  },
+  {
+    id: 'couscous',
+    name: 'Couscous',
+    category: 'carbs',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 112, protein: 3.8, carbs: 23, fats: 0.2, fiber: 1.4,
+    veg: true, cuisine: 'mediterranean',
+  },
+  {
+    id: 'bulgur',
+    name: 'Bulgur',
+    category: 'carbs',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 83, protein: 3.1, carbs: 19, fats: 0.2, fiber: 4.5,
+    veg: true, cuisine: 'mediterranean',
+  },
+  {
+    id: 'feta',
+    name: 'Feta cheese',
+    category: 'protein',
+    mealTypes: ['breakfast', 'lunch', 'snack'],
+    portion: '50 g',
+    kcal: 132, protein: 7, carbs: 2, fats: 11, fiber: 0,
+    veg: true, cuisine: 'mediterranean',
+  },
+  {
+    id: 'hummus',
+    name: 'Hummus',
+    category: 'protein',
+    mealTypes: ['lunch', 'snack', 'breakfast'],
+    portion: '50 g (~3 tbsp)',
+    kcal: 120, protein: 5, carbs: 10, fats: 7, fiber: 3,
+    veg: true, cuisine: 'mediterranean',
+  },
+  {
+    id: 'olives',
+    name: 'Olives',
+    category: 'fat',
+    mealTypes: ['lunch', 'snack', 'dinner'],
+    portion: '10 pcs',
+    kcal: 50, protein: 0.4, carbs: 3, fats: 4.5, fiber: 1.5,
+    veg: true, cuisine: 'mediterranean',
+  },
+  {
+    id: 'falafel',
+    name: 'Falafel',
+    category: 'protein',
+    mealTypes: ['lunch', 'snack'],
+    portion: '3 balls (~50 g)',
+    kcal: 165, protein: 6, carbs: 16, fats: 9, fiber: 4,
+    veg: true, cuisine: 'middle_eastern',
+  },
+  {
+    id: 'tahini',
+    name: 'Tahini',
+    category: 'fat',
+    mealTypes: ['breakfast', 'lunch', 'snack'],
+    portion: '1 tbsp',
+    kcal: 90, protein: 2.6, carbs: 3, fats: 8, fiber: 1.4,
+    veg: true, cuisine: 'middle_eastern',
+  },
+  {
+    id: 'tabouleh',
+    name: 'Tabouleh',
+    category: 'fiber',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 cup',
+    kcal: 100, protein: 3, carbs: 14, fats: 4, fiber: 4,
+    veg: true, cuisine: 'mediterranean',
+  },
+  {
+    id: 'greek-salad',
+    name: 'Greek salad',
+    category: 'fiber',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 bowl',
+    kcal: 180, protein: 6, carbs: 12, fats: 13, fiber: 4,
+    veg: true, cuisine: 'mediterranean',
+  },
+
+  // ─── WESTERN / CONTINENTAL ──────────────────────────────────
+  {
+    id: 'oatmeal-cooked',
+    name: 'Oatmeal (with milk)',
+    category: 'carbs',
+    mealTypes: ['breakfast', 'pre_workout'],
+    portion: '1 cup cooked',
+    kcal: 165, protein: 6, carbs: 28, fats: 3, fiber: 4,
+    veg: true, cuisine: 'western',
+  },
+  {
+    id: 'granola',
+    name: 'Granola',
+    category: 'carbs',
+    mealTypes: ['breakfast', 'snack'],
+    portion: '50 g',
+    kcal: 220, protein: 5, carbs: 30, fats: 9, fiber: 4,
+    veg: true, cuisine: 'western',
+  },
+  {
+    id: 'protein-pancakes',
+    name: 'Protein pancakes',
+    category: 'protein',
+    mealTypes: ['breakfast', 'pre_workout'],
+    portion: '2 medium',
+    kcal: 280, protein: 22, carbs: 28, fats: 8, fiber: 3,
+    veg: true, cuisine: 'western',
+  },
+  {
+    id: 'turkey-breast',
+    name: 'Turkey breast',
+    category: 'protein',
+    mealTypes: ['lunch', 'dinner', 'snack'],
+    portion: '100 g cooked',
+    kcal: 135, protein: 30, carbs: 0, fats: 1, fiber: 0,
+    veg: false, cuisine: 'western',
+  },
+  {
+    id: 'cottage-cheese',
+    name: 'Cottage cheese',
+    category: 'protein',
+    mealTypes: ['breakfast', 'snack', 'pre_workout'],
+    portion: '100 g',
+    kcal: 98, protein: 11, carbs: 3.4, fats: 4.3, fiber: 0,
+    veg: true, cuisine: 'western',
+  },
+  {
+    id: 'cheddar-cheese',
+    name: 'Cheddar cheese',
+    category: 'fat',
+    mealTypes: ['breakfast', 'snack'],
+    portion: '30 g',
+    kcal: 120, protein: 7, carbs: 0.4, fats: 10, fiber: 0,
+    veg: true, cuisine: 'western',
+  },
+  {
+    id: 'protein-shake-western',
+    name: 'Protein smoothie',
+    category: 'protein',
+    mealTypes: ['pre_workout', 'breakfast', 'snack'],
+    portion: '1 glass (~300 ml)',
+    kcal: 250, protein: 25, carbs: 25, fats: 5, fiber: 4,
+    veg: true, cuisine: 'universal',
+  },
+  {
+    id: 'beef-steak',
+    name: 'Beef steak (lean)',
+    category: 'protein',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 250, protein: 26, carbs: 0, fats: 15, fiber: 0,
+    veg: false, cuisine: 'western',
+  },
+  {
+    id: 'tuna',
+    name: 'Tuna (canned in water)',
+    category: 'protein',
+    mealTypes: ['lunch', 'snack', 'dinner'],
+    portion: '100 g drained',
+    kcal: 116, protein: 26, carbs: 0, fats: 1, fiber: 0,
+    veg: false, cuisine: 'universal',
+  },
+  {
+    id: 'rye-bread',
+    name: 'Rye bread',
+    category: 'carbs',
+    mealTypes: ['breakfast', 'lunch', 'snack'],
+    portion: '1 slice',
+    kcal: 83, protein: 2.7, carbs: 15, fats: 1.1, fiber: 1.9,
+    veg: true, cuisine: 'western',
+  },
+
+  // ─── EAST ASIAN ─────────────────────────────────────────────
+  {
+    id: 'jasmine-rice',
+    name: 'Jasmine rice',
+    category: 'carbs',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 130, protein: 2.7, carbs: 28, fats: 0.3, fiber: 0.4,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'sushi-rice',
+    name: 'Sushi rice',
+    category: 'carbs',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 130, protein: 2.4, carbs: 29, fats: 0.2, fiber: 0.3,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'rice-noodles',
+    name: 'Rice noodles',
+    category: 'carbs',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 109, protein: 0.9, carbs: 25, fats: 0.2, fiber: 1,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'soba-noodles',
+    name: 'Soba noodles',
+    category: 'carbs',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 99, protein: 5.1, carbs: 21, fats: 0.1, fiber: 1,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'edamame',
+    name: 'Edamame',
+    category: 'protein',
+    mealTypes: ['snack', 'lunch', 'pre_workout'],
+    portion: '1 cup shelled',
+    kcal: 188, protein: 18, carbs: 14, fats: 8, fiber: 8,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'tempeh',
+    name: 'Tempeh',
+    category: 'protein',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g',
+    kcal: 195, protein: 19, carbs: 9, fats: 11, fiber: 0,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'miso',
+    name: 'Miso soup',
+    category: 'protein',
+    mealTypes: ['breakfast', 'lunch', 'dinner'],
+    portion: '1 bowl',
+    kcal: 60, protein: 5, carbs: 7, fats: 2, fiber: 1.5,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'seaweed',
+    name: 'Seaweed (nori)',
+    category: 'fiber',
+    mealTypes: ['snack', 'lunch'],
+    portion: '5 g',
+    kcal: 18, protein: 3, carbs: 2, fats: 0.5, fiber: 1.5,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'shiitake',
+    name: 'Shiitake mushrooms',
+    category: 'fiber',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 56, protein: 1.6, carbs: 15, fats: 0.2, fiber: 2.3,
+    veg: true, cuisine: 'east_asian',
+  },
+  {
+    id: 'sesame-oil',
+    name: 'Sesame oil',
+    category: 'fat',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 tsp',
+    kcal: 40, protein: 0, carbs: 0, fats: 4.5, fiber: 0,
+    veg: true, cuisine: 'east_asian',
+  },
+
+  // ─── LATIN / MEXICAN ────────────────────────────────────────
+  {
+    id: 'black-beans',
+    name: 'Black beans',
+    category: 'protein',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 cup cooked',
+    kcal: 227, protein: 15, carbs: 41, fats: 0.9, fiber: 15,
+    veg: true, cuisine: 'latin',
+  },
+  {
+    id: 'corn-tortilla',
+    name: 'Corn tortilla',
+    category: 'carbs',
+    mealTypes: ['breakfast', 'lunch', 'dinner'],
+    portion: '1 medium (~25 g)',
+    kcal: 60, protein: 1.5, carbs: 13, fats: 0.7, fiber: 1.5,
+    veg: true, cuisine: 'latin',
+  },
+  {
+    id: 'salsa-fresh',
+    name: 'Fresh salsa',
+    category: 'fiber',
+    mealTypes: ['lunch', 'snack', 'dinner'],
+    portion: '50 g',
+    kcal: 18, protein: 1, carbs: 4, fats: 0.1, fiber: 1,
+    veg: true, cuisine: 'latin',
+  },
+  {
+    id: 'guacamole',
+    name: 'Guacamole',
+    category: 'fat',
+    mealTypes: ['lunch', 'snack', 'dinner'],
+    portion: '50 g',
+    kcal: 80, protein: 1, carbs: 5, fats: 7, fiber: 3.5,
+    veg: true, cuisine: 'latin',
+  },
+  {
+    id: 'plantain',
+    name: 'Plantain',
+    category: 'carbs',
+    mealTypes: ['lunch', 'pre_workout', 'snack'],
+    portion: '100 g cooked',
+    kcal: 116, protein: 0.8, carbs: 31, fats: 0.2, fiber: 2.3,
+    veg: true, cuisine: 'latin',
+  },
+  {
+    id: 'pinto-beans',
+    name: 'Pinto beans',
+    category: 'protein',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 cup cooked',
+    kcal: 245, protein: 15, carbs: 45, fats: 1, fiber: 15,
+    veg: true, cuisine: 'latin',
+  },
+
+  // ─── UNIVERSAL ADDITIONS ────────────────────────────────────
+  {
+    id: 'kale',
+    name: 'Kale',
+    category: 'fiber',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 cup cooked',
+    kcal: 36, protein: 2.5, carbs: 7, fats: 0.5, fiber: 2.6,
+    veg: true, cuisine: 'universal',
+  },
+  {
+    id: 'zucchini',
+    name: 'Zucchini',
+    category: 'fiber',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 cup cooked',
+    kcal: 17, protein: 1.2, carbs: 3.1, fats: 0.3, fiber: 1,
+    veg: true, cuisine: 'universal',
+  },
+  {
+    id: 'bell-pepper',
+    name: 'Bell pepper',
+    category: 'fiber',
+    mealTypes: ['lunch', 'snack', 'dinner'],
+    portion: '1 medium',
+    kcal: 31, protein: 1, carbs: 7, fats: 0.3, fiber: 2.5,
+    veg: true, cuisine: 'universal',
+  },
+  {
+    id: 'berries-mixed',
+    name: 'Mixed berries',
+    category: 'fiber',
+    mealTypes: ['breakfast', 'snack'],
+    portion: '1 cup',
+    kcal: 70, protein: 1, carbs: 17, fats: 0.5, fiber: 4,
+    veg: true, cuisine: 'universal',
+  },
+  {
+    id: 'grapes',
+    name: 'Grapes',
+    category: 'fiber',
+    mealTypes: ['snack', 'pre_workout'],
+    portion: '1 cup',
+    kcal: 100, protein: 1, carbs: 27, fats: 0.2, fiber: 1.4,
+    veg: true, cuisine: 'universal',
+  },
+  {
+    id: 'lentils-green',
+    name: 'Green lentils',
+    category: 'protein',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '1 cup cooked',
+    kcal: 230, protein: 18, carbs: 40, fats: 0.8, fiber: 16,
+    veg: true, cuisine: 'universal',
+  },
+  {
+    id: 'shrimp',
+    name: 'Shrimp',
+    category: 'protein',
+    mealTypes: ['lunch', 'dinner'],
+    portion: '100 g cooked',
+    kcal: 99, protein: 24, carbs: 0.2, fats: 0.3, fiber: 0,
+    veg: false, cuisine: 'universal',
   },
 ];
 
