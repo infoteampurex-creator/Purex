@@ -9,6 +9,8 @@ import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
 import { TwinSection } from '@/components/client/twin/TwinSection';
 import { HealthyStreakCard } from '@/components/client/twin/HealthyStreakCard';
+import { PureXScoreCard } from '@/components/client/dashboard/PureXScoreCard';
+import { computePureXScore } from '@/lib/data/purex-score';
 import { getMockClientPact } from '@/lib/data/commitment';
 import { getMockClientScore } from '@/lib/data/score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
@@ -129,11 +131,23 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   const currentStreakDays = computeCurrentStreak(streakHistory);
   const mission = generateMission(twinInputs, currentStreakDays);
 
+  // ─── PureX Score — master daily metric (today's input-derived).
+  // Sits at the top of the dashboard so the first thing the user
+  // sees is their current standing. Shown on both web AND app; the
+  // breakdown sheet works in either surface.
+  const pureXScore = computePureXScore(twinInputs, currentStreakDays);
+  const pureXScoreEmpty = !userId || pureXScore.isEmpty;
+
   return (
     <div className="space-y-6 md:space-y-7">
       <AdminSwitcher />
 
       <WelcomeHeader />
+
+      {/* ─── PureX Score (hero) — single 0-100 number with breakdown
+          sheet on tap. Placed above all the raw-input cards because
+          this is the metric the user *should* return to daily. */}
+      <PureXScoreCard score={pureXScore} showPreview={pureXScoreEmpty} />
 
       {/* Health Connect auto-sync card — app-only (returns null on
           web, and dynamic-imported so the plugin's JS never lands in
