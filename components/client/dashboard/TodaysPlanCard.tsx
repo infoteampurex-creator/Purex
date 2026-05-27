@@ -54,8 +54,8 @@ function shiftDate(yyyymmdd: string, days: number): string {
 }
 
 function formatHeading(date: string, today: string): string {
-  if (date === today) return 'My plan today';
-  if (date === shiftDate(today, -1)) return 'Yesterday’s plan';
+  if (date === today) return "Today's Mission";
+  if (date === shiftDate(today, -1)) return "Yesterday's Mission";
   const [y, m, d] = date.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   return dt.toLocaleDateString('en-GB', {
@@ -63,6 +63,50 @@ function formatHeading(date: string, today: string): string {
     day: 'numeric',
     month: 'short',
   });
+}
+
+// ─── Mission framing helpers ────────────────────────────────────
+//
+// Convert the existing Daily Plan data into the gamified "Mission"
+// presentation layer — XP badge + Difficulty pill — without changing
+// what the trainer-side flow stores. This is pure copy + visual.
+
+/**
+ * Difficulty inferred from the plan's structure. The trainer doesn't
+ * pick this explicitly today; we infer from exercise count and
+ * presence of cardio/recovery work. Rough scale tuned to feel
+ * earnable, not punishing:
+ *   ≤ 3 exercises and no cardio  → Easy
+ *   4-6 exercises, or has cardio → Medium
+ *   7+ exercises, or high targets → Hard
+ */
+function deriveMissionDifficulty(plan: DailyPlan):
+  | { label: string; color: string }
+  | null {
+  if (plan.exercises.length === 0 && !plan.cardioTargetMinutes) return null;
+  const exerciseCount = plan.exercises.length;
+  const hasCardio = (plan.cardioTargetMinutes ?? 0) > 0;
+  if (exerciseCount >= 7 || (plan.cardioTargetMinutes ?? 0) >= 45) {
+    return { label: 'Hard', color: '#ff8a4d' };
+  }
+  if (exerciseCount >= 4 || hasCardio) {
+    return { label: 'Medium', color: '#ffd24d' };
+  }
+  return { label: 'Easy', color: '#c6ff3d' };
+}
+
+/**
+ * XP reward — incentive copy attached to the Mission header. Base
+ * reward scales with exercise count + small bonus for cardio.
+ * Visible BEFORE completion as the carrot; we keep showing it after
+ * so users see what they earned today.
+ */
+function deriveMissionXp(plan: DailyPlan): number {
+  if (plan.exercises.length === 0 && !plan.cardioTargetMinutes) return 0;
+  const base = 100;
+  const perExercise = 20;
+  const cardioBonus = (plan.cardioTargetMinutes ?? 0) >= 30 ? 40 : 0;
+  return Math.min(400, base + plan.exercises.length * perExercise + cardioBonus);
 }
 
 export function TodaysPlanCard({
@@ -111,13 +155,13 @@ export function TodaysPlanCard({
           </div>
           <h3 className="font-display font-semibold text-xl tracking-tight">
             {isToday
-              ? 'No plan set for today'
-              : `No plan was set for ${heading.toLowerCase()}`}
+              ? 'No mission assigned yet'
+              : `No mission was set for ${heading.toLowerCase()}`}
           </h3>
           <p className="text-sm text-text-muted mt-2 max-w-md mx-auto">
             {isToday
-              ? "Your coach hasn't shared today's plan yet."
-              : 'No assigned plan for this date.'}
+              ? "Your coach hasn't activated today's mission. Start a self-challenge to protect your streak."
+              : 'No mission for this date.'}
           </p>
         </div>
       </motion.div>
@@ -183,13 +227,54 @@ export function TodaysPlanCard({
           heading={heading}
         />
 
-        {/* Header — workout title + complete toggle */}
+        {/* Header — mission title + difficulty/XP/complete pills.
+            "Daily plan" → "Today's Mission" framing: workout name stays,
+            but the chips below now include Difficulty and XP reward so
+            the user sees the mission as gamified, not bureaucratic. */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
             <h2 className="font-display font-bold text-2xl md:text-3xl tracking-tight leading-tight">
-              {plan.workoutName ?? 'Daily plan'}
+              {plan.workoutName ?? "Today's Mission"}
             </h2>
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              {/* Difficulty pill — inferred from exercise count/cardio */}
+              {(() => {
+                const diff = deriveMissionDifficulty(plan);
+                return diff ? (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-[0.12em] border"
+                    style={{
+                      color: diff.color,
+                      backgroundColor: `${diff.color}1A`,
+                      borderColor: `${diff.color}55`,
+                    }}
+                  >
+                    {diff.label}
+                  </span>
+                ) : null;
+              })()}
+              {/* XP reward — the carrot. Shows BEFORE completion so user
+                  sees what they're working toward, and after as earned. */}
+              {(() => {
+                const xp = deriveMissionXp(plan);
+                if (xp === 0) return null;
+                const completed =
+                  plan.actuals.workoutCompletionStatus === 'completed';
+                return (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-[0.12em]"
+                    style={{
+                      color: '#0a0c09',
+                      background: completed
+                        ? 'linear-gradient(135deg, #c6ff3d 0%, #ffd24d 100%)'
+                        : 'linear-gradient(135deg, #ffd24d 0%, #ff8a4d 100%)',
+                      boxShadow: '0 0 12px rgba(255,210,77,0.35)',
+                    }}
+                  >
+                    {completed ? `+${xp} XP earned` : `+${xp} XP`}
+                  </span>
+                );
+              })()}
               {plan.workoutType && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-mono font-bold uppercase tracking-[0.12em] border border-accent/30">
                   {plan.workoutType}
@@ -223,9 +308,9 @@ export function TodaysPlanCard({
           </Section>
         )}
 
-        {/* Daily targets — progress rings for the visual ones */}
+        {/* Mission targets — progress rings for the visual ones */}
         {(plan.stepsTarget || plan.sleepTargetHours || plan.waterTarget) && (
-          <Section title="Daily targets" icon={<Target size={13} />}>
+          <Section title="Mission targets" icon={<Target size={13} />}>
             <div className="grid grid-cols-3 gap-3">
               <RingTile
                 icon={<Footprints size={12} />}
@@ -294,9 +379,9 @@ export function TodaysPlanCard({
           </Section>
         )}
 
-        {/* Trainer notes */}
+        {/* Coach note (was "Trainer notes" — same data) */}
         {plan.trainerNotes && (
-          <Section title="Trainer notes" icon={<StickyNote size={13} />}>
+          <Section title="Coach note" icon={<StickyNote size={13} />}>
             <div className="rounded-lg bg-bg-elevated/40 border border-border-soft p-3.5 text-sm leading-relaxed whitespace-pre-wrap">
               {plan.trainerNotes}
             </div>
