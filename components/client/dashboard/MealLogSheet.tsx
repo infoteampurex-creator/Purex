@@ -9,6 +9,11 @@ import {
 import { addMeal, deleteMeal } from '@/lib/actions/meals';
 import { analyzeMealPhoto } from '@/lib/actions/analyze-meal-photo';
 import type { MealRow } from '@/lib/data/meals';
+import { FoodSourcesSheet } from './FoodSourcesSheet';
+import type {
+  FoodSource,
+  MealTypeExtended,
+} from '@/lib/data/food-sources';
 
 interface Props {
   open: boolean;
@@ -78,6 +83,11 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
   const [aiRaw, setAiRaw] = useState<unknown>(null);
   const [aiConfidence, setAiConfidence] = useState<number | null>(null);
   const [aiDescription, setAiDescription] = useState<string>('');
+
+  // Food sources browser state — sheet opens above the meal log form.
+  // Picks sum into current macros so the user can build a meal from
+  // multiple items (e.g. "2 idlis + 1 tbsp peanut butter").
+  const [foodBrowserOpen, setFoodBrowserOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -186,6 +196,39 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
     setCarbsG(p.carbsG);
     setFatsG(p.fatsG);
     setFiberG(p.fiberG);
+  };
+
+  /**
+   * Map the DB meal_type enum onto the FoodSourcesSheet's extended
+   * enum. The DB doesn't yet have 'pre_workout' as a distinct value
+   * — we route 'other' to 'snack' in the food sheet (closest match)
+   * so the sheet always has a sensible default tab.
+   */
+  const foodSheetMealType: MealTypeExtended =
+    mealType === 'other' ? 'snack' : (mealType as MealTypeExtended);
+
+  /**
+   * Add a picked food's macros to the current meal log values.
+   * Sums (not replaces) so a user can build a meal from multiple
+   * food sources. Auto-appends the food name to the meal name field
+   * if blank, or comma-separates if there's existing text.
+   */
+  const handlePickFood = (food: FoodSource) => {
+    setCalories((v) => v + food.kcal);
+    setProteinG((v) => Math.round((v + food.protein) * 10) / 10);
+    setCarbsG((v) => Math.round((v + food.carbs) * 10) / 10);
+    setFatsG((v) => Math.round((v + food.fats) * 10) / 10);
+    setFiberG((v) => Math.round((v + food.fiber) * 10) / 10);
+    setName((current) => {
+      const trimmed = current.trim();
+      if (!trimmed) return food.name;
+      // Avoid duplicates
+      if (trimmed.toLowerCase().includes(food.name.toLowerCase()))
+        return trimmed;
+      return `${trimmed}, ${food.name}`;
+    });
+    // Keep the food browser open so the user can stack multiple
+    // items into one meal without re-opening it each time.
   };
 
   const handleDelete = async (meal: MealRow) => {
@@ -652,6 +695,39 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
                 })}
               </div>
 
+              {/* Browse food sources — meal-type-aware food picker.
+                  Sits above Quick Presets because for many clients
+                  ("what should I eat for breakfast?") this is the
+                  primary action; presets are the fast secondary. */}
+              <button
+                type="button"
+                onClick={() => setFoodBrowserOpen(true)}
+                className="w-full flex items-center justify-between rounded-xl px-3.5 py-3 mb-3 transition-colors hover:bg-white/[0.02]"
+                style={{
+                  background: 'rgba(198,255,61,0.06)',
+                  border: '1px solid rgba(198,255,61,0.28)',
+                }}
+              >
+                <div className="text-left">
+                  <div
+                    className="font-mono uppercase tracking-[0.18em] font-bold"
+                    style={{ fontSize: 10, color: '#c6ff3d' }}
+                  >
+                    Browse food ideas
+                  </div>
+                  <div
+                    className="mt-0.5 leading-snug"
+                    style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}
+                  >
+                    Carbs, protein, fat, fiber — by meal type
+                  </div>
+                </div>
+                <Apple
+                  size={20}
+                  style={{ color: '#c6ff3d', flexShrink: 0 }}
+                />
+              </button>
+
               {/* Quick presets */}
               <div
                 className="font-mono uppercase tracking-[0.14em] font-bold mb-2"
@@ -747,6 +823,17 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
           </motion.div>
         </>
       )}
+
+      {/* Food sources browser — meal-type × macro picker. Opens on
+          top of the meal log sheet via z-index; tapping a food sums
+          its macros into the parent log's state and keeps the
+          browser open for stacking multiple items into one meal. */}
+      <FoodSourcesSheet
+        open={foodBrowserOpen}
+        onClose={() => setFoodBrowserOpen(false)}
+        initialMealType={foodSheetMealType}
+        onPickFood={handlePickFood}
+      />
     </AnimatePresence>
   );
 }
