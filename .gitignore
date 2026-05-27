@@ -37,6 +37,12 @@ android/app/google-services.json
 *.keystore
 *.jks
 
+# ─── Avatar processing temp dir ───
+# Used by scripts/process-male-avatars-step1-bgremove.mjs to drop
+# transparent PNGs before sharp re-encodes them to WebP. Large files,
+# regenerated on every avatar refresh — never commit.
+.tmp-bg-removed/
+
 # ─── Unity-as-Library build artifacts ───
 # When Phase 1 of the Unity 3D avatar lands (see docs/unity-as-library.md),
 # Unity Editor's "Export Project" drops a unityLibrary/ Gradle module
