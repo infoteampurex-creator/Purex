@@ -10,6 +10,9 @@ import { TwinSection } from '@/components/client/twin/TwinSection';
 import { HealthyStreakCard } from '@/components/client/twin/HealthyStreakCard';
 import { PureXScoreCard } from '@/components/client/dashboard/PureXScoreCard';
 import { computePureXScore } from '@/lib/data/purex-score';
+import { MoodCheckInCard } from '@/components/client/dashboard/MoodCheckInCard';
+import type { MoodState } from '@/lib/data/mood';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import { getMockClientPact } from '@/lib/data/commitment';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
@@ -85,20 +88,37 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   let todaysMeals: MealRow[] = [];
   let latestMeasurements: BodyMeasurements | null = null;
   let bodySettings: ProfileBodySettings = EMPTY_PROFILE_BODY_SETTINGS;
+  let todaysMood: MoodState | null = null;
   if (userId) {
-    const [inputsResult, history, meals, meas, bodyProfile] = await Promise.all([
-      getTwinDailyInputs(userId, today),
-      getStreakHistory(userId, 7),
-      getTodaysMeals(userId, today),
-      getLatestMeasurements(userId),
-      getProfileBodySettings(userId),
-    ]);
+    const [inputsResult, history, meals, meas, bodyProfile, moodRow] =
+      await Promise.all([
+        getTwinDailyInputs(userId, today),
+        getStreakHistory(userId, 7),
+        getTodaysMeals(userId, today),
+        getLatestMeasurements(userId),
+        getProfileBodySettings(userId),
+        // Fetch today's mood_state directly from client_daily_logs —
+        // small enough query that adding it to getTwinDailyInputs would
+        // bloat that function's selected columns. Returns null if no
+        // log row yet OR mood not set.
+        (async () => {
+          const sb = await createSupabaseClient();
+          const { data } = await sb
+            .from('client_daily_logs')
+            .select('mood_state')
+            .eq('client_id', userId)
+            .eq('log_date', today)
+            .maybeSingle();
+          return (data?.mood_state ?? null) as MoodState | null;
+        })(),
+      ]);
     twinInputs = inputsResult.inputs;
     streakHistory = history;
     nutritionSnapshot = inputsResult.nutrition;
     todaysMeals = meals;
     latestMeasurements = meas;
     bodySettings = bodyProfile;
+    todaysMood = moodRow;
   }
   const twinStats = deriveTwinStats(twinInputs);
   const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
@@ -145,6 +165,13 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           sheet on tap. Placed above all the raw-input cards because
           this is the metric the user *should* return to daily. */}
       <PureXScoreCard score={pureXScore} showPreview={pureXScoreEmpty} />
+
+      {/* ─── Morning Mood Check-In — 8-chip "how is your body today?"
+          prompt. Sits just below PureX Score because it's a daily
+          ritual: open dashboard → see score → log mood → see
+          recommendation. Only shown when signed in (no point on a
+          signed-out preview). */}
+      {userId && <MoodCheckInCard current={todaysMood} />}
 
       {/* Health Connect auto-sync card — app-only (returns null on
           web, and dynamic-imported so the plugin's JS never lands in
