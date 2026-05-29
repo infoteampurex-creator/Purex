@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import {
+  AdminSidebar,
+  AdminMobileBottomNav,
+} from '@/components/admin/AdminSidebar';
 import { requireAuth } from '@/lib/supabase/server';
 
 export default async function AdminLayout({
@@ -19,8 +22,15 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-bg">
+      {/* Desktop only — hidden < md */}
       <AdminSidebar />
-      <div className="pl-20 lg:pl-64">
+      {/* Mobile only — hidden >= md */}
+      <AdminMobileBottomNav />
+
+      {/* Padding: left only on desktop (room for sidebar); bottom on
+          mobile to clear the bottom nav (h-16 + safe-area). No left
+          padding on mobile so content uses full width. */}
+      <div className="md:pl-20 lg:pl-64 pb-20 md:pb-0">
         <div className="max-w-[1400px] mx-auto px-5 md:px-8 py-6 md:py-10">
           {children}
         </div>
