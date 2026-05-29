@@ -19,6 +19,10 @@ import { HealthReportReview } from '@/components/admin/HealthReportReview';
 import { getReportsForClient } from '@/lib/actions/health-reports';
 import { AdminHealthyStreakPanel } from '@/components/admin/AdminHealthyStreakPanel';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
+import { WeeklyScheduleEditor } from '@/components/admin/WeeklyScheduleEditor';
+import { getWeeklyPlanForClient } from '@/lib/data/weekly-plan-server';
+import { ClientDietEditor } from '@/components/admin/ClientDietEditor';
+import { getMealPlanForClient } from '@/lib/data/meal-plan-server';
 import {
   getClientBookings,
   getMockClientPhotos,
@@ -97,6 +101,8 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     streakHistory,
     healthConditions,
     clientReports,
+    weeklyPlan,
+    mealPlan,
   ] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
@@ -108,7 +114,17 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getStreakHistory(client.id, 30),
     getHealthConditionsForClient(client.id),
     getReportsForClient(client.id),
+    getWeeklyPlanForClient(client.id),
+    getMealPlanForClient(client.id),
   ]);
+
+  // Editor only needs id/name/category/muscle for its template dropdown
+  const weeklyTemplateOptions = workoutTemplates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    category: t.category,
+    targetMuscleGroup: t.targetMuscleGroup,
+  }));
 
   // Slim down library entries to what the EditDailyPlanModal actually
   // reads — keeps the client bundle small.
@@ -259,6 +275,29 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         exerciseLibrary={exerciseLibrary}
         workoutTemplates={workoutTemplates}
       />
+
+      {/* Weekly schedule — coach sets a recurring 7-day plan once,
+          system auto-materializes future client_workouts rows.
+          Solves the "1 workout × 7 days × N clients every week" grind. */}
+      <div className="mt-6">
+        <WeeklyScheduleEditor
+          clientId={client.id}
+          clientName={client.fullName}
+          initial={weeklyPlan}
+          templates={weeklyTemplateOptions}
+        />
+      </div>
+
+      {/* Diet plan — recurring daily meals + macro/lifestyle targets.
+          Mirrors the WhatsApp diet block coach already writes. Paste
+          to extract the whole plan in one click. */}
+      <div className="mt-6">
+        <ClientDietEditor
+          clientId={client.id}
+          clientName={client.fullName}
+          initial={mealPlan}
+        />
+      </div>
 
       {/* Coach-managed health profile — drives plan/meal tailoring.
           Client sees this read-only on /client/health. */}
