@@ -19,10 +19,12 @@ import {
   transformationScore,
   weightDelta,
   type ProgressData,
+  type StrengthPR,
 } from '@/lib/data/progress';
 
 interface Props {
   data: ProgressData;
+  strengthPRs: StrengthPR[];
 }
 
 /**
@@ -39,7 +41,7 @@ interface Props {
  * No chart libraries — all SVG so the bundle stays small and the
  * styling matches the rest of the PureX premium dark UI.
  */
-export function ProgressPageView({ data }: Props) {
+export function ProgressPageView({ data, strengthPRs }: Props) {
   const tScore = transformationScore(data);
   const wDelta = weightDelta(data.weightHistory);
   const tBand = transformationBand(tScore);
@@ -208,6 +210,47 @@ export function ProgressPageView({ data }: Props) {
             {wDelta != null && <DeltaPill delta={wDelta} unit="kg" inverse />}
           </div>
           <WeightChart history={data.weightHistory} />
+        </section>
+      )}
+
+      {/* ─── Strength PRs — top lifts ever ─── */}
+      {strengthPRs.length > 0 && (
+        <section
+          className="rounded-3xl border p-5"
+          style={{
+            background: 'rgba(255,255,255,0.02)',
+            borderColor: 'rgba(255,255,255,0.06)',
+          }}
+        >
+          <div className="flex items-baseline justify-between mb-3">
+            <div>
+              <h2
+                className="font-display font-bold tracking-tight"
+                style={{ fontSize: 18 }}
+              >
+                Strength PRs
+              </h2>
+              <p
+                className="leading-snug mt-0.5"
+                style={{ fontSize: 12, color: 'rgba(255,255,255,0.50)' }}
+              >
+                Heaviest set ever per exercise
+              </p>
+            </div>
+            <span
+              className="font-mono uppercase tracking-[0.16em] font-bold"
+              style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}
+            >
+              top {strengthPRs.length}
+            </span>
+          </div>
+          <ul className="space-y-2">
+            {strengthPRs.map((pr) => (
+              <li key={pr.exerciseName}>
+                <StrengthPRRow pr={pr} />
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -495,6 +538,65 @@ function WeightChart({ history }: { history: Array<{ date: string; weightKg: num
         </>
       )}
     </svg>
+  );
+}
+
+function StrengthPRRow({ pr }: { pr: StrengthPR }) {
+  const dt = pr.achievedAt ? new Date(pr.achievedAt) : null;
+  return (
+    <div
+      className="rounded-xl border px-3 py-3 flex items-center gap-3"
+      style={{
+        background: 'rgba(255,255,255,0.02)',
+        borderColor: 'rgba(255,255,255,0.06)',
+      }}
+    >
+      <div className="min-w-0 flex-1">
+        <div
+          className="font-semibold leading-tight"
+          style={{ fontSize: 14, color: 'rgba(245,245,240,0.92)' }}
+        >
+          {pr.exerciseName}
+        </div>
+        <div
+          className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-1 font-mono"
+          style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}
+        >
+          {pr.targetMuscle && (
+            <span className="uppercase tracking-[0.10em]">
+              {pr.targetMuscle}
+            </span>
+          )}
+          {pr.bestReps && <span>· {pr.bestReps} reps</span>}
+          {dt && (
+            <span>
+              · {dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+            </span>
+          )}
+          <span>· logged {pr.attemptsLogged}×</span>
+        </div>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <div
+          className="font-display font-bold tabular-nums leading-none"
+          style={{ fontSize: 22, color: '#ff8a4d' }}
+        >
+          {pr.bestWeightKg}
+          <span
+            className="font-mono ml-1"
+            style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}
+          >
+            kg
+          </span>
+        </div>
+        <div
+          className="font-mono uppercase tracking-[0.14em] font-bold mt-0.5"
+          style={{ fontSize: 8, color: '#ff8a4d' }}
+        >
+          PR
+        </div>
+      </div>
+    </div>
   );
 }
 

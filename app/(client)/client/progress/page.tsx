@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { LineChart } from 'lucide-react';
 import { ProgressPageView } from '@/components/client/progress/ProgressPageView';
 import { getCurrentUserId } from '@/lib/data/client-live';
-import { getProgressData } from '@/lib/data/progress-server';
+import { getProgressData, getStrengthPRs } from '@/lib/data/progress-server';
 
 export const metadata = {
   title: 'PureX Progress · 30/60/90-day transformation trends',
@@ -32,7 +32,10 @@ export default async function ProgressPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const data = await getProgressData(userId, today);
+  const [data, strengthPRs] = await Promise.all([
+    getProgressData(userId, today),
+    getStrengthPRs(userId, 8),
+  ]);
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
@@ -68,7 +71,7 @@ export default async function ProgressPage() {
           </p>
         </header>
 
-        <ProgressPageView data={data} />
+        <ProgressPageView data={data} strengthPRs={strengthPRs} />
       </div>
     </main>
   );

@@ -1,71 +1,88 @@
+import { redirect } from 'next/navigation';
 import { User } from 'lucide-react';
-import Link from 'next/link';
-import { MOCK_CLIENT } from '@/lib/data/client-mock';
+import { ProfilePageView } from '@/components/client/profile/ProfilePageView';
+import { createClient } from '@/lib/supabase/server';
+import {
+  getLatestMeasurements,
+  getProfileBodySettings,
+} from '@/lib/data/body-measurements';
+import { deriveBodyProportions } from '@/lib/data/body-proportions';
 
-export default function ProfilePage() {
+export const metadata = {
+  title: 'PureX Profile · Account, goal, settings',
+};
+export const dynamic = 'force-dynamic';
+
+/**
+ * Profile page — real user data + account actions + Sign Out.
+ *
+ * Fix for the "no logout option in app" bug. Builds the Profile page
+ * around an avatar header, account info, goal/body summary, plan info,
+ * and an explicit Sign Out button (also surfaces a small banner with
+ * Sign Out on mobile dashboards in a future pass).
+ */
+export default async function ProfilePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Pull profile + body settings + latest measurement in parallel
+  const [{ data: profileRow }, bodySettings, latestMeas] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('email, full_name, phone, role, avatar_url, created_at')
+      .eq('id', user.id)
+      .maybeSingle(),
+    getProfileBodySettings(user.id),
+    getLatestMeasurements(user.id),
+  ]);
+
+  const proportions = deriveBodyProportions(
+    latestMeas,
+    bodySettings.heightCm,
+    bodySettings.gender
+  );
+
   return (
-    <div className="max-w-xl mx-auto">
-      {/* Profile header */}
-      <div className="text-center mb-10">
-        <div className="inline-flex w-20 h-20 items-center justify-center rounded-full border-2 border-accent/60 bg-gradient-to-br from-accent/20 to-bg-elevated mb-4 font-display font-black text-3xl text-accent">
-          {MOCK_CLIENT.firstName[0]}
-        </div>
-        <h1 className="font-display font-semibold text-2xl md:text-3xl tracking-tight">
-          {MOCK_CLIENT.fullName}
-        </h1>
-        <div className="mt-1 text-sm text-text-muted">{MOCK_CLIENT.email}</div>
+    <main className="relative bg-bg text-text min-h-screen">
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse at 80% 0%, rgba(125, 211, 255, 0.08) 0%, transparent 55%), radial-gradient(ellipse at 20% 60%, rgba(198, 255, 61, 0.06) 0%, transparent 55%)',
+        }}
+      />
 
-        <div className="mt-4 inline-flex items-center gap-2 bg-accent/10 border border-accent/30 px-3 py-1.5 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent font-bold">
-            {MOCK_CLIENT.activePlan} · Day {MOCK_CLIENT.dayNumber}
-          </span>
-        </div>
-      </div>
-
-      {/* Profile completion */}
-      <div className="bg-bg-card border border-border rounded-2xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent font-bold mb-1">
-              Profile Completion
-            </div>
-            <div className="font-display font-semibold text-lg tracking-tight">
-              {MOCK_CLIENT.profileCompletion}% complete
-            </div>
-          </div>
-          <Link
-            href="#"
-            className="text-xs text-accent font-bold hover:underline"
-          >
-            Complete →
-          </Link>
-        </div>
-        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+      <div className="relative container-safe pt-6 pb-24 max-w-2xl mx-auto">
+        <header className="mb-6 md:mb-8">
           <div
-            className="h-full rounded-full"
-            style={{
-              width: `${MOCK_CLIENT.profileCompletion}%`,
-              background: 'linear-gradient(90deg, #c6ff3d, #4dffb8)',
-              boxShadow: '0 0 8px rgba(198, 255, 61, 0.4)',
-            }}
-          />
-        </div>
-      </div>
+            className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] font-bold mb-3"
+            style={{ color: '#7dd3ff' }}
+          >
+            <User size={12} />
+            PureX Profile
+          </div>
+          <h1 className="font-display font-bold text-3xl md:text-4xl tracking-tight leading-[1.05] mb-2">
+            Account
+          </h1>
+        </header>
 
-      {/* Coming next */}
-      <div className="text-center py-10 px-5 bg-bg-card border border-border rounded-2xl">
-        <User size={28} className="text-accent/60 mx-auto mb-3" />
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-2">
-          Coming Next
-        </div>
-        <h2 className="font-display font-semibold text-lg tracking-tight mb-2">
-          Profile Editor
-        </h2>
-        <p className="text-sm text-text-muted leading-relaxed max-w-sm mx-auto">
-          Edit personal info, assigned coach, notification preferences, plan details, and billing. Scaffolds next.
-        </p>
+        <ProfilePageView
+          email={profileRow?.email ?? user.email ?? ''}
+          fullName={profileRow?.full_name ?? null}
+          phone={profileRow?.phone ?? null}
+          role={profileRow?.role ?? 'user'}
+          avatarUrl={profileRow?.avatar_url ?? null}
+          memberSince={profileRow?.created_at ?? user.created_at}
+          bodySettings={bodySettings}
+          proportions={proportions}
+        />
       </div>
-    </div>
+    </main>
   );
 }

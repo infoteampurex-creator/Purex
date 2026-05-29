@@ -78,6 +78,15 @@ export function transformationScore(data: ProgressData): number {
   );
 }
 
+export interface StrengthPR {
+  exerciseName: string;
+  targetMuscle: string | null;
+  bestWeightKg: number;
+  bestReps: string | null;
+  achievedAt: string;          // ISO date
+  attemptsLogged: number;       // how many times the user logged this exercise
+}
+
 export function emptyProgressData(daysWindow: string[] = []): ProgressData {
   return {
     scoreTrend30: daysWindow.map((date) => ({ date, score: null, hit: false })),

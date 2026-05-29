@@ -4,6 +4,7 @@ import { computeHealthScore } from './twin';
 import type {
   DailyScorePoint,
   ProgressData,
+  StrengthPR,
   WeeklyAverages,
   WeightPoint,
 } from './progress';
@@ -264,3 +265,141 @@ export {
   transformationScore,
   weightDelta,
 } from './progress';
+
+// ─── Strength PRs ─────────────────────────────────────────────────
+
+/**
+ * Top-N strength PRs for a client. Joins client_workout_exercise_logs
+ * (the actuals) with client_workout_exercises (the planned rows) so
+ * we can resolve exercise_name + target_muscle.
+ *
+ * For each (client, exercise_name), picks the heaviest single set ever
+ * — looking at BOTH the flat actual_weight_kg column AND the highest
+ * weight inside the set_breakdown jsonb if present. Returns the top
+ * `limit` exercises sorted by best weight desc.
+ *
+ * Returns [] if the user has zero logged actuals (new account) or
+ * the query errors.
+ */
+export async function getStrengthPRs(
+  clientId: string,
+  limit = 8
+): Promise<StrengthPR[]> {
+  try {
+    const supabase = await createClient();
+
+    // One pass: pull every actual log + the planned exercise it ties to
+    const { data, error } = await supabase
+      .from('client_workout_exercise_logs')
+      .select(
+        `actual_weight_kg, actual_reps, set_breakdown, completed_at,
+         client_workout_exercises ( exercise_name, target_muscle )`
+      )
+      .eq('client_id', clientId)
+      .order('completed_at', { ascending: false });
+
+    if (error || !data) {
+      // eslint-disable-next-line no-console
+      console.error('[progress-server] getStrengthPRs failed', error);
+      return [];
+    }
+
+    type Row = {
+      actual_weight_kg: number | null;
+      actual_reps: string | null;
+      set_breakdown: Array<{
+        reps?: string | null;
+        weight_kg?: number | null;
+        rpe?: number | null;
+      }> | null;
+      completed_at: string | null;
+      client_workout_exercises:
+        | {
+            exercise_name: string | null;
+            target_muscle: string | null;
+          }
+        | Array<{
+            exercise_name: string | null;
+            target_muscle: string | null;
+          }>
+        | null;
+    };
+
+    const aggregates = new Map<
+      string,
+      {
+        exerciseName: string;
+        targetMuscle: string | null;
+        bestWeight: number;
+        bestReps: string | null;
+        achievedAt: string;
+        attempts: number;
+      }
+    >();
+
+    for (const row of data as Row[]) {
+      // Supabase returns the joined row as either an object or array
+      // depending on the FK resolution; normalise.
+      const planned = Array.isArray(row.client_workout_exercises)
+        ? row.client_workout_exercises[0]
+        : row.client_workout_exercises;
+      const exerciseName = planned?.exercise_name?.trim();
+      if (!exerciseName) continue;
+
+      const flat = row.actual_weight_kg ?? 0;
+      let bestInBreakdown = 0;
+      let bestRepsInBreakdown: string | null = null;
+      if (Array.isArray(row.set_breakdown)) {
+        for (const s of row.set_breakdown) {
+          const w = s?.weight_kg ?? 0;
+          if (w > bestInBreakdown) {
+            bestInBreakdown = w;
+            bestRepsInBreakdown = s?.reps ?? null;
+          }
+        }
+      }
+      const bestThisAttempt = Math.max(flat, bestInBreakdown);
+      if (bestThisAttempt <= 0) continue;
+      const repsThisAttempt =
+        bestInBreakdown >= flat
+          ? bestRepsInBreakdown ?? row.actual_reps
+          : row.actual_reps;
+
+      const key = exerciseName.toLowerCase();
+      const existing = aggregates.get(key);
+      if (!existing) {
+        aggregates.set(key, {
+          exerciseName,
+          targetMuscle: planned?.target_muscle ?? null,
+          bestWeight: bestThisAttempt,
+          bestReps: repsThisAttempt,
+          achievedAt: row.completed_at ?? '',
+          attempts: 1,
+        });
+      } else {
+        existing.attempts++;
+        if (bestThisAttempt > existing.bestWeight) {
+          existing.bestWeight = bestThisAttempt;
+          existing.bestReps = repsThisAttempt;
+          existing.achievedAt = row.completed_at ?? existing.achievedAt;
+        }
+      }
+    }
+
+    return Array.from(aggregates.values())
+      .sort((a, b) => b.bestWeight - a.bestWeight)
+      .slice(0, limit)
+      .map((p) => ({
+        exerciseName: p.exerciseName,
+        targetMuscle: p.targetMuscle,
+        bestWeightKg: Math.round(p.bestWeight * 10) / 10,
+        bestReps: p.bestReps,
+        achievedAt: p.achievedAt,
+        attemptsLogged: p.attempts,
+      }));
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[progress-server] getStrengthPRs threw', err);
+    return [];
+  }
+}
