@@ -1,29 +1,75 @@
+import { redirect } from 'next/navigation';
 import { LineChart } from 'lucide-react';
-import Link from 'next/link';
+import { ProgressPageView } from '@/components/client/progress/ProgressPageView';
+import { getCurrentUserId } from '@/lib/data/client-live';
+import { getProgressData } from '@/lib/data/progress-server';
 
-export default function ProgressPage() {
+export const metadata = {
+  title: 'PureX Progress · 30/60/90-day transformation trends',
+};
+export const dynamic = 'force-dynamic';
+
+/**
+ * Top-level Progress page.
+ *
+ * Whoop-style transformation hub: single hero score, consistency rings,
+ * trend charts, weekly-vs-last-week deltas. Built entirely from data
+ * we already collect (client_daily_logs, client_body_measurements,
+ * client_workouts, client_meals) — no new tables, no new server actions.
+ *
+ * IA reminder:
+ *   Home    = today
+ *   Plan    = training arc
+ *   Nutrition = fuel
+ *   Progress = THIS PAGE — how am I trending over weeks/months
+ *   Health  = body data snapshot
+ *   Profile = account
+ */
+export default async function ProgressPage() {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    redirect('/login');
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const data = await getProgressData(userId, today);
+
   return (
-    <div className="flex items-center justify-center min-h-[70vh]">
-      <div className="text-center max-w-md">
-        <div className="inline-flex w-14 h-14 items-center justify-center rounded-2xl bg-accent/10 border border-accent/30 mb-5 text-accent">
-          <LineChart size={22} />
-        </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-3">
-          Coming Next
-        </div>
-        <h1 className="font-display font-semibold text-2xl md:text-3xl tracking-tight">
-          Progress Report
-        </h1>
-        <p className="mt-4 text-sm text-text-muted leading-relaxed">
-          Weight trend, body composition changes, performance metrics, and check-in history. Full progress visualisation ships next.
-        </p>
-        <Link
-          href="/client/dashboard"
-          className="inline-flex items-center gap-2 mt-6 text-sm text-accent hover:underline font-medium"
-        >
-          ← Back to dashboard
-        </Link>
+    <main className="relative bg-bg text-text min-h-screen">
+      {/* Background atmosphere — lime-cyan to read as "improvement / trend" */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse at 80% 0%, rgba(198, 255, 61, 0.10) 0%, transparent 55%), radial-gradient(ellipse at 20% 60%, rgba(125, 211, 255, 0.08) 0%, transparent 55%)',
+        }}
+      />
+
+      <div className="relative container-safe pt-6 pb-24 max-w-3xl mx-auto">
+        <header className="mb-6 md:mb-8">
+          <div
+            className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] font-bold mb-3"
+            style={{ color: '#c6ff3d' }}
+          >
+            <LineChart size={12} />
+            PureX Progress
+          </div>
+          <h1 className="font-display font-bold text-3xl md:text-4xl tracking-tight leading-[1.05] mb-2">
+            How you&apos;re trending.
+          </h1>
+          <p
+            className="text-text-muted leading-relaxed max-w-xl"
+            style={{ fontSize: 15 }}
+          >
+            One score for 30-day transformation. Consistency rings. Daily
+            score trend. Weight movement. This week vs last. Built from
+            what you log — the more you track, the sharper the picture.
+          </p>
+        </header>
+
+        <ProgressPageView data={data} />
       </div>
-    </div>
+    </main>
   );
 }
