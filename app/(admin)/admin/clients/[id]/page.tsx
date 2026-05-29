@@ -13,6 +13,8 @@ import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { EditClientButton } from '@/components/admin/EditClientButton';
 import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
+import { HealthConditionsEditor } from '@/components/admin/HealthConditionsEditor';
+import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
 import { AdminHealthyStreakPanel } from '@/components/admin/AdminHealthyStreakPanel';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import {
@@ -62,6 +64,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     workoutTemplates,
     twinInputsResult,
     streakHistory,
+    healthConditions,
   ] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
@@ -71,6 +74,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getCachedWorkoutTemplates(),
     getTwinDailyInputs(client.id, today),
     getStreakHistory(client.id, 30),
+    getHealthConditionsForClient(client.id),
   ]);
 
   // Slim down library entries to what the EditDailyPlanModal actually
@@ -221,6 +225,15 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         exerciseLibrary={exerciseLibrary}
         workoutTemplates={workoutTemplates}
       />
+
+      {/* Coach-managed health profile — drives plan/meal tailoring.
+          Client sees this read-only on /client/health. */}
+      <div className="mt-6">
+        <HealthConditionsEditor
+          clientId={client.id}
+          initial={healthConditions}
+        />
+      </div>
     </>
   );
 }

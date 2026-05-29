@@ -12,6 +12,7 @@ import { deriveBodyProportions } from '@/lib/data/body-proportions';
 import { getMyHealthReports } from '@/lib/actions/health-reports';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import type { MoodState } from '@/lib/data/mood';
+import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
 
 export const metadata = {
   title: 'PureX Health · Body data, reports, conditions',
@@ -52,6 +53,7 @@ export default async function HealthPage() {
     bodySettings,
     healthReports,
     moodHistoryRows,
+    healthConditions,
   ] = await Promise.all([
     getTwinDailyInputs(userId, today),
     getLatestMeasurements(userId),
@@ -75,6 +77,7 @@ export default async function HealthPage() {
         mood_state: MoodState | null;
       }>;
     })(),
+    getHealthConditionsForClient(userId),
   ]);
 
   const proportions = deriveBodyProportions(
@@ -124,6 +127,7 @@ export default async function HealthPage() {
           healthReports={healthReports}
           moodHistory={moodHistoryRows}
           dailyInputs={inputsResult.inputs}
+          healthConditions={healthConditions}
         />
       </div>
     </main>

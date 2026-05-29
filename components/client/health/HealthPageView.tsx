@@ -23,6 +23,11 @@ import type {
 import type { BodyProportions } from '@/lib/data/body-proportions';
 import type { HealthReport } from '@/lib/data/health-reports';
 import type { DailyInputs } from '@/lib/data/twin';
+import {
+  COMMON_CONDITIONS,
+  hasAnyHealthData,
+  type HealthConditionsProfile,
+} from '@/lib/data/health-conditions';
 
 interface Props {
   measurements: BodyMeasurements | null;
@@ -31,6 +36,7 @@ interface Props {
   healthReports: HealthReport[];
   moodHistory: Array<{ log_date: string; mood_state: MoodState | null }>;
   dailyInputs: DailyInputs;
+  healthConditions: HealthConditionsProfile;
 }
 
 /**
@@ -50,6 +56,7 @@ export function HealthPageView({
   healthReports,
   moodHistory,
   dailyInputs,
+  healthConditions,
 }: Props) {
   return (
     <div className="space-y-5">
@@ -69,8 +76,9 @@ export function HealthPageView({
       {/* 4 — Mood pattern (last 7 days) */}
       <MoodPatternCard history={moodHistory} />
 
-      {/* 5 — Health conditions stub */}
+      {/* 5 — Health conditions (now persisted; read-only for client) */}
       <HealthConditionsCard
+        conditions={healthConditions}
         proportions={proportions}
         bodySettings={bodySettings}
       />
@@ -343,25 +351,15 @@ function MoodPatternCard({
 // ─── Health Conditions card (stub for v1) ───────────────────────
 
 function HealthConditionsCard({
+  conditions,
   proportions: _proportions,
   bodySettings: _bodySettings,
 }: {
+  conditions: HealthConditionsProfile;
   proportions: BodyProportions | null;
   bodySettings: ProfileBodySettings;
 }) {
-  // Common Indian-context conditions surfaced as a checklist preview.
-  // No persistence yet — coach-side admin to add these comes with a
-  // follow-up migration (client_health_profile table).
-  const commonConditions = [
-    'Type 2 diabetes',
-    'Hypertension',
-    'PCOS',
-    'Thyroid (hypo / hyper)',
-    'High cholesterol',
-    'Acidity / GERD',
-    'Knee / lower-back issue',
-    'Lactose intolerance',
-  ];
+  const hasData = hasAnyHealthData(conditions);
 
   return (
     <motion.section
@@ -385,56 +383,112 @@ function HealthConditionsCard({
           <Stethoscope size={11} />
           Health Conditions
         </div>
-        <span
-          className="font-mono uppercase tracking-[0.18em] font-bold px-2 py-0.5 rounded"
-          style={{
-            fontSize: 8,
-            color: '#ff8a4d',
-            background: 'rgba(255,138,77,0.12)',
-          }}
-        >
-          Coming soon
-        </span>
-      </div>
-      <div className="px-5 pb-3">
-        <h3
-          className="font-display font-bold tracking-tight leading-tight"
-          style={{ fontSize: 18, color: 'rgba(245,245,240,0.95)' }}
-        >
-          Conditions, allergies & injuries
-        </h3>
-        <p
-          className="mt-1 leading-snug"
-          style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}
-        >
-          Your coach will add these from the admin panel so workouts +
-          meals get tailored. Self-add coming in a future update.
-        </p>
+        {hasData && conditions.updatedAt && (
+          <span
+            className="font-mono uppercase tracking-[0.16em] font-bold"
+            style={{ fontSize: 9, color: 'rgba(255,255,255,0.50)' }}
+          >
+            Updated{' '}
+            {new Date(conditions.updatedAt).toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'short',
+            })}
+          </span>
+        )}
       </div>
 
-      <div className="px-5 pb-5">
-        <div
-          className="font-mono uppercase tracking-[0.14em] font-bold mb-2"
-          style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}
-        >
-          Common conditions tracked
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {commonConditions.map((c) => (
-            <span
-              key={c}
-              className="font-mono text-[10px] px-2 py-1 rounded-full"
-              style={{
-                color: 'rgba(255,255,255,0.55)',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
+      {hasData ? (
+        <>
+          <div className="px-5 pb-3">
+            <h3
+              className="font-display font-bold tracking-tight leading-tight"
+              style={{ fontSize: 18, color: 'rgba(245,245,240,0.95)' }}
             >
-              {c}
-            </span>
-          ))}
-        </div>
-      </div>
+              Your coach&apos;s notes
+            </h3>
+          </div>
+
+          {conditions.conditions.length > 0 && (
+            <ChipSection title="Conditions" items={conditions.conditions} color="#ff8a4d" />
+          )}
+          {conditions.allergies.length > 0 && (
+            <ChipSection title="Allergies" items={conditions.allergies} color="#ff6b6b" />
+          )}
+          {conditions.injuries.length > 0 && (
+            <ChipSection title="Injuries" items={conditions.injuries} color="#ffd24d" />
+          )}
+          {conditions.medications.length > 0 && (
+            <ChipSection
+              title="Medications"
+              items={conditions.medications}
+              color="#a78bfa"
+            />
+          )}
+          {conditions.coachNotes && conditions.coachNotes.trim() && (
+            <div className="px-5 pb-4">
+              <div
+                className="font-mono uppercase tracking-[0.14em] font-bold mb-1.5"
+                style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}
+              >
+                Notes
+              </div>
+              <div
+                className="rounded-xl px-3 py-2.5 whitespace-pre-wrap leading-relaxed"
+                style={{
+                  fontSize: 13,
+                  color: 'rgba(255,255,255,0.85)',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                {conditions.coachNotes}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="px-5 pb-3">
+            <h3
+              className="font-display font-bold tracking-tight leading-tight"
+              style={{ fontSize: 18, color: 'rgba(245,245,240,0.95)' }}
+            >
+              No conditions on file
+            </h3>
+            <p
+              className="mt-1 leading-snug"
+              style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}
+            >
+              Your coach will add conditions, allergies, injuries, and
+              medications here — they use this to tailor your workouts
+              and meal plan.
+            </p>
+          </div>
+          <div className="px-5 pb-5">
+            <div
+              className="font-mono uppercase tracking-[0.14em] font-bold mb-2"
+              style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}
+            >
+              Examples of what your coach tracks
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {COMMON_CONDITIONS.slice(0, 8).map((c) => (
+                <span
+                  key={c}
+                  className="font-mono text-[10px] px-2 py-1 rounded-full"
+                  style={{
+                    color: 'rgba(255,255,255,0.55)',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div
         className="px-5 py-3 border-t flex items-start gap-2"
@@ -455,5 +509,42 @@ function HealthConditionsCard({
         </p>
       </div>
     </motion.section>
+  );
+}
+
+function ChipSection({
+  title,
+  items,
+  color,
+}: {
+  title: string;
+  items: string[];
+  color: string;
+}) {
+  return (
+    <div className="px-5 pb-3">
+      <div
+        className="font-mono uppercase tracking-[0.14em] font-bold mb-1.5"
+        style={{ fontSize: 9, color }}
+      >
+        {title}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((item, i) => (
+          <span
+            key={`${item}-${i}`}
+            className="px-2 py-1 rounded-full"
+            style={{
+              fontSize: 11,
+              color: 'rgba(245,245,240,0.92)',
+              background: `${color}14`,
+              border: `1px solid ${color}33`,
+            }}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
