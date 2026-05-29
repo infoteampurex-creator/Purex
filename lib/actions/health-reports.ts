@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import type { HealthReport } from '@/lib/data/health-reports';
+import { extractHealthReport } from './extract-health-report';
 
 // ─── Validation ─────────────────────────────────────────────────
 
@@ -155,6 +156,17 @@ export async function uploadHealthReport(
 
     revalidatePath('/client/dashboard');
     revalidatePath('/client/profile');
+
+    // ─── Fire-and-forget AI extraction ─────────────────────────
+    // We deliberately don't await this. Gemini can take 10+ seconds
+    // for a multi-page PDF, and we don't want the upload flow to
+    // block. If extraction fails or AI is unconfigured the report
+    // row still has the file — user keeps everything they uploaded.
+    // The extraction status surfaces in the UI ("Extracting…" pill).
+    extractHealthReport(row.id).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[health-reports] background extraction threw', err);
+    });
 
     return {
       ok: true,
@@ -350,20 +362,7 @@ export async function getReportsForClient(
       console.error('[getReportsForClient] failed', error);
       return [];
     }
-    return (data ?? []).map((row) => ({
-      id: row.id,
-      clientId: row.client_id,
-      storagePath: row.storage_path,
-      originalFilename: row.original_filename,
-      mimeType: row.mime_type,
-      fileSizeBytes: row.file_size_bytes,
-      reportLabel: row.report_label,
-      reportDate: row.report_date,
-      coachReviewNote: row.coach_review_note,
-      coachReviewedAt: row.coach_reviewed_at,
-      coachReviewedBy: row.coach_reviewed_by,
-      uploadedAt: row.uploaded_at,
-    }));
+    return (data ?? []).map(mapRowToReport);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[getReportsForClient] threw', err);
@@ -432,9 +431,15 @@ interface HealthReportRow {
   coach_reviewed_at: string | null;
   coach_reviewed_by: string | null;
   uploaded_at: string;
+  extraction_status?: string | null;
+  extracted_at?: string | null;
+  extracted_data?: unknown;
+  extracted_summary?: string | null;
+  extraction_error?: string | null;
 }
 
 function mapRowToReport(row: HealthReportRow): HealthReport {
+  const status = (row.extraction_status as HealthReport['extractionStatus']) ?? 'pending';
   return {
     id: row.id,
     clientId: row.client_id,
@@ -448,5 +453,10 @@ function mapRowToReport(row: HealthReportRow): HealthReport {
     coachReviewedAt: row.coach_reviewed_at,
     coachReviewedBy: row.coach_reviewed_by,
     uploadedAt: row.uploaded_at,
+    extractionStatus: status,
+    extractedAt: row.extracted_at ?? null,
+    extractedData: (row.extracted_data as HealthReport['extractedData']) ?? null,
+    extractedSummary: row.extracted_summary ?? null,
+    extractionError: row.extraction_error ?? null,
   };
 }

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { BodyMeasurementsCard } from '@/components/client/dashboard/BodyMeasurementsCard';
 import { HealthPassportCard } from '@/components/client/dashboard/HealthPassportCard';
+import { ExtractedMarkersCard } from '@/components/client/health/ExtractedMarkersCard';
 import {
   MOOD_META,
   type MoodState,
@@ -70,7 +71,13 @@ export function HealthPageView({
         profileSettings={bodySettings}
       />
 
-      {/* 3 — Health Passport (moved from dashboard) */}
+      {/* 3a — Extracted lab markers (Gemini vision pulls structured
+              values out of the user's uploaded reports). Renders an
+              empty state when no reports are extracted yet, so this
+              card is always present as a hint. */}
+      <ExtractedMarkersCard reports={healthReports} />
+
+      {/* 3b — Health Passport (raw file list — view / delete / re-extract) */}
       <HealthPassportCard initialReports={healthReports} />
 
       {/* 4 — Mood pattern (last 7 days) */}

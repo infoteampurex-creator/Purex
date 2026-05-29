@@ -23,6 +23,8 @@ import { WeeklyScheduleEditor } from '@/components/admin/WeeklyScheduleEditor';
 import { getWeeklyPlanForClient } from '@/lib/data/weekly-plan-server';
 import { ClientDietEditor } from '@/components/admin/ClientDietEditor';
 import { getMealPlanForClient } from '@/lib/data/meal-plan-server';
+import { MaterializedWorkoutsDiagnostic } from '@/components/admin/MaterializedWorkoutsDiagnostic';
+import { getUpcomingMaterializedWorkouts } from '@/lib/data/materialized-workouts-server';
 import {
   getClientBookings,
   getMockClientPhotos,
@@ -103,6 +105,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     clientReports,
     weeklyPlan,
     mealPlan,
+    upcomingWorkouts,
   ] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
@@ -116,6 +119,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getReportsForClient(client.id),
     getWeeklyPlanForClient(client.id),
     getMealPlanForClient(client.id),
+    getUpcomingMaterializedWorkouts(client.id, 14),
   ]);
 
   // Editor only needs id/name/category/muscle for its template dropdown
@@ -286,6 +290,14 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
           initial={weeklyPlan}
           templates={weeklyTemplateOptions}
         />
+      </div>
+
+      {/* Diagnostic — what the client actually sees in client_workouts
+          for the next 14 days. Verifies that the materialization step
+          ran after Save. Empty state surfaces "you hit Save but nothing
+          was written" instead of leaving it as silent failure. */}
+      <div className="mt-6">
+        <MaterializedWorkoutsDiagnostic workouts={upcomingWorkouts} />
       </div>
 
       {/* Diet plan — recurring daily meals + macro/lifestyle targets.

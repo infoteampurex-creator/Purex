@@ -1,10 +1,38 @@
 /**
  * Health Passport — pure types + display helpers.
  *
- * Phase 1: data-custodian only. We hold the file + light metadata,
- * the coach interprets it. No AI extraction, no biomarker parsing
- * (legal posture per docs/product-vision.md §4).
+ * Phase 1: data-custodian only. Phase 2 (this version) adds
+ * Gemini-powered structured extraction of test markers from the
+ * uploaded file. We surface the values AS THEY APPEAR ON THE REPORT —
+ * we do not diagnose, recommend medication, or interpret beyond
+ * "this number is above/below the lab's reference range." The legal
+ * posture (data custodian, no medical advice) is unchanged.
  */
+
+export type ExtractionStatus =
+  | 'pending'
+  | 'processing'
+  | 'done'
+  | 'failed'
+  | 'skipped';
+
+export interface ExtractedMarker {
+  name: string;
+  value: string;
+  unit: string;
+  reference_range: string;
+  status: 'high' | 'low' | 'normal' | 'unknown';
+  category: string;
+}
+
+export interface ExtractedReportPayload {
+  report_type: string;
+  report_date: string;
+  lab_name: string;
+  markers: ExtractedMarker[];
+  interpretation: string;
+  confidence: number;
+}
 
 export interface HealthReport {
   id: string;
@@ -19,6 +47,13 @@ export interface HealthReport {
   coachReviewedAt: string | null;      // ISO datetime
   coachReviewedBy: string | null;
   uploadedAt: string;                  // ISO datetime
+
+  // AI extraction (Phase 2 — Gemini vision)
+  extractionStatus: ExtractionStatus;
+  extractedAt: string | null;
+  extractedData: ExtractedReportPayload | null;
+  extractedSummary: string | null;
+  extractionError: string | null;
 }
 
 /** Friendly display name fallback chain. */

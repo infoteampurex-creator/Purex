@@ -4,6 +4,8 @@ import { NutritionPageView } from '@/components/client/nutrition/NutritionPageVi
 import { getCurrentUserId } from '@/lib/data/client-live';
 import { getTwinDailyInputs } from '@/lib/data/twin-server';
 import { getTodaysMeals } from '@/lib/data/meals';
+import { getMealPlanForClient } from '@/lib/data/meal-plan-server';
+import { createClient } from '@/lib/supabase/server';
 import {
   EMPTY_NUTRITION_SNAPSHOT,
   type NutritionSnapshot,
@@ -40,13 +42,25 @@ export default async function NutritionPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [inputsResult, meals] = await Promise.all([
+  const supabase = await createClient();
+  const profilePromise = supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const [inputsResult, meals, mealPlan, profileRes] = await Promise.all([
     getTwinDailyInputs(userId, today),
     getTodaysMeals(userId, today),
+    getMealPlanForClient(userId),
+    profilePromise,
   ]);
 
   const nutrition: NutritionSnapshot =
     inputsResult.nutrition ?? EMPTY_NUTRITION_SNAPSHOT;
+
+  const firstName =
+    profileRes.data?.full_name?.split(/\s+/)[0] ?? 'there';
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
@@ -82,7 +96,12 @@ export default async function NutritionPage() {
           </p>
         </header>
 
-        <NutritionPageView nutrition={nutrition} meals={meals} />
+        <NutritionPageView
+          nutrition={nutrition}
+          meals={meals}
+          mealPlan={mealPlan}
+          firstName={firstName}
+        />
       </div>
     </main>
   );

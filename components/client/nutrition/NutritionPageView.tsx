@@ -5,14 +5,18 @@ import { motion } from 'framer-motion';
 import { Plus, Sparkles, Trash2, Camera, Edit3, BookOpen } from 'lucide-react';
 import { MealLogSheet } from '@/components/client/dashboard/MealLogSheet';
 import { FoodSourcesSheet } from '@/components/client/dashboard/FoodSourcesSheet';
+import { MealPlanCard } from '@/components/client/nutrition/MealPlanCard';
 import { deleteMeal } from '@/lib/actions/meals';
 import { useRouter } from 'next/navigation';
 import type { MealRow } from '@/lib/data/meals';
 import type { NutritionSnapshot } from '@/lib/data/twin';
+import type { MealPlan } from '@/lib/data/meal-plan';
 
 interface Props {
   nutrition: NutritionSnapshot;
   meals: MealRow[];
+  mealPlan: MealPlan;
+  firstName: string;
 }
 
 /**
@@ -29,7 +33,12 @@ interface Props {
  * opens the same MealLogSheet, so users have two entry points
  * (Home tile or Nutrition page) into the same flow.
  */
-export function NutritionPageView({ nutrition, meals }: Props) {
+export function NutritionPageView({
+  nutrition,
+  meals,
+  mealPlan,
+  firstName,
+}: Props) {
   const router = useRouter();
   const [logSheetOpen, setLogSheetOpen] = useState(false);
   const [foodSheetOpen, setFoodSheetOpen] = useState(false);
@@ -57,6 +66,9 @@ export function NutritionPageView({ nutrition, meals }: Props) {
 
   return (
     <>
+      {/* ─── Coach-assigned diet plan ─── */}
+      <MealPlanCard plan={mealPlan} firstName={firstName} />
+
       {/* ─── Today's totals hero ─── */}
       <section className="rounded-3xl overflow-hidden border mb-5"
         style={{

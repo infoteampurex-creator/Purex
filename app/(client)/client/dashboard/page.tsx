@@ -1,6 +1,8 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
+import { PlanFromCoachBanner } from '@/components/client/dashboard/PlanFromCoachBanner';
+import { getCoachPlanFreshness } from '@/lib/data/plan-updates-server';
 // AdminSwitcher removed — middleware now redirects admins away from
 // /client/* entirely, so the "Switch to admin panel" banner can never
 // render. Coaches use /admin for everything; they preview client data
@@ -71,14 +73,24 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
   let tasks: Awaited<ReturnType<typeof getClientTasksLive>>['rows'] = [];
   let dailyPlan = EMPTY_DAILY_PLAN;
+  let coachPlanFreshness: Awaited<
+    ReturnType<typeof getCoachPlanFreshness>
+  > = {
+    scheduleUpdatedAt: null,
+    dietUpdatedAt: null,
+    upcomingWorkouts: 0,
+    nextWorkoutDate: null,
+  };
 
   if (userId) {
-    const [tasksRes, plan] = await Promise.all([
+    const [tasksRes, plan, freshness] = await Promise.all([
       getClientTasksLive(userId, selectedDate),
       getDailyPlan(userId, selectedDate),
+      getCoachPlanFreshness(userId),
     ]);
     tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
     dailyPlan = plan;
+    coachPlanFreshness = freshness;
   }
 
   // ─── Twin + Future Clone + Healthy Streak (Phase 4 — live data) ───
@@ -185,6 +197,12 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           sheet on tap. Placed above all the raw-input cards because
           this is the metric the user *should* return to daily. */}
       <PureXScoreCard score={pureXScore} showPreview={pureXScoreEmpty} />
+
+      {/* ─── Plan from coach — surfaces "Schedule / Diet updated Xh
+          ago" + upcoming-workout count. Auto-hides when nothing is
+          set yet. Also our first-line debug signal when a client
+          reports "I can't see my workouts." */}
+      {userId && <PlanFromCoachBanner freshness={coachPlanFreshness} />}
 
       {/* ─── Morning Mood Check-In — 8-chip "how is your body today?"
           prompt. Sits just below PureX Score because it's a daily
