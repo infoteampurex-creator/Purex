@@ -125,8 +125,8 @@ export function AdminHealthyStreakPanel({
           <AlertTriangle size={14} className="text-amber flex-shrink-0 mt-0.5" />
           <p className="text-amber leading-relaxed" style={{ fontSize: 13 }}>
             {noLogToday
-              ? `${clientName} hasn't logged today yet. WhatsApp nudge?`
-              : `${clientName} is below threshold today — ${weakest?.label} is the weak link.`}
+              ? `${capitalize(clientName)} hasn't logged today yet. WhatsApp nudge?`
+              : `${capitalize(clientName)} is below threshold today — ${weakest?.label} is the weak link.`}
           </p>
         </div>
       )}
@@ -386,7 +386,7 @@ function findWeakestComponent(
       label: 'Workout',
       score: breakdown.workout,
       weight: 25,
-      copy: 'Workout not completed today — biggest swing if she trains.',
+      copy: 'Workout not completed today — biggest swing if they train.',
     },
     {
       label: 'Steps',
@@ -417,4 +417,10 @@ function findWeakestComponent(
     .filter((c) => c.score < 70)
     .sort((a, b) => a.score * a.weight - b.score * b.weight);
   return ranked[0] ?? null;
+}
+
+/** Capitalise first character — defensive against lower-case names in DB. */
+function capitalize(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

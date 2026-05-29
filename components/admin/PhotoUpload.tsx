@@ -15,6 +15,8 @@ interface PhotoUploadProps {
     view: 'front' | 'side' | 'back';
   };
   label?: string;
+  /** Used as initials fallback when no photo uploaded (avatar mode). */
+  fallbackName?: string | null;
   onUploadComplete?: (path: string) => void;
   className?: string;
 }
@@ -36,6 +38,7 @@ export function PhotoUpload({
   currentUrl,
   progressMeta,
   label,
+  fallbackName,
   onUploadComplete,
   className,
 }: PhotoUploadProps) {
@@ -127,6 +130,18 @@ export function PhotoUpload({
           {displayUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={displayUrl} alt="Avatar" className="w-full h-full object-cover" />
+          ) : fallbackName ? (
+            <span
+              className="font-display font-black text-accent"
+              style={{ fontSize: 30, letterSpacing: '-0.02em' }}
+            >
+              {fallbackName
+                .split(/[\s.]+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((s) => s[0]?.toUpperCase())
+                .join('') || '?'}
+            </span>
           ) : (
             <Camera size={24} className="text-accent opacity-60" strokeWidth={1.5} />
           )}

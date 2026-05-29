@@ -46,6 +46,35 @@ function planSlugFromName(name: string | undefined): string | null {
   return FALLBACK_PROGRAMS.find((p) => p.name === name)?.slug ?? null;
 }
 
+/**
+ * Format a raw ISO timestamp like "2026-04-22T18:34:11.64315+00:00" as
+ * "Apr 22, 2026". Falls back gracefully when the input isn't a real date.
+ */
+function formatJoinedDate(raw: string | null | undefined): string {
+  if (!raw) return '—';
+  const dt = new Date(raw);
+  if (isNaN(dt.getTime())) return raw; // last resort — show whatever was there
+  return dt.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Title-case a name like "vishnu vardhan" → "Vishnu Vardhan".
+ * Defensive — DB may store all-lower-case from a signup form.
+ */
+function titleCase(name: string | null | undefined): string {
+  if (!name) return '';
+  return name
+    .split(/\s+/)
+    .map((part) =>
+      part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part
+    )
+    .join(' ');
+}
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -120,13 +149,14 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
               clientId={client.id}
               mode="avatar"
               currentUrl={client.avatarUrl}
+              fallbackName={client.fullName}
             />
 
             {/* Info */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-display font-semibold text-2xl tracking-tight">
-                  {client.fullName}
+                  {titleCase(client.fullName)}
                 </h1>
                 <ClientStatusPill status={client.status} />
               </div>
@@ -150,7 +180,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
                 )}
                 <span className="inline-flex items-center gap-1 font-mono">
                   <Calendar size={11} />
-                  Joined {client.joinedAt}
+                  Joined {formatJoinedDate(client.joinedAt)}
                 </span>
               </div>
 
