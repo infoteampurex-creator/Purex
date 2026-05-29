@@ -131,24 +131,12 @@ export function DesktopSidebar() {
         })}
       </nav>
 
-      {/* Bottom quick CTA + sign out */}
-      <div className="p-3 lg:p-4 border-t border-border space-y-2">
-        <Link
-          href="/book"
-          className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-br from-accent/15 to-accent/5 border border-accent/30 hover:border-accent/60 transition-all"
-        >
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-bg font-display font-black text-xs flex-shrink-0 mx-auto lg:mx-0">
-            +
-          </div>
-          <div className="hidden lg:block min-w-0">
-            <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-accent font-bold">
-              Quick
-            </div>
-            <div className="text-sm font-medium truncate">Book a specialist</div>
-          </div>
-        </Link>
-
-        {/* Sign out */}
+      {/* Sign out (the "Book a specialist" quick CTA was removed per
+          product decision — Bookings is no longer surfaced in the
+          primary menu. Direct booking still works at /book and
+          /book/[expertSlug] for users who land there from emails or
+          a coach's share link.) */}
+      <div className="p-3 lg:p-4 border-t border-border">
         <SignOutSidebarButton />
       </div>
     </aside>
