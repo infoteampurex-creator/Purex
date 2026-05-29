@@ -149,7 +149,13 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath('/', 'layout');
-  redirect('/');
+  // Land on /login rather than the marketing home. The Capacitor app
+  // runs in hosted mode pointed at teampurex.com — landing signed-out
+  // users on the marketing pitch is jarring inside an app. /login is
+  // also the friendlier default on the web (signed-out usually means
+  // "I want to log back in soon"), and the rest of the auth flow
+  // (forgot/reset password links) reads naturally from there.
+  redirect('/login');
 }
 
 export async function requestPasswordReset(
