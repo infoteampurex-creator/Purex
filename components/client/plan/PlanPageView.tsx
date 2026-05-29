@@ -340,11 +340,18 @@ function WeekDayCell({
     .slice(0, 1);
   const dayNum = dt.getDate();
 
+  // Tappable wrapper — every day links into the dashboard with that date
+  // selected, where the TodaysPlanCard renders the full exercise list.
+  // Rest days link too so clients can confirm "yep, nothing for today."
+  const href = `/client/dashboard?date=${date}`;
+
   if (workouts.length === 0) {
     return (
-      <div
+      <Link
+        href={href}
+        prefetch={false}
         title={`${dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · rest`}
-        className="aspect-[2/3] rounded-md border flex flex-col items-center justify-center gap-0.5"
+        className="aspect-[2/3] rounded-md border flex flex-col items-center justify-center gap-0.5 transition-colors hover:bg-white/[0.05] active:opacity-80"
         style={{
           background: 'rgba(255,255,255,0.02)',
           borderColor: isToday
@@ -367,7 +374,7 @@ function WeekDayCell({
         <span style={{ fontSize: 14 }} aria-hidden>
           💤
         </span>
-      </div>
+      </Link>
     );
   }
 
@@ -377,9 +384,11 @@ function WeekDayCell({
   const allDone = workouts.every((w) => w.completed);
 
   return (
-    <div
+    <Link
+      href={href}
+      prefetch={false}
       title={`${dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${workouts.map((w) => w.name).join(', ')}`}
-      className="aspect-[2/3] rounded-md border flex flex-col items-center justify-center gap-0.5 relative"
+      className="aspect-[2/3] rounded-md border flex flex-col items-center justify-center gap-0.5 relative transition-transform hover:scale-[1.04] active:scale-100"
       style={{
         background: allDone ? `${meta.color}22` : `${meta.color}0E`,
         borderColor: isToday ? `${meta.color}` : `${meta.color}55`,
@@ -408,7 +417,7 @@ function WeekDayCell({
           <Check size={8} strokeWidth={3} />
         </span>
       )}
-    </div>
+    </Link>
   );
 }
 
@@ -481,14 +490,16 @@ function CalendarHeatGrid({ data }: { data: PlanData }) {
         const isToday = date === data.todayIso;
         const meta = primary ? CATEGORY_META[primary.category] : null;
         return (
-          <div
+          <Link
             key={date}
+            href={`/client/dashboard?date=${date}`}
+            prefetch={false}
             title={
               primary
                 ? `${dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${primary.name} ${completed ? '· done' : '· pending'}`
                 : `${dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · rest`
             }
-            className="aspect-square rounded-md border flex flex-col items-center justify-center gap-0.5"
+            className="aspect-square rounded-md border flex flex-col items-center justify-center gap-0.5 transition-transform hover:scale-[1.06] active:scale-100"
             style={{
               background: meta
                 ? completed
@@ -517,7 +528,7 @@ function CalendarHeatGrid({ data }: { data: PlanData }) {
               </span>
             )}
             {idx < 0 && <></>}
-          </div>
+          </Link>
         );
       })}
     </div>

@@ -56,6 +56,7 @@ function shiftDate(yyyymmdd: string, days: number): string {
 function formatHeading(date: string, today: string): string {
   if (date === today) return "Today's Mission";
   if (date === shiftDate(today, -1)) return "Yesterday's Mission";
+  if (date === shiftDate(today, 1)) return "Tomorrow's Plan";
   const [y, m, d] = date.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   return dt.toLocaleDateString('en-GB', {
@@ -119,7 +120,13 @@ export function TodaysPlanCard({
   const isToday = selectedDate === today;
   const prevDate = shiftDate(selectedDate, -1);
   const nextDate = shiftDate(selectedDate, 1);
-  const canGoNext = nextDate <= today;
+  // Allow stepping forward up to 13 days ahead — matches the window the
+  // coach's weekly schedule materialises (4 weeks default, but we keep
+  // ~2 weeks visible to avoid letting clients wander far into a plan
+  // that could still change). Future preview lets them prep tomorrow's
+  // session, but they still can't LOG actuals for future dates.
+  const maxFutureDate = shiftDate(today, 13);
+  const canGoNext = nextDate <= maxFutureDate;
   const heading = formatHeading(selectedDate, today);
 
   const hasAnyPlan =
