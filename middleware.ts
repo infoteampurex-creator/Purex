@@ -49,16 +49,37 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Gate /client routes behind admin approval. Users with status =
-  // 'pending_approval' or 'rejected' get bounced to /pending-approval
-  // (top-level route, not under /client, so the gate doesn't recurse).
+  // Gate /client routes. Two redirects happen here:
+  //
+  //   1. ADMIN BLOCK — admins / super_admins should never see the
+  //      client app surface. Their workflow is fully under /admin/*.
+  //      If an admin lands on any /client/* path (via a stale link,
+  //      manual URL, or post-login leftover), we bounce them to
+  //      /admin/dashboard. Per user direction: "I don't want client
+  //      view in admin." Coaches preview a client's data from the
+  //      admin panel's client detail page, not by switching roles.
+  //
+  //   2. PENDING-APPROVAL BLOCK — regular users with signup_status
+  //      != 'approved' get bounced to /pending-approval (a top-level
+  //      route outside /client so the gate doesn't recurse).
   if (pathname.startsWith('/client') && user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('signup_status')
+      .select('signup_status, role')
       .eq('id', user.id)
       .single();
 
+    // (1) Admin block
+    if (
+      profile &&
+      (profile.role === 'admin' || profile.role === 'super_admin')
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/dashboard';
+      return NextResponse.redirect(url);
+    }
+
+    // (2) Pending-approval block
     if (profile && profile.signup_status !== 'approved') {
       const url = request.nextUrl.clone();
       url.pathname = '/pending-approval';

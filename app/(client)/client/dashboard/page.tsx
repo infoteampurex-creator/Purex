@@ -1,7 +1,10 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
-import { AdminSwitcher } from '@/components/client/AdminSwitcher';
+// AdminSwitcher removed — middleware now redirects admins away from
+// /client/* entirely, so the "Switch to admin panel" banner can never
+// render. Coaches use /admin for everything; they preview client data
+// from the client-detail page, not by visiting /client routes.
 import { CommitmentWidget } from '@/components/client/CommitmentWidget';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
@@ -176,8 +179,6 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6 md:space-y-7">
-      <AdminSwitcher />
-
       <WelcomeHeader />
 
       {/* ─── PureX Score (hero) — single 0-100 number with breakdown
