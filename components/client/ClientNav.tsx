@@ -2,20 +2,23 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Dumbbell, Apple, LineChart, Calendar, User, LogOut } from 'lucide-react';
+import { Home, Dumbbell, Apple, LineChart, HeartPulse, User, LogOut } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import { cn } from '@/lib/cn';
 import { signOut as signOutAction } from '@/lib/actions/auth';
 
-// 6 tabs. Order matters — Nutrition sits between Plan and Progress
-// because all three are training-adjacent daily actions. Bookings
-// stays as the lower-frequency item closer to Profile.
+// 6 tabs. Bookings dropped from primary nav (low-frequency action;
+// still reachable via /book and from Profile). Health takes its slot
+// — the daily-action surface for the user's body data: measurements,
+// lab reports, vitals, mood pattern, conditions. Ordering puts the
+// 3 daily-tracking surfaces (Nutrition / Progress / Health) together
+// after Plan.
 const navItems = [
   { href: '/client/dashboard', label: 'Home',      icon: Home },
   { href: '/client/plan',      label: 'Plan',      icon: Dumbbell },
   { href: '/client/nutrition', label: 'Nutrition', icon: Apple },
   { href: '/client/progress',  label: 'Progress',  icon: LineChart },
-  { href: '/client/bookings',  label: 'Bookings',  icon: Calendar },
+  { href: '/client/health',    label: 'Health',    icon: HeartPulse },
   { href: '/client/profile',   label: 'Profile',   icon: User },
 ];
 

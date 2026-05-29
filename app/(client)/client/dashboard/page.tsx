@@ -1,6 +1,5 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
-import { BodyMeasurementsCard } from '@/components/client/dashboard/BodyMeasurementsCard';
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { AdminSwitcher } from '@/components/client/AdminSwitcher';
 import { CommitmentWidget } from '@/components/client/CommitmentWidget';
@@ -13,9 +12,6 @@ import { computePureXScore } from '@/lib/data/purex-score';
 import { MoodCheckInCard } from '@/components/client/dashboard/MoodCheckInCard';
 import type { MoodState } from '@/lib/data/mood';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
-import { HealthPassportCard } from '@/components/client/dashboard/HealthPassportCard';
-import { getMyHealthReports } from '@/lib/actions/health-reports';
-import type { HealthReport } from '@/lib/data/health-reports';
 import { getMockClientPact } from '@/lib/data/commitment';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
@@ -92,38 +88,29 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   let latestMeasurements: BodyMeasurements | null = null;
   let bodySettings: ProfileBodySettings = EMPTY_PROFILE_BODY_SETTINGS;
   let todaysMood: MoodState | null = null;
-  let healthReports: HealthReport[] = [];
   if (userId) {
-    const [
-      inputsResult,
-      history,
-      meals,
-      meas,
-      bodyProfile,
-      moodRow,
-      reports,
-    ] = await Promise.all([
-      getTwinDailyInputs(userId, today),
-      getStreakHistory(userId, 7),
-      getTodaysMeals(userId, today),
-      getLatestMeasurements(userId),
-      getProfileBodySettings(userId),
-      // Fetch today's mood_state directly from client_daily_logs —
-      // small enough query that adding it to getTwinDailyInputs would
-      // bloat that function's selected columns. Returns null if no
-      // log row yet OR mood not set.
-      (async () => {
-        const sb = await createSupabaseClient();
-        const { data } = await sb
-          .from('client_daily_logs')
-          .select('mood_state')
-          .eq('client_id', userId)
-          .eq('log_date', today)
-          .maybeSingle();
-        return (data?.mood_state ?? null) as MoodState | null;
-      })(),
-      getMyHealthReports(),
-    ]);
+    const [inputsResult, history, meals, meas, bodyProfile, moodRow] =
+      await Promise.all([
+        getTwinDailyInputs(userId, today),
+        getStreakHistory(userId, 7),
+        getTodaysMeals(userId, today),
+        getLatestMeasurements(userId),
+        getProfileBodySettings(userId),
+        // Fetch today's mood_state directly from client_daily_logs —
+        // small enough query that adding it to getTwinDailyInputs would
+        // bloat that function's selected columns. Returns null if no
+        // log row yet OR mood not set.
+        (async () => {
+          const sb = await createSupabaseClient();
+          const { data } = await sb
+            .from('client_daily_logs')
+            .select('mood_state')
+            .eq('client_id', userId)
+            .eq('log_date', today)
+            .maybeSingle();
+          return (data?.mood_state ?? null) as MoodState | null;
+        })(),
+      ]);
     twinInputs = inputsResult.inputs;
     streakHistory = history;
     nutritionSnapshot = inputsResult.nutrition;
@@ -131,7 +118,6 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     latestMeasurements = meas;
     bodySettings = bodyProfile;
     todaysMood = moodRow;
-    healthReports = reports;
   }
   const twinStats = deriveTwinStats(twinInputs);
   const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
@@ -201,13 +187,9 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         todaysMeals={todaysMeals}
       />
 
-      {/* Body measurements — Phase 1 foundation for the parametric
-          live-Twin avatar planned for Phase 2. App-only (returns
-          null on web). */}
-      <BodyMeasurementsCard
-        latest={latestMeasurements}
-        profileSettings={bodySettings}
-      />
+      {/* BodyMeasurementsCard moved to /client/health — single source
+          of truth for body data. Still imported here only because it
+          drives twinProportions for the TwinSection below. */}
 
       {userId && (
         <TodaysPlanCard
@@ -242,11 +224,10 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
       <CommitmentWidget pact={pact} />
 
-      {/* ─── Health Passport — upload-only Phase 1 (data custodian
-          + coach review). Sits between Commitment and Task list so
-          it gets visible placement without competing with the daily
-          scoring/mission stack at the top of the dashboard. */}
-      {userId && <HealthPassportCard initialReports={healthReports} />}
+      {/* HealthPassportCard + BodyMeasurementsCard moved to
+          /client/health (Health tab in bottom nav). The dashboard
+          now stays focused on "today's actions" while Health is
+          "your body's data." */}
 
       {/* ScoreWidget removed — PureXScoreCard at the top of the
           dashboard now serves as the single hero score. Keeping both
