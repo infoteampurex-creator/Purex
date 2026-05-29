@@ -15,6 +15,8 @@ import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import { HealthConditionsEditor } from '@/components/admin/HealthConditionsEditor';
 import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
+import { HealthReportReview } from '@/components/admin/HealthReportReview';
+import { getReportsForClient } from '@/lib/actions/health-reports';
 import { AdminHealthyStreakPanel } from '@/components/admin/AdminHealthyStreakPanel';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import {
@@ -65,6 +67,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     twinInputsResult,
     streakHistory,
     healthConditions,
+    clientReports,
   ] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
@@ -75,6 +78,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getTwinDailyInputs(client.id, today),
     getStreakHistory(client.id, 30),
     getHealthConditionsForClient(client.id),
+    getReportsForClient(client.id),
   ]);
 
   // Slim down library entries to what the EditDailyPlanModal actually
@@ -233,6 +237,12 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
           clientId={client.id}
           initial={healthConditions}
         />
+      </div>
+
+      {/* Lab report review — coach adds notes to client uploads.
+          Notes appear on the client's Health tab. */}
+      <div className="mt-6">
+        <HealthReportReview reports={clientReports} />
       </div>
     </>
   );

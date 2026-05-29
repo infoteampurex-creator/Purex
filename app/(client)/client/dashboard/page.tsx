@@ -12,6 +12,8 @@ import { computePureXScore } from '@/lib/data/purex-score';
 import { MoodCheckInCard } from '@/components/client/dashboard/MoodCheckInCard';
 import type { MoodState } from '@/lib/data/mood';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { SmartAlertsCard } from '@/components/client/dashboard/SmartAlertsCard';
+import { computeSmartAlerts } from '@/lib/data/smart-alerts';
 import { getMockClientPact } from '@/lib/data/commitment';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
@@ -154,6 +156,24 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   const pureXScore = computePureXScore(twinInputs, currentStreakDays);
   const pureXScoreEmpty = !userId || pureXScore.isEmpty;
 
+  // ─── Smart Alerts — derived from current inputs + recent history.
+  // Server-side compute so the dashboard initial render already has
+  // the alerts (no client-side flash). currentHour uses IST since
+  // the existing twin-server already keys off IST today.
+  const recentScores = streakHistory
+    .filter((h) => h.hasData)
+    .map((h) => h.score)
+    .reverse(); // oldest → newest for trend math
+  const smartAlerts = userId
+    ? computeSmartAlerts({
+        inputs: twinInputs,
+        recentScores,
+        workouts7d: twinInputs.workoutsLast7,
+        moodToday: todaysMood,
+        currentHour: new Date().getHours(),
+      })
+    : [];
+
   return (
     <div className="space-y-6 md:space-y-7">
       <AdminSwitcher />
@@ -171,6 +191,15 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           recommendation. Only shown when signed in (no point on a
           signed-out preview). */}
       {userId && <MoodCheckInCard current={todaysMood} />}
+
+      {/* ─── Smart Alerts — context-aware nudges (dehydration, low
+          sleep, missed workout, streak save, etc). Computed server-
+          side from current inputs + recent history so the first
+          render already has the alerts (no client-side flash).
+          Only shown when there's at least one active alert. */}
+      {userId && smartAlerts.length > 0 && (
+        <SmartAlertsCard alerts={smartAlerts} />
+      )}
 
       {/* Health Connect auto-sync card — app-only (returns null on
           web, and dynamic-imported so the plugin's JS never lands in

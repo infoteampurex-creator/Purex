@@ -257,6 +257,120 @@ export async function deleteHealthReport(
   }
 }
 
+// ─── Coach review note (admin-only) ──────────────────────────────
+
+export type CoachReviewResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Admin/coach writes (or updates) the review note on a report. Uses
+ * the existing client_health_reports.coach_review_note column. Sets
+ * coach_reviewed_at + coach_reviewed_by automatically.
+ *
+ * Pass `note: ''` to clear an existing review note. (We treat empty
+ * string as "no note" — the column itself becomes null.)
+ *
+ * Auth: requires admin/super_admin role. Non-admins are rejected
+ * via RLS but we add a friendly check here too for error UX.
+ */
+export async function setCoachReviewNote(input: {
+  reportId: string;
+  note: string;
+}): Promise<CoachReviewResult> {
+  if (!input.reportId || typeof input.reportId !== 'string') {
+    return { ok: false, error: 'Invalid report id' };
+  }
+  const note = (input.note ?? '').trim();
+  if (note.length > 4000) {
+    return { ok: false, error: 'Note is too long (4000 chars max)' };
+  }
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: 'Not signed in' };
+
+    // Role check for friendly error (RLS also enforces)
+    const { data: roleRow } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+    const role = roleRow?.role ?? 'user';
+    if (role !== 'admin' && role !== 'super_admin') {
+      return { ok: false, error: 'Only coaches can review reports.' };
+    }
+
+    const { data: row, error } = await supabase
+      .from('client_health_reports')
+      .update({
+        coach_review_note: note === '' ? null : note,
+        coach_reviewed_at: note === '' ? null : new Date().toISOString(),
+        coach_reviewed_by: note === '' ? null : user.id,
+      })
+      .eq('id', input.reportId)
+      .select('client_id')
+      .single();
+
+    if (error || !row) {
+      return { ok: false, error: error?.message ?? 'Report not found' };
+    }
+
+    revalidatePath('/client/dashboard');
+    revalidatePath('/client/health');
+    revalidatePath(`/admin/clients/${row.client_id}`);
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Update failed',
+    };
+  }
+}
+
+/**
+ * Server-side: list a specific client's reports for the admin/coach
+ * view. RLS allows admins to read any client's reports.
+ */
+export async function getReportsForClient(
+  clientId: string
+): Promise<HealthReport[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('client_health_reports')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('uploaded_at', { ascending: false });
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('[getReportsForClient] failed', error);
+      return [];
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      clientId: row.client_id,
+      storagePath: row.storage_path,
+      originalFilename: row.original_filename,
+      mimeType: row.mime_type,
+      fileSizeBytes: row.file_size_bytes,
+      reportLabel: row.report_label,
+      reportDate: row.report_date,
+      coachReviewNote: row.coach_review_note,
+      coachReviewedAt: row.coach_reviewed_at,
+      coachReviewedBy: row.coach_reviewed_by,
+      uploadedAt: row.uploaded_at,
+    }));
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[getReportsForClient] threw', err);
+    return [];
+  }
+}
+
 // ─── Signed URL for viewing ─────────────────────────────────────
 
 /**

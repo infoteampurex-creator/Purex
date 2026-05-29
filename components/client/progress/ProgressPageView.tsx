@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { TrendLineChart } from './TrendLineChart';
 import { ConsistencyRing } from './ConsistencyRing';
+import { TransformationTimeline } from './TransformationTimeline';
 import {
   transformationScore,
   weightDelta,
@@ -312,6 +313,9 @@ export function ProgressPageView({ data, strengthPRs }: Props) {
           />
         </div>
       </section>
+
+      {/* ─── Transformation Timeline ─── */}
+      <TransformationTimeline data={data} />
     </div>
   );
 }
