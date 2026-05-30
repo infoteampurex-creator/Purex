@@ -12,11 +12,15 @@ import {
   AlertTriangle,
   Eye,
   Sparkles,
+  RefreshCw,
+  Check,
+  Clock,
 } from 'lucide-react';
 import {
   uploadHealthReport,
   deleteHealthReport,
   getReportViewUrl,
+  retryHealthReportExtraction,
 } from '@/lib/actions/health-reports';
 import {
   HEALTH_PASSPORT_DISCLAIMER,
@@ -57,7 +61,26 @@ export function HealthPassportCard({ initialReports }: Props) {
   const [reportLabel, setReportLabel] = useState('');
   const [reportDate, setReportDate] = useState('');
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // ─── Retry extraction ──────────────────────────────────────────
+
+  const handleRetry = async (report: HealthReport) => {
+    if (retryingId) return;
+    setRetryingId(report.id);
+    try {
+      const res = await retryHealthReportExtraction(report.id);
+      if (res.ok) {
+        setReports((prev) =>
+          prev.map((r) => (r.id === report.id ? res.report : r))
+        );
+        router.refresh();
+      }
+    } finally {
+      setRetryingId(null);
+    }
+  };
   const [busy, setBusy] = useState(false);
 
   // ─── File pick → show metadata form before upload ──────────────
@@ -332,7 +355,7 @@ export function HealthPassportCard({ initialReports }: Props) {
                     }}
                   >
                     <Upload size={11} />
-                    {busy ? 'Uploading…' : 'Upload'}
+                    {busy ? 'Uploading & reading…' : 'Upload'}
                   </button>
                   <button
                     type="button"
@@ -390,6 +413,12 @@ export function HealthPassportCard({ initialReports }: Props) {
                     year: 'numeric',
                   })}
                 </div>
+                {/* Extraction status pill + re-extract control */}
+                <ExtractionStatusRow
+                  report={r}
+                  retrying={retryingId === r.id}
+                  onRetry={() => handleRetry(r)}
+                />
                 {r.coachReviewNote && (
                   <div
                     className="mt-2 rounded-md px-2 py-1.5"
@@ -451,6 +480,156 @@ export function HealthPassportCard({ initialReports }: Props) {
     </div>
   );
 }
+
+// ─── ExtractionStatusRow ─────────────────────────────────────────
+//
+// Inline mini-row inside each report card. Shows current extraction
+// state (Extracting / Extracted / Failed / Skipped / Pending), the
+// 1-line summary when extraction finished, and a Re-extract button
+// for stuck / failed / skipped reports.
+//
+// Treats reports that have been in 'processing' or 'pending' for more
+// than 90 seconds as STALE — Vercel killed the background job — and
+// offers a retry. Without this clients see "Reading…" forever and
+// assume the feature is broken.
+
+function ExtractionStatusRow({
+  report,
+  retrying,
+  onRetry,
+}: {
+  report: HealthReport;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
+  const status = report.extractionStatus;
+  const isStaleProcessing = (() => {
+    if (status !== 'processing' && status !== 'pending') return false;
+    // Stale if more than 90s since extracted_at OR uploaded_at
+    const last = report.extractedAt ?? report.uploadedAt;
+    const ageMs = Date.now() - new Date(last).getTime();
+    return ageMs > 90 * 1000;
+  })();
+
+  const effectiveStatus: typeof status | 'stale' = isStaleProcessing
+    ? 'stale'
+    : status;
+
+  const meta = STATUS_META[effectiveStatus] ?? STATUS_META.pending;
+  const canRetry = ['failed', 'skipped', 'stale'].includes(effectiveStatus);
+
+  // When extraction is done, show the readable summary; otherwise
+  // show the static status label.
+  const label =
+    effectiveStatus === 'done' && report.extractedSummary
+      ? report.extractedSummary
+      : meta.label;
+
+  return (
+    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+      <span
+        className="inline-flex items-center gap-1 font-mono uppercase tracking-[0.14em] font-bold rounded-full px-1.5 py-0.5"
+        style={{
+          fontSize: 9,
+          color: meta.color,
+          background: meta.bg,
+          border: '1px solid ' + meta.border,
+        }}
+      >
+        <span
+          className={meta.spin ? 'animate-spin inline-flex' : 'inline-flex'}
+        >
+          {meta.icon}
+        </span>
+        {label}
+      </span>
+      {report.extractionError && effectiveStatus === 'failed' && (
+        <span
+          style={{
+            fontSize: 10,
+            color: 'rgba(255,153,153,0.70)',
+          }}
+        >
+          {report.extractionError.slice(0, 80)}
+        </span>
+      )}
+      {canRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          disabled={retrying}
+          className="inline-flex items-center gap-1 font-mono uppercase tracking-[0.14em] font-bold transition-opacity hover:opacity-80 disabled:opacity-50"
+          style={{
+            fontSize: 9,
+            color: '#7dd3ff',
+          }}
+        >
+          <RefreshCw
+            size={10}
+            className={retrying ? 'animate-spin' : ''}
+          />
+          {retrying ? 'Re-reading…' : 'Re-extract'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+const STATUS_META: Record<
+  string,
+  {
+    label: string;
+    icon: React.ReactNode;
+    color: string;
+    bg: string;
+    border: string;
+    spin?: boolean;
+  }
+> = {
+  done: {
+    label: 'Extracted',
+    icon: <Check size={9} strokeWidth={3} />,
+    color: '#c6ff3d',
+    bg: 'rgba(198,255,61,0.08)',
+    border: 'rgba(198,255,61,0.25)',
+  },
+  processing: {
+    label: 'Reading…',
+    icon: <RefreshCw size={9} />,
+    color: '#7dd3ff',
+    bg: 'rgba(125,211,255,0.08)',
+    border: 'rgba(125,211,255,0.25)',
+    spin: true,
+  },
+  pending: {
+    label: 'Queued',
+    icon: <Clock size={9} />,
+    color: '#7dd3ff',
+    bg: 'rgba(125,211,255,0.08)',
+    border: 'rgba(125,211,255,0.25)',
+  },
+  stale: {
+    label: 'Stalled',
+    icon: <AlertTriangle size={9} />,
+    color: '#ffb84d',
+    bg: 'rgba(255,184,77,0.08)',
+    border: 'rgba(255,184,77,0.30)',
+  },
+  failed: {
+    label: 'Failed',
+    icon: <AlertTriangle size={9} />,
+    color: '#ff9999',
+    bg: 'rgba(255,107,107,0.08)',
+    border: 'rgba(255,107,107,0.30)',
+  },
+  skipped: {
+    label: 'Skipped',
+    icon: <AlertTriangle size={9} />,
+    color: 'rgba(255,255,255,0.55)',
+    bg: 'rgba(255,255,255,0.04)',
+    border: 'rgba(255,255,255,0.15)',
+  },
+};
 
 // ─── Helpers ──────────────────────────────────────────────────
 

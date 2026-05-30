@@ -83,9 +83,16 @@ export function ExtractedMarkersCard({ reports }: Props) {
   const { latest, processing, hasAny } = useMemo(() => {
     const map = new Map<string, LatestMarker>();
     let processing = 0;
+    const now = Date.now();
     for (const r of reports) {
       if (r.extractionStatus === 'processing' || r.extractionStatus === 'pending') {
-        processing++;
+        // Stale gate: a report sitting in 'processing' for >90s is
+        // almost certainly a Vercel-killed background job, not a
+        // live extraction. Don't show "Reading…" forever — let the
+        // HealthPassportCard surface the retry button instead.
+        const lastTouch = r.extractedAt ?? r.uploadedAt;
+        const ageMs = now - new Date(lastTouch).getTime();
+        if (ageMs <= 90 * 1000) processing++;
       }
       if (r.extractionStatus !== 'done' || !r.extractedData) continue;
       for (const m of r.extractedData.markers) {

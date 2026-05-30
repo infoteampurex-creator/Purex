@@ -52,6 +52,11 @@ import {
   type BodyProportions,
 } from '@/lib/data/body-proportions';
 
+// Bump serverless timeout — the dashboard can host health-report
+// uploads via HealthPassportCard, and Gemini extraction runs inline
+// inside the upload action. 60s gives multi-page PDFs room to finish.
+export const maxDuration = 60;
+
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
 }

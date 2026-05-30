@@ -18,6 +18,11 @@ export const metadata = {
   title: 'PureX Health · Body data, reports, conditions',
 };
 export const dynamic = 'force-dynamic';
+// Gemini vision on a multi-page PDF can run 15-30 seconds; default
+// 10s serverless timeout would always race the response. 60s ceiling
+// for Vercel Pro. Applies to all server actions invoked from this
+// page (uploadHealthReport, retryHealthReportExtraction).
+export const maxDuration = 60;
 
 /**
  * Top-level Health page — the user's body-data hub.

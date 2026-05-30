@@ -6,6 +6,14 @@ import { createClient } from '@/lib/supabase/server';
 import type { HealthReport } from '@/lib/data/health-reports';
 import { extractHealthReport } from './extract-health-report';
 
+// NOTE on maxDuration: server-action files marked 'use server' can
+// only export async functions, so the timeout config must live on
+// the pages/routes that USE these actions:
+//   - app/(client)/client/health/page.tsx
+//   - app/(client)/client/dashboard/page.tsx
+// Both set `export const maxDuration = 60` so Gemini has room to run
+// (15-30s typical for a multi-page PDF).
+
 // ─── Validation ─────────────────────────────────────────────────
 
 const ALLOWED_MIME = new Set([
@@ -157,25 +165,86 @@ export async function uploadHealthReport(
     revalidatePath('/client/dashboard');
     revalidatePath('/client/profile');
 
-    // ─── Fire-and-forget AI extraction ─────────────────────────
-    // We deliberately don't await this. Gemini can take 10+ seconds
-    // for a multi-page PDF, and we don't want the upload flow to
-    // block. If extraction fails or AI is unconfigured the report
-    // row still has the file — user keeps everything they uploaded.
-    // The extraction status surfaces in the UI ("Extracting…" pill).
-    extractHealthReport(row.id).catch((err) => {
+    // ─── Synchronous AI extraction ──────────────────────────────
+    // We tried fire-and-forget first; Vercel kills background
+    // promises shortly after the request returns, so extractions
+    // sat in 'pending' forever. Awaiting keeps the request alive
+    // until Gemini responds — the user sees a slightly longer
+    // "Uploading…" spinner but the report appears with markers
+    // already populated. Failures are non-fatal: the file + row
+    // exist regardless, and the user can hit Re-extract from the UI.
+    try {
+      await extractHealthReport(row.id);
+    } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn('[health-reports] background extraction threw', err);
-    });
+      console.warn('[health-reports] inline extraction threw', err);
+      // Swallow — upload itself succeeded.
+    }
+
+    // Re-fetch the row so we return the post-extraction state to the
+    // client (markers available immediately on the Health page).
+    const { data: finalRow } = await supabase
+      .from('client_health_reports')
+      .select('*')
+      .eq('id', row.id)
+      .maybeSingle();
+
+    revalidatePath('/client/health');
 
     return {
       ok: true,
-      report: mapRowToReport(row),
+      report: mapRowToReport((finalRow as HealthReportRow) ?? (row as HealthReportRow)),
     };
   } catch (err) {
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Upload failed',
+    };
+  }
+}
+
+// ─── Retry extraction ───────────────────────────────────────────
+
+export type RetryExtractionResult =
+  | { ok: true; report: HealthReport }
+  | { ok: false; error: string };
+
+/**
+ * Re-run Gemini extraction on a report that's currently stuck in
+ * 'pending' / 'processing' / 'failed' / 'skipped'. Manual trigger
+ * surfaced as a button on the report row in HealthPassportCard.
+ *
+ * Useful for:
+ *   - Reports uploaded before the inline-extraction fix landed
+ *   - Failed extractions the user wants to retry (poor scan)
+ *   - Re-extracting after the AI key was added
+ */
+export async function retryHealthReportExtraction(
+  reportId: string
+): Promise<RetryExtractionResult> {
+  if (!reportId || typeof reportId !== 'string') {
+    return { ok: false, error: 'Invalid report id' };
+  }
+
+  try {
+    await extractHealthReport(reportId);
+    const supabase = await createClient();
+    const { data: row } = await supabase
+      .from('client_health_reports')
+      .select('*')
+      .eq('id', reportId)
+      .maybeSingle();
+    if (!row) return { ok: false, error: 'Report not found' };
+
+    revalidatePath('/client/health');
+    revalidatePath('/client/dashboard');
+    revalidatePath(`/admin/clients/${(row as HealthReportRow).client_id}`);
+
+    return { ok: true, report: mapRowToReport(row as HealthReportRow) };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Re-extract failed',
     };
   }
 }

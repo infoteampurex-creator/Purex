@@ -5,6 +5,11 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
+// NOTE on maxDuration: this is a 'use server' file, so config exports
+// like `maxDuration` can't live here. They go on the calling page
+// (app/(client)/client/health/page.tsx, dashboard page) so Gemini
+// has 60s instead of the default 10s for a multi-page PDF.
+
 // ─── Gemini config ──────────────────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `You are a medical lab report analyst.
