@@ -61,7 +61,7 @@ export function Nav() {
             >
               Sign in
             </Link>
-            <Link href="/book" className="hidden md:inline-flex">
+            <Link href="/apply" className="hidden md:inline-flex">
               <Button variant="primary" size="sm">
                 Get Started
               </Button>
@@ -115,7 +115,7 @@ export function Nav() {
               >
                 Already a member? Sign in
               </Link>
-              <Link href="/book" onClick={() => setDrawerOpen(false)}>
+              <Link href="/apply" onClick={() => setDrawerOpen(false)}>
                 <Button variant="primary" size="lg" className="w-full">
                   Get Started
                 </Button>

@@ -14,6 +14,7 @@ import {
   Library,
   Footprints,
   Stethoscope,
+  ClipboardList,
   LogOut,
   ExternalLink,
   Menu,
@@ -27,6 +28,7 @@ import { signOut as signOutAction } from '@/lib/actions/auth';
 // Full nav set — used by desktop sidebar + the "More" sheet on mobile
 const navItems = [
   { href: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/applications', label: 'Applications', icon: ClipboardList },
   { href: '/admin/leads', label: 'Leads', icon: Inbox, badge: true },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { href: '/admin/clients', label: 'Clients', icon: Users },

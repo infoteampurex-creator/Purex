@@ -50,7 +50,7 @@ export function CtaBand() {
           Book a free 30-minute discovery call. No pressure. No commitment. Just a clear conversation about your goals and the right path forward.
         </p>
         <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-          <Link href="/book">
+          <Link href="/apply">
             <Button size="lg" className="w-full sm:w-auto min-w-[220px]">
               Book Free Discovery Call
               <ArrowRight size={18} />

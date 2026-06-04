@@ -43,7 +43,7 @@ export function TransformationGallery() {
         {/* Outro CTA */}
         <div className="mt-14 md:mt-20 flex items-center justify-center">
           <Link
-            href="/book"
+            href="/apply"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover transition-colors"
           >
             Start your journey
