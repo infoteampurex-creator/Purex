@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Mail, MessageCircle, Calendar, ExternalLink } from 'lucide-react';
 import { ApplicationActionsPanel } from '@/components/admin/ApplicationActionsPanel';
+import { CopyApplicationLink } from '@/components/admin/CopyApplicationLink';
 import {
   getAdminEnquiryById,
   getAssignableSpecialists,
@@ -138,10 +139,13 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
         </div>
 
         {/* Actions sidebar */}
-        <ApplicationActionsPanel
-          enquiry={enquiry}
-          specialists={specialists}
-        />
+        <div className="space-y-5 md:sticky md:top-24 self-start">
+          <ApplicationActionsPanel
+            enquiry={enquiry}
+            specialists={specialists}
+          />
+          <CopyApplicationLink enquiryId={enquiry.id} email={enquiry.email} />
+        </div>
       </div>
     </>
   );
