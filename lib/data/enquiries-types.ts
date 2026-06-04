@@ -91,7 +91,71 @@ export const NEXT_STEP_OPTIONS = [
 
 export type NextStep = (typeof NEXT_STEP_OPTIONS)[number]['value'];
 
+// ────────────────────────────────────────────────────────────────────
+// Form-B-style discovery options — admin captures these on the call.
+// Values match `lib/data/application-sections.ts` exactly so they're
+// portable if the visitor later self-fills Form B at /application.
+// ────────────────────────────────────────────────────────────────────
+
+export const GENDER_OPTIONS = [
+  { value: 'female',             label: 'Female' },
+  { value: 'male',               label: 'Male' },
+  { value: 'prefer_not_to_say',  label: 'Prefer not to say' },
+] as const;
+
+export type Gender = (typeof GENDER_OPTIONS)[number]['value'];
+
+export const FOOD_PREFERENCE_OPTIONS = [
+  { value: 'vegetarian',     label: 'Vegetarian' },
+  { value: 'eggetarian',     label: 'Eggetarian' },
+  { value: 'non_vegetarian', label: 'Non Vegetarian' },
+  { value: 'vegan',          label: 'Vegan' },
+] as const;
+
+export type FoodPreference = (typeof FOOD_PREFERENCE_OPTIONS)[number]['value'];
+
+export const WORKOUT_EXPERIENCE_OPTIONS = [
+  { value: 'beginner',     label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced',     label: 'Advanced' },
+] as const;
+
+export type WorkoutExperience = (typeof WORKOUT_EXPERIENCE_OPTIONS)[number]['value'];
+
+export const TRAINING_DAYS_OPTIONS = [
+  { value: '3', label: '3 days' },
+  { value: '4', label: '4 days' },
+  { value: '5', label: '5 days' },
+  { value: '6', label: '6 days' },
+] as const;
+
+export type TrainingDays = (typeof TRAINING_DAYS_OPTIONS)[number]['value'];
+
+export const COMMITMENT_DURATION_OPTIONS = [
+  { value: '3_months',   label: '3 months' },
+  { value: '6_months',   label: '6 months' },
+  { value: '12_months',  label: '12 months' },
+  { value: 'long_term',  label: 'Long-term lifestyle' },
+] as const;
+
+export type CommitmentDuration =
+  (typeof COMMITMENT_DURATION_OPTIONS)[number]['value'];
+
+export const MEDICAL_CONDITION_OPTIONS = [
+  { value: 'thyroid',         label: 'Thyroid' },
+  { value: 'pcos_pcod',       label: 'PCOS / PCOD' },
+  { value: 'blood_pressure',  label: 'Blood Pressure' },
+  { value: 'diabetes',        label: 'Diabetes / Blood Sugar' },
+  { value: 'knee_pain',       label: 'Knee Pain' },
+  { value: 'back_pain',       label: 'Back Pain' },
+  { value: 'asthma',          label: 'Asthma' },
+  { value: 'none',            label: 'None' },
+] as const;
+
+export type MedicalCondition = (typeof MEDICAL_CONDITION_OPTIONS)[number]['value'];
+
 export interface EnquiryAdminData {
+  // ── Sales / discovery ──────────────────────────────────────────
   temperature?: LeadTemperature;
   plan_discussed?: PlanDiscussed;
   pricing_discussed?: boolean;
@@ -100,7 +164,30 @@ export interface EnquiryAdminData {
   next_step?: NextStep;
   discovery_call_date?: string; // ISO date 'YYYY-MM-DD'
   follow_up_at?: string;        // ISO datetime
-  source_channel?: string;      // 'instagram' | 'referral' | 'google' | 'other' (free text for flexibility)
+  source_channel?: string;
+
+  // ── About the client (Google Form sections 1, 4) ───────────────
+  age?: number;
+  gender?: Gender;
+  occupation?: string;
+  city_country?: string;
+  height_cm?: number;
+  weight_kg?: number;
+
+  // ── Medical (Google Form section 5) ────────────────────────────
+  medical_conditions?: MedicalCondition[];
+  injuries_notes?: string;
+  energy_level?: number; // 1-10
+
+  // ── Habits + Training (Google Form sections 7, 8) ─────────────
+  food_preference?: FoodPreference;
+  currently_working_out?: boolean;
+  workout_experience?: WorkoutExperience;
+  gym_access?: boolean;
+  training_days_per_week?: TrainingDays;
+
+  // ── Commitment (Google Form section 3) ─────────────────────────
+  commitment_duration?: CommitmentDuration;
 }
 
 export interface AdminEnquiry {

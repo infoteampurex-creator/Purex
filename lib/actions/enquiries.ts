@@ -270,6 +270,7 @@ const onlyDigitsOpt = (v: string | null | undefined) =>
 
 const adminDataSchema = z
   .object({
+    // Sales / discovery
     temperature: z.enum(['cold', 'warm', 'hot']).optional(),
     plan_discussed: z
       .enum([
@@ -298,6 +299,48 @@ const adminDataSchema = z
     discovery_call_date: z.string().max(40).optional(),
     follow_up_at: z.string().max(40).optional(),
     source_channel: z.string().max(120).optional(),
+
+    // About the client
+    age: z.number().int().min(10).max(100).optional(),
+    gender: z.enum(['female', 'male', 'prefer_not_to_say']).optional(),
+    occupation: z.string().max(160).optional(),
+    city_country: z.string().max(160).optional(),
+    height_cm: z.number().min(80).max(250).optional(),
+    weight_kg: z.number().min(25).max(300).optional(),
+
+    // Medical
+    medical_conditions: z
+      .array(
+        z.enum([
+          'thyroid',
+          'pcos_pcod',
+          'blood_pressure',
+          'diabetes',
+          'knee_pain',
+          'back_pain',
+          'asthma',
+          'none',
+        ])
+      )
+      .optional(),
+    injuries_notes: z.string().max(2000).optional(),
+    energy_level: z.number().int().min(1).max(10).optional(),
+
+    // Habits + training
+    food_preference: z
+      .enum(['vegetarian', 'eggetarian', 'non_vegetarian', 'vegan'])
+      .optional(),
+    currently_working_out: z.boolean().optional(),
+    workout_experience: z
+      .enum(['beginner', 'intermediate', 'advanced'])
+      .optional(),
+    gym_access: z.boolean().optional(),
+    training_days_per_week: z.enum(['3', '4', '5', '6']).optional(),
+
+    // Commitment
+    commitment_duration: z
+      .enum(['3_months', '6_months', '12_months', 'long_term'])
+      .optional(),
   })
   .strict();
 
