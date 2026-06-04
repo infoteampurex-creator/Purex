@@ -12,6 +12,7 @@ import {
   Library,
   Footprints,
   Stethoscope,
+  ClipboardList,
   LogOut,
   ExternalLink,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { signOut as signOutAction } from '@/lib/actions/auth';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/applications', label: 'Applications', icon: ClipboardList },
   { href: '/admin/leads', label: 'Leads', icon: Inbox, badge: true },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { href: '/admin/clients', label: 'Clients', icon: Users },

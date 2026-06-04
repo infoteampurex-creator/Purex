@@ -90,7 +90,7 @@ export function Hero() {
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.45 }}
               className="flex flex-col sm:flex-row gap-3 sm:gap-4"
             >
-              <Link href="/book">
+              <Link href="/apply">
                 <Button size="lg" className="w-full sm:w-auto">
                   Start Your Transformation
                   <ArrowRight size={18} />

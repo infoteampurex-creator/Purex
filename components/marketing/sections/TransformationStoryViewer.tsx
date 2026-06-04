@@ -155,7 +155,7 @@ function StoryPanel({
                 Inspired? Your transformation starts with a conversation.
               </p>
               <a
-                href="/book"
+                href="/apply"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-bg font-semibold text-sm hover:bg-accent-hover transition-colors"
               >
                 Start now
