@@ -2,6 +2,7 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   type AdminEnquiry,
+  type EnquiryAdminData,
   type EnquiryStatus,
   type PrimaryGoal,
   type StartTiming,
@@ -23,12 +24,13 @@ interface EnquiryRow {
   created_at: string;
   contacted_at: string | null;
   converted_at: string | null;
+  admin_data: EnquiryAdminData | null;
 }
 
 const COLS =
   'id, full_name, whatsapp, email, primary_goal, start_timing, message, ' +
   'preferred_language, status, assigned_specialist_id, admin_notes, source, ' +
-  'created_at, contacted_at, converted_at';
+  'created_at, contacted_at, converted_at, admin_data';
 
 function rowToEnquiry(
   r: EnquiryRow,
@@ -53,6 +55,7 @@ function rowToEnquiry(
     createdAt: r.created_at,
     contactedAt: r.contacted_at,
     convertedAt: r.converted_at,
+    adminData: (r.admin_data ?? {}) as EnquiryAdminData,
   };
 }
 
