@@ -422,24 +422,70 @@ function FieldRenderer({
       return (
         <label className="block">
           {labelBlock}
-          <input
-            type="number"
-            inputMode="numeric"
-            value={(value as number | string) ?? ''}
-            onChange={(e) => {
-              const n = e.target.value === '' ? '' : Number(e.target.value);
-              onChange(n);
-            }}
-            min={field.min}
-            max={field.max}
-            placeholder={field.placeholder}
-            className={cn(base, 'max-w-[200px]')}
-            required={field.required}
-          />
+          <div className="relative inline-block max-w-[220px] w-full">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={(value as number | string) ?? ''}
+              onChange={(e) => {
+                const n = e.target.value === '' ? '' : Number(e.target.value);
+                onChange(n);
+              }}
+              min={field.min}
+              max={field.max}
+              placeholder={field.placeholder}
+              className={cn(base, field.suffix ? 'pr-12' : '')}
+              required={field.required}
+            />
+            {field.suffix && (
+              <span
+                aria-hidden
+                className="absolute inset-y-0 right-3 flex items-center font-mono text-xs uppercase tracking-[0.14em] font-bold text-text-muted pointer-events-none"
+              >
+                {field.suffix}
+              </span>
+            )}
+          </div>
           {helpBlock}
           {errorBlock}
         </label>
       );
+
+    case 'scale': {
+      const min = field.min ?? 1;
+      const max = field.max ?? 10;
+      const selected = typeof value === 'number' ? value : undefined;
+      const numbers: number[] = [];
+      for (let i = min; i <= max; i++) numbers.push(i);
+      return (
+        <fieldset>
+          {labelBlock}
+          <div className="flex flex-wrap gap-1.5">
+            {numbers.map((n) => {
+              const on = selected === n;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => onChange(on ? null : n)}
+                  className={cn(
+                    'w-10 h-10 rounded-lg border font-mono text-sm font-bold transition-all',
+                    on
+                      ? 'border-accent bg-accent text-bg'
+                      : 'border-border-soft text-text-muted hover:border-text-muted hover:text-text'
+                  )}
+                  aria-pressed={on}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+          {helpBlock}
+          {errorBlock}
+        </fieldset>
+      );
+    }
 
     case 'long_text':
       return (

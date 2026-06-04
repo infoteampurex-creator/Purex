@@ -3,19 +3,24 @@
  *
  * Single source of truth for every section + question. The form
  * renderer at /application reads this array and builds the UI
- * dynamically. Adding a new section / question is purely a config
- * change here — no migration, no UI edits, no admin tweaks.
+ * dynamically. Adding a new question is purely a config change —
+ * no migration, no UI edits, no admin tweaks.
  *
  * Submission payload structure:
  *   {
- *     personal_info: { full_name, age, gender, phone, email },
- *     goals: { transformation_goals: [...] },
- *     lifestyle: { ... },
+ *     welcome: { email },
+ *     personal_info: { full_name, age, gender, phone, ... },
+ *     goals: { transformation_goals: [...], ... },
  *     ...
  *   }
  *
  * Each section key (snake_case) becomes a top-level field in the
  * `payload` JSONB column.
+ *
+ * ─── Source: Google Form "TEAM PURE X — Transformation Application
+ *     Form" — 10 sections, 47 questions. Photo uploads (9.1) are
+ *     captured as a paste-able shared-folder link until we wire
+ *     Supabase Storage uploads in a follow-up.
  */
 
 export type FieldType =
@@ -27,7 +32,8 @@ export type FieldType =
   | 'radio'
   | 'select'
   | 'multi_select'
-  | 'checkbox';
+  | 'checkbox'
+  | 'scale';
 
 export interface FieldOption {
   value: string;
@@ -47,9 +53,11 @@ export interface Field {
   placeholder?: string;
   /** Options for radio / select / multi_select */
   options?: FieldOption[];
-  /** Min / max for number inputs */
+  /** Min / max for number inputs (and scale endpoints) */
   min?: number;
   max?: number;
+  /** Suffix for number inputs (cm, kg, etc.) */
+  suffix?: string;
   /** Auto-prefilled from ?email= query param (used to seed Section 1) */
   prefillFromQuery?: string;
 }
@@ -65,24 +73,16 @@ export interface Section {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// SECTION CONFIG
-// ════════════════════════════════════════════════════════════════════
-//
-// 11 sections per the Google form. Sections 1, 2, and the first
-// question of Section 3 are captured below from the screenshots
-// shared. Remaining sections (3.2+ through Section 11) need their
-// fields added — drop new field objects into the relevant section's
-// `fields: []` array as you share them. No other code changes.
-//
+// SECTION CONFIG — mirrors the Google Form exactly.
 // ════════════════════════════════════════════════════════════════════
 
 export const APPLICATION_SECTIONS: Section[] = [
-  // ─── Section 1 — Welcome / intent ─────────────────────────────
+  // ─── Welcome / email capture ─────────────────────────────────────
   {
     key: 'welcome',
     title: 'Welcome',
     intro:
-      "We focus on building sustainable transformations through structured nutrition, intelligent training, accountability, and performance-based coaching. Please fill this form carefully — it helps us build a plan specifically for you.",
+      "This is not just another fitness program. We focus on building sustainable transformations through structured nutrition, intelligent training, accountability, and performance-based coaching. Please fill this form carefully so we can build a plan that fits your lifestyle.",
     fields: [
       {
         key: 'email',
@@ -95,28 +95,28 @@ export const APPLICATION_SECTIONS: Section[] = [
     ],
   },
 
-  // ─── Section 2 — Personal information ─────────────────────────
+  // ─── 1. Personal Information ─────────────────────────────────────
   {
     key: 'personal_info',
-    title: 'Personal Information',
+    title: '1. Personal Information',
     fields: [
       {
         key: 'full_name',
-        label: 'Full Name',
+        label: '1.1. Full Name',
         type: 'short_text',
         required: true,
       },
       {
         key: 'age',
-        label: 'Age',
+        label: '1.2. Age',
         type: 'number',
         required: true,
-        min: 16,
+        min: 14,
         max: 100,
       },
       {
         key: 'gender',
-        label: 'Gender',
+        label: '1.3. Gender',
         type: 'radio',
         required: true,
         options: [
@@ -127,28 +127,41 @@ export const APPLICATION_SECTIONS: Section[] = [
       },
       {
         key: 'phone',
-        label: 'Phone Number',
+        label: '1.4. Phone Number',
         type: 'tel',
         required: true,
-        help: 'Ten digits, no +91 needed.',
         placeholder: '9876543210',
+        help: 'Include country code if outside India.',
       },
-      // Email collected in Section 1 — repeated here in the Google
-      // form, omitted here to avoid double entry.
+      {
+        key: 'occupation',
+        label: '1.6. Occupation',
+        type: 'short_text',
+        required: true,
+        placeholder: 'e.g. Software engineer, school teacher, founder',
+      },
+      {
+        key: 'city_country',
+        label: '1.7. City & Country',
+        type: 'short_text',
+        required: true,
+        placeholder: 'Bengaluru, India',
+      },
     ],
   },
 
-  // ─── Section 3 — Goals ───────────────────────────────────────
+  // ─── 2. Goals & Motivation ───────────────────────────────────────
   {
     key: 'goals',
-    title: 'Your Goals',
+    title: '2. Goals & Motivation',
     fields: [
       {
         key: 'transformation_goals',
-        label: 'What transformation are you looking to achieve through TEAM PURE X?',
+        label:
+          '2.1. What transformation are you looking to achieve through TEAM PURE X?',
         type: 'multi_select',
         required: true,
-        help: 'Select all that apply.',
+        help: 'Tick all that apply.',
         options: [
           { value: 'fat_loss', label: 'Fat Loss' },
           { value: 'muscle_gain', label: 'Muscle Gain' },
@@ -162,525 +175,460 @@ export const APPLICATION_SECTIONS: Section[] = [
           { value: 'lifestyle_transformation', label: 'Lifestyle Transformation' },
         ],
       },
-      // TODO: Add remaining 3.x questions from Google form as they
-      // are shared. Drop new Field objects into this `fields` array.
-    ],
-  },
-
-  // ─── Section 4 — Lifestyle ────────────────────────────────────
-  {
-    key: 'lifestyle',
-    title: 'Your Lifestyle',
-    intro: 'Help us understand your day-to-day so we can build a plan that fits.',
-    fields: [
       {
-        key: 'occupation',
-        label: 'What do you do for work?',
-        type: 'short_text',
-        required: true,
-        placeholder: 'e.g. Software engineer, school teacher, founder',
-      },
-      {
-        key: 'work_hours_per_day',
-        label: 'Average work hours per day',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'under_8', label: 'Less than 8 hours' },
-          { value: '8_to_10', label: '8 – 10 hours' },
-          { value: '10_to_12', label: '10 – 12 hours' },
-          { value: 'over_12', label: 'More than 12 hours' },
-        ],
-      },
-      {
-        key: 'sitting_time',
-        label: 'How much of your day is sedentary (sitting at a desk, driving, on screens)?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'mostly_active', label: 'Mostly active — I move around a lot' },
-          { value: 'mixed', label: 'Mixed — some sitting, some moving' },
-          { value: 'mostly_sitting', label: 'Mostly sitting — 6+ hours' },
-          { value: 'all_day_sitting', label: 'All day at a desk' },
-        ],
-      },
-      {
-        key: 'stress_level',
-        label: 'How would you rate your current stress level?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'low', label: 'Low — life feels manageable' },
-          { value: 'moderate', label: 'Moderate — busy but coping' },
-          { value: 'high', label: 'High — feeling stretched thin' },
-          { value: 'overwhelming', label: 'Overwhelming — burnout territory' },
-        ],
-      },
-      {
-        key: 'sleep_hours',
-        label: 'Average sleep per night',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'under_5', label: 'Under 5 hours' },
-          { value: '5_to_6', label: '5 – 6 hours' },
-          { value: '6_to_7', label: '6 – 7 hours' },
-          { value: '7_to_8', label: '7 – 8 hours' },
-          { value: 'over_8', label: 'More than 8 hours' },
-        ],
-      },
-      {
-        key: 'biggest_challenge',
-        label: 'What\'s been your biggest challenge with fitness so far?',
+        key: 'whats_been_stopping_you',
+        label: '2.2. What has been stopping you from achieving your fitness goals until now?',
         type: 'long_text',
         required: true,
-        help: 'Be honest — this helps us coach you, not judge you.',
+      },
+      {
+        key: 'why_team_pure_x',
+        label: '2.3. Why do you specifically want to work with TEAM PURE X?',
+        type: 'long_text',
+        required: true,
+      },
+      {
+        key: 'what_achieving_means',
+        label: '2.4. What would achieving your goal mean to you personally?',
+        type: 'long_text',
+        required: true,
       },
     ],
   },
 
-  // ─── Section 5 — Current fitness ──────────────────────────────
+  // ─── 3. Commitment & Coaching ────────────────────────────────────
   {
-    key: 'current_fitness',
-    title: 'Current Fitness',
+    key: 'commitment',
+    title: '3. Commitment & Coaching',
     fields: [
       {
-        key: 'self_rating',
-        label: 'How would you rate your current fitness level?',
+        key: 'commitment_duration',
+        label: '3.1. How long are you willing to commit towards improving your health & fitness?',
         type: 'radio',
         required: true,
         options: [
-          { value: 'beginner', label: 'Beginner — starting fresh or returning after a long break' },
-          { value: 'recreational', label: 'Recreational — I move a few times a week, no structured plan' },
-          { value: 'intermediate', label: 'Intermediate — I train regularly, results are okay' },
-          { value: 'advanced', label: 'Advanced — I train hard with structure' },
+          { value: '3_months', label: '3 Months' },
+          { value: '6_months', label: '6 Months' },
+          { value: '12_months', label: '12 Months' },
+          { value: 'long_term', label: 'Long Term Lifestyle Change' },
         ],
       },
       {
-        key: 'workouts_per_week',
-        label: 'How many structured workouts do you currently do per week?',
+        key: 'ready_to_follow_process',
+        label:
+          '3.2. Our coaching includes accountability, structured systems, and regular check-ins. Are you ready to stay consistent and follow the process?',
         type: 'radio',
         required: true,
         options: [
-          { value: '0', label: '0 — none' },
-          { value: '1_2', label: '1 – 2' },
-          { value: '3_4', label: '3 – 4' },
-          { value: '5_plus', label: '5 or more' },
+          { value: 'yes_fully', label: 'Yes, fully committed' },
+          { value: 'try_best', label: 'I will try my best' },
+          { value: 'not_sure', label: 'Not sure yet' },
         ],
       },
       {
-        key: 'workout_types',
-        label: 'What types of training are you currently doing? (Select all that apply)',
-        type: 'multi_select',
-        required: false,
-        options: [
-          { value: 'weight_training', label: 'Weight training / gym' },
-          { value: 'home_bodyweight', label: 'Home / bodyweight' },
-          { value: 'running', label: 'Running' },
-          { value: 'cycling', label: 'Cycling' },
-          { value: 'swimming', label: 'Swimming' },
-          { value: 'yoga', label: 'Yoga / Pilates' },
-          { value: 'sports', label: 'Sports (cricket, football, etc.)' },
-          { value: 'group_classes', label: 'Group classes (CrossFit, HIIT, etc.)' },
-          { value: 'walking', label: 'Walking' },
-          { value: 'none', label: 'Nothing structured' },
-        ],
-      },
-      {
-        key: 'energy_level',
-        label: 'How is your day-to-day energy?',
+        key: 'financial_commitment',
+        label:
+          '3.4. Coaching requires both time and financial commitment. Which best describes your situation?',
         type: 'radio',
         required: true,
         options: [
-          { value: 'strong', label: 'Strong — I feel sharp most of the day' },
-          { value: 'okay', label: 'Okay — some afternoon dips' },
-          { value: 'low', label: 'Low — I drag through most days' },
-          { value: 'depleted', label: 'Depleted — chronic fatigue' },
+          { value: 'ready_to_invest', label: 'I’m ready to invest in my transformation' },
+          { value: 'budget_concerns', label: 'I have budget concerns but still interested' },
+          { value: 'not_ready', label: 'Not ready financially right now' },
         ],
       },
+    ],
+  },
+
+  // ─── 4. Body Details ─────────────────────────────────────────────
+  {
+    key: 'body_details',
+    title: '4. Body Details',
+    intro: 'Please provide values in centimetres / kilograms.',
+    fields: [
       {
-        key: 'current_height_cm',
-        label: 'Height (cm)',
+        key: 'height_cm',
+        label: '4.1. Height',
         type: 'number',
-        required: false,
+        required: true,
+        suffix: 'cm',
         min: 100,
         max: 230,
         placeholder: '170',
       },
       {
-        key: 'current_weight_kg',
-        label: 'Current weight (kg)',
+        key: 'weight_empty_stomach_kg',
+        label: '4.2. Weight (empty stomach)',
         type: 'number',
-        required: false,
+        required: true,
+        suffix: 'kg',
         min: 30,
         max: 250,
         placeholder: '72',
       },
+      {
+        key: 'neck_cm',
+        label: '4.3. Neck',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 20,
+        max: 70,
+      },
+      {
+        key: 'chest_cm',
+        label: '4.4. Chest',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 50,
+        max: 180,
+      },
+      {
+        key: 'left_bicep_cm',
+        label: '4.5. Left Bicep',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 15,
+        max: 70,
+      },
+      {
+        key: 'right_bicep_cm',
+        label: '4.5. Right Bicep',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 15,
+        max: 70,
+      },
+      {
+        key: 'belly_cm',
+        label: '4.6. Belly',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 40,
+        max: 200,
+      },
+      {
+        key: 'waist_cm',
+        label: '4.7. Waist',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 40,
+        max: 200,
+      },
+      {
+        key: 'hip_glute_cm',
+        label: '4.8. Hip / Glute',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 50,
+        max: 200,
+      },
+      {
+        key: 'left_thigh_cm',
+        label: '4.9. Left Thigh',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 25,
+        max: 120,
+      },
+      {
+        key: 'right_thigh_cm',
+        label: '4.10. Right Thigh',
+        type: 'number',
+        required: true,
+        suffix: 'cm',
+        min: 25,
+        max: 120,
+      },
     ],
   },
 
-  // ─── Section 6 — Medical / health background ─────────────────
+  // ─── 5. Medical & Health Information ─────────────────────────────
   {
-    key: 'medical_background',
-    title: 'Medical Background',
-    intro: 'Stays private. Only the trainer + medical specialist see it. Be thorough — this keeps you safe.',
+    key: 'medical',
+    title: '5. Medical & Health Information',
+    intro: 'Stays private. Only your coach and the medical specialist see it.',
     fields: [
       {
-        key: 'chronic_conditions',
-        label: 'Any chronic health conditions we should know about? (Select all that apply)',
+        key: 'current_conditions',
+        label: '5.1. Are you currently suffering from any of these?',
         type: 'multi_select',
-        required: false,
+        required: true,
+        help: 'Tick all that apply.',
         options: [
-          { value: 'diabetes', label: 'Diabetes (Type 1 or 2)' },
-          { value: 'hypertension', label: 'High blood pressure' },
-          { value: 'thyroid', label: 'Thyroid (hypo or hyper)' },
-          { value: 'pcos', label: 'PCOS / PCOD' },
-          { value: 'cholesterol', label: 'High cholesterol' },
-          { value: 'asthma', label: 'Asthma / respiratory' },
-          { value: 'heart', label: 'Heart condition' },
-          { value: 'depression_anxiety', label: 'Depression / anxiety' },
-          { value: 'autoimmune', label: 'Autoimmune condition' },
-          { value: 'none', label: 'None of the above' },
+          { value: 'thyroid', label: 'Thyroid' },
+          { value: 'pcos_pcod', label: 'PCOS / PCOD' },
+          { value: 'blood_pressure', label: 'Blood Pressure' },
+          { value: 'diabetes', label: 'Diabetes / Blood Sugar' },
+          { value: 'knee_pain', label: 'Knee Pain' },
+          { value: 'back_pain', label: 'Back Pain' },
+          { value: 'asthma', label: 'Asthma' },
+          { value: 'none', label: 'None' },
         ],
       },
       {
-        key: 'condition_details',
-        label: 'Details on any condition(s) selected above',
+        key: 'injuries_surgeries',
+        label: '5.2. Any injuries, surgeries, or medical conditions we should know about?',
         type: 'long_text',
         required: false,
-        help: 'Diagnosis date, severity, how it\'s currently managed.',
       },
       {
         key: 'medications',
-        label: 'Are you on any regular medications or supplements?',
+        label: '5.3. Are you currently taking any medications?',
         type: 'long_text',
         required: false,
-        help: 'List names + dosage if comfortable. Otherwise just type "yes — will share on call".',
+        help: 'List names + dosage if comfortable. Otherwise type "will share on call".',
       },
       {
-        key: 'injuries',
-        label: 'Any current injuries or chronic pain?',
-        type: 'long_text',
+        key: 'energy_level',
+        label: 'How would you rate your daily energy levels?',
+        type: 'scale',
         required: false,
-        help: 'Back pain, knee issues, shoulder restrictions, etc. Anything we should plan around.',
+        min: 1,
+        max: 10,
+        help: '1 = constantly drained · 10 = sharp and high-energy all day.',
       },
+    ],
+  },
+
+  // ─── 6. Lifestyle Assessment ─────────────────────────────────────
+  {
+    key: 'lifestyle',
+    title: '6. Lifestyle Assessment',
+    fields: [
       {
-        key: 'recent_surgery',
-        label: 'Any surgery in the last 12 months?',
+        key: 'work_study_lifestyle',
+        label: '6.1. What does your work/study lifestyle look like?',
         type: 'radio',
         required: true,
         options: [
-          { value: 'no', label: 'No' },
-          { value: 'yes_cleared', label: 'Yes — cleared for exercise by doctor' },
-          { value: 'yes_not_cleared', label: 'Yes — not yet cleared' },
+          { value: 'desk_job', label: 'Desk Job' },
+          { value: 'work_from_home', label: 'Work From Home' },
+          { value: 'physically_active_job', label: 'Physically Active Job' },
+          { value: 'student', label: 'Student' },
+          { value: 'shift_work', label: 'Shift Work' },
         ],
       },
       {
-        key: 'pregnancy',
-        label: 'Are you currently pregnant or recently postpartum (less than 6 months)?',
+        key: 'daily_activity',
+        label: '6.2. How active are you daily?',
         type: 'radio',
-        required: false,
+        required: true,
         options: [
-          { value: 'no', label: 'No / not applicable' },
-          { value: 'pregnant', label: 'Pregnant' },
-          { value: 'postpartum', label: 'Postpartum (under 6 months)' },
+          { value: 'sedentary', label: 'Sedentary' },
+          { value: 'lightly_active', label: 'Lightly Active' },
+          { value: 'moderately_active', label: 'Moderately Active' },
+          { value: 'highly_active', label: 'Highly Active' },
+        ],
+      },
+      {
+        key: 'average_sleep',
+        label: '6.3. Average Sleep Duration',
+        type: 'radio',
+        required: true,
+        options: [
+          { value: 'under_5', label: 'Less than 5 hrs' },
+          { value: '5_6', label: '5–6 hrs' },
+          { value: '6_7', label: '6–7 hrs' },
+          { value: '7_8', label: '7–8 hrs' },
+          { value: '8_plus', label: '8+ hrs' },
         ],
       },
     ],
   },
 
-  // ─── Section 7 — Nutrition habits ────────────────────────────
+  // ─── 7. Nutrition Assessment ─────────────────────────────────────
   {
     key: 'nutrition',
-    title: 'Nutrition Habits',
+    title: '7. Nutrition Assessment',
     fields: [
       {
-        key: 'dietary_preference',
-        label: 'Your dietary preference',
+        key: 'food_preference',
+        label: '7.1. Food Preference',
         type: 'radio',
         required: true,
         options: [
-          { value: 'omnivore', label: 'Omnivore — I eat everything' },
-          { value: 'eggetarian', label: 'Eggetarian — vegetarian + eggs' },
           { value: 'vegetarian', label: 'Vegetarian' },
+          { value: 'eggetarian', label: 'Eggetarian' },
+          { value: 'non_vegetarian', label: 'Non Vegetarian' },
           { value: 'vegan', label: 'Vegan' },
-          { value: 'jain', label: 'Jain' },
-          { value: 'pescatarian', label: 'Pescatarian (fish only)' },
         ],
+      },
+      {
+        key: 'eating_habits',
+        label: '7.2. Walk us through your current eating habits in detail',
+        type: 'long_text',
+        required: false,
+        help: 'Please explain in detail — typical breakfast, lunch, dinner, snacks, timing, what changes on busy days.',
       },
       {
         key: 'meals_per_day',
-        label: 'How many meals do you usually eat per day?',
+        label: '7.3. How many meals do you usually eat daily?',
         type: 'radio',
         required: true,
         options: [
-          { value: '1_2', label: '1 – 2 meals' },
-          { value: '3', label: '3 meals' },
-          { value: '4_5', label: '4 – 5 meals (with snacks)' },
-          { value: 'irregular', label: 'Irregular — depends on the day' },
+          { value: '2', label: '2' },
+          { value: '3', label: '3' },
+          { value: '4', label: '4' },
+          { value: '5_plus', label: '5+' },
         ],
       },
       {
-        key: 'water_intake_litres',
-        label: 'Roughly how much water do you drink per day?',
+        key: 'water_intake',
+        label: '7.4. Water Intake Per Day',
         type: 'radio',
         required: true,
         options: [
-          { value: 'under_1', label: 'Less than 1 litre' },
-          { value: '1_2', label: '1 – 2 litres' },
-          { value: '2_3', label: '2 – 3 litres' },
-          { value: 'over_3', label: 'More than 3 litres' },
+          { value: 'under_1l', label: 'Less than 1L' },
+          { value: '1_2l', label: '1–2L' },
+          { value: '2_3l', label: '2–3L' },
+          { value: '3l_plus', label: '3L+' },
         ],
       },
       {
-        key: 'eating_out_frequency',
-        label: 'How often do you eat out or order in?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'rare', label: 'Rare — special occasions only' },
-          { value: 'weekly', label: '1 – 2 times a week' },
-          { value: 'frequent', label: '3 – 5 times a week' },
-          { value: 'daily', label: 'Almost every day' },
-        ],
-      },
-      {
-        key: 'alcohol_frequency',
-        label: 'Alcohol intake',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'none', label: 'Don\'t drink' },
-          { value: 'occasional', label: 'Occasionally (a few times a month)' },
-          { value: 'weekly', label: 'Weekly (1 – 2 times a week)' },
-          { value: 'frequent', label: 'Frequently (3+ times a week)' },
-        ],
-      },
-      {
-        key: 'food_allergies',
-        label: 'Any food allergies or strict avoidances?',
+        key: 'food_allergies_dislikes',
+        label: '7.5. Any food allergies or foods you dislike?',
         type: 'long_text',
-        required: false,
+        required: true,
         help: 'Nuts, dairy, gluten, specific cuisines — anything we should plan around.',
       },
       {
-        key: 'biggest_nutrition_struggle',
-        label: 'What\'s your biggest nutrition struggle right now?',
-        type: 'long_text',
-        required: false,
-        help: 'Late-night cravings, no time to cook, eating too much sugar, etc.',
-      },
-    ],
-  },
-
-  // ─── Section 8 — Training history ────────────────────────────
-  {
-    key: 'training_history',
-    title: 'Training History',
-    fields: [
-      {
-        key: 'past_coaching',
-        label: 'Have you worked with a coach or trainer before?',
+        key: 'alcohol_consumption',
+        label: '7.6. Alcohol Consumption',
         type: 'radio',
         required: true,
         options: [
-          { value: 'no', label: 'No — this would be my first time' },
-          { value: 'gym_trainer', label: 'Yes — gym trainer' },
-          { value: 'online_coach', label: 'Yes — online coach' },
-          { value: 'physiotherapist', label: 'Yes — physiotherapist / clinical' },
-          { value: 'multiple', label: 'Yes — multiple coaches over the years' },
-        ],
-      },
-      {
-        key: 'longest_consistent_period',
-        label: 'What\'s the longest you\'ve stayed consistent with training?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'never', label: 'Never really stuck with anything' },
-          { value: 'few_weeks', label: 'A few weeks' },
-          { value: '1_3_months', label: '1 – 3 months' },
-          { value: '3_6_months', label: '3 – 6 months' },
-          { value: '6_12_months', label: '6 – 12 months' },
-          { value: 'over_year', label: 'Over a year' },
-        ],
-      },
-      {
-        key: 'why_stopped',
-        label: 'When you\'ve stopped in the past, what got in the way?',
-        type: 'long_text',
-        required: true,
-        help: 'Time, motivation, injury, life changes, lack of results — name it honestly.',
-      },
-      {
-        key: 'what_worked',
-        label: 'What\'s worked best for you in the past?',
-        type: 'long_text',
-        required: false,
-        help: 'A specific coach, a routine, a season of life. Helps us replicate what fits you.',
-      },
-    ],
-  },
-
-  // ─── Section 9 — Commitment level ────────────────────────────
-  {
-    key: 'commitment',
-    title: 'Commitment Level',
-    intro: 'Honest answers help us match the right plan to your capacity — not over-promise.',
-    fields: [
-      {
-        key: 'days_available_per_week',
-        label: 'Realistically, how many days a week can you commit to structured training?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: '2', label: '2 days' },
-          { value: '3', label: '3 days' },
-          { value: '4', label: '4 days' },
-          { value: '5_plus', label: '5+ days' },
-        ],
-      },
-      {
-        key: 'session_length',
-        label: 'How long can each session realistically be?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: '30_min', label: '30 minutes' },
-          { value: '45_min', label: '45 minutes' },
-          { value: '60_min', label: '60 minutes' },
-          { value: '90_min', label: '90 minutes or more' },
-        ],
-      },
-      {
-        key: 'tracking_willingness',
-        label: 'Are you willing to log workouts, meals, and weight daily?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'yes', label: 'Yes — I understand consistency is the lever' },
-          { value: 'workouts_only', label: 'Workouts yes, meals/weight is harder' },
-          { value: 'weekly_only', label: 'Prefer weekly check-ins over daily logging' },
-          { value: 'unsure', label: 'Not sure yet — open to trying' },
-        ],
-      },
-      {
-        key: 'why_now',
-        label: 'Why is now the right time for you?',
-        type: 'long_text',
-        required: true,
-        help: 'A milestone, a health event, a goal date — what\'s pushing the decision.',
-      },
-      {
-        key: 'budget_comfort',
-        label: 'PURE X coaching is a premium investment. Are you comfortable discussing pricing on the call?',
-        type: 'radio',
-        required: true,
-        options: [
-          { value: 'yes', label: 'Yes — I understand quality coaching has a cost' },
-          { value: 'need_details', label: 'I need the details first to decide' },
-          { value: 'budget_concern', label: 'I have a strict budget — flexibility matters' },
+          { value: 'never', label: 'Never' },
+          { value: 'occasionally', label: 'Occasionally' },
+          { value: 'weekly', label: 'Weekly' },
+          { value: 'frequently', label: 'Frequently' },
         ],
       },
     ],
   },
 
-  // ─── Section 10 — Schedule + logistics ───────────────────────
+  // ─── 8. Training Assessment ──────────────────────────────────────
   {
-    key: 'schedule',
-    title: 'Schedule & Logistics',
+    key: 'training',
+    title: '8. Training Assessment',
     fields: [
       {
-        key: 'preferred_workout_time',
-        label: 'When can you train most consistently?',
+        key: 'workout_experience',
+        label: '8.1. Current Workout Experience',
         type: 'radio',
         required: true,
         options: [
-          { value: 'early_morning', label: 'Early morning (before 8 AM)' },
-          { value: 'morning', label: 'Morning (8 – 11 AM)' },
-          { value: 'midday', label: 'Midday (11 AM – 2 PM)' },
-          { value: 'afternoon', label: 'Afternoon (2 – 5 PM)' },
-          { value: 'evening', label: 'Evening (5 – 9 PM)' },
-          { value: 'late_night', label: 'Late night (after 9 PM)' },
+          { value: 'beginner', label: 'Beginner' },
+          { value: 'intermediate', label: 'Intermediate' },
+          { value: 'advanced', label: 'Advanced' },
         ],
       },
       {
-        key: 'training_location',
-        label: 'Where will you primarily train?',
+        key: 'currently_working_out',
+        label: '8.2. Are you currently working out?',
         type: 'radio',
         required: true,
         options: [
-          { value: 'gym', label: 'Commercial gym' },
-          { value: 'home_full', label: 'Home — full equipment setup' },
-          { value: 'home_minimal', label: 'Home — minimal equipment (mat, bands, dumbbells)' },
-          { value: 'home_bodyweight', label: 'Home — bodyweight only' },
-          { value: 'outdoor', label: 'Outdoor (parks, tracks)' },
-          { value: 'mixed', label: 'Mix of locations' },
+          { value: 'yes', label: 'Yes' },
+          { value: 'no', label: 'No' },
         ],
       },
       {
-        key: 'equipment_access',
-        label: 'What equipment do you have access to? (Select all that apply)',
+        key: 'preferred_workout_style',
+        label: '8.3. Preferred Workout Style',
         type: 'multi_select',
-        required: false,
+        required: true,
+        help: 'Tick all that apply.',
         options: [
-          { value: 'full_gym', label: 'Full commercial gym (barbells, machines, racks)' },
-          { value: 'dumbbells', label: 'Dumbbells' },
-          { value: 'kettlebells', label: 'Kettlebells' },
-          { value: 'resistance_bands', label: 'Resistance bands' },
-          { value: 'pull_up_bar', label: 'Pull-up bar' },
-          { value: 'cardio_machine', label: 'Cardio machine (treadmill / bike / rower)' },
-          { value: 'bench', label: 'Bench' },
-          { value: 'yoga_mat', label: 'Yoga mat' },
-          { value: 'none', label: 'Nothing — bodyweight only' },
+          { value: 'gym_workouts', label: 'Gym Workouts' },
+          { value: 'home_workouts', label: 'Home Workouts' },
+          { value: 'running', label: 'Running' },
+          { value: 'strength_training', label: 'Strength Training' },
+          { value: 'functional_training', label: 'Functional Training' },
+          { value: 'hybrid_training', label: 'Hybrid Training' },
+          { value: 'yoga', label: 'Yoga' },
+          { value: 'mobility', label: 'Mobility' },
         ],
       },
       {
-        key: 'travel_frequency',
-        label: 'How often do you travel for work or otherwise?',
+        key: 'gym_access',
+        label: '8.4. Do you have gym access?',
         type: 'radio',
         required: true,
         options: [
-          { value: 'rare', label: 'Rare — mostly at home base' },
-          { value: 'monthly', label: 'Once a month or so' },
-          { value: 'weekly', label: 'A few times a month' },
-          { value: 'frequent', label: 'Frequently — on the road every week' },
+          { value: 'yes', label: 'Yes' },
+          { value: 'no', label: 'No' },
         ],
       },
       {
-        key: 'family_commitments',
-        label: 'Family / care commitments that affect your schedule?',
+        key: 'equipment_at_home',
+        label: '8.5. Equipment available at home',
         type: 'long_text',
         required: false,
-        help: 'Kids, parents, partner. Tell us so we plan around real life.',
+        help: 'List what you have — dumbbells, mat, bands, bench, pull-up bar, etc.',
       },
       {
-        key: 'preferred_coach_communication',
-        label: 'How would you prefer to communicate with your coach?',
+        key: 'training_days_per_week',
+        label: '8.6. How many days per week can you realistically train?',
         type: 'radio',
         required: true,
         options: [
-          { value: 'whatsapp', label: 'WhatsApp messages' },
-          { value: 'voice_notes', label: 'Voice notes' },
-          { value: 'video_calls', label: 'Scheduled video calls' },
-          { value: 'mixed', label: 'Mix of all — depends on the topic' },
+          { value: '3', label: '3 Days' },
+          { value: '4', label: '4 Days' },
+          { value: '5', label: '5 Days' },
+          { value: '6', label: '6 Days' },
         ],
       },
     ],
   },
 
-  // ─── Section 11 — Final notes ────────────────────────────────
+  // ─── 9. Progress Tracking ────────────────────────────────────────
+  // Original Google form uses file uploads for 4 angles. Until we
+  // wire Supabase Storage, we ask for a shared-folder link. The
+  // admin can then ask for them on WhatsApp during the call.
   {
-    key: 'final_notes',
-    title: 'Anything Else',
-    intro: 'Last chance to share anything we should know.',
+    key: 'progress_tracking',
+    title: '9. Progress Tracking',
+    intro:
+      'We need current photos to set a baseline. Upload them to a Google Drive / iCloud / OneDrive folder and paste the share link below — make sure the folder is viewable by anyone with the link.',
+    fields: [
+      {
+        key: 'photos_link',
+        label: '9.1. Photo folder link (Front · Back · Left · Right profiles)',
+        type: 'long_text',
+        required: true,
+        placeholder: 'https://drive.google.com/...',
+        help:
+          'Include 4 photos: Front Full Body, Back Full Body, Left Profile, Right Profile. Tight-fitting clothes work best for accurate measurements.',
+      },
+    ],
+  },
+
+  // ─── 10. Final Step ──────────────────────────────────────────────
+  {
+    key: 'final_step',
+    title: '10. Final Step',
     fields: [
       {
         key: 'anything_else',
-        label: 'Is there anything else you would like us to know?',
+        label: '10.1. Anything else you want TEAM PURE X to know?',
         type: 'long_text',
         required: false,
-        help: 'Optional. Whatever you write here goes straight to your coach.',
+      },
+      {
+        key: 'agreement',
+        label:
+          '10.2. Before joining TEAM PURE X, understand that transformation requires consistency, patience, discipline, and accountability. There are no shortcuts. We provide the system, structure, and support — your responsibility is to execute consistently.',
+        type: 'checkbox',
+        required: true,
+        help: 'Tick to agree.',
       },
     ],
   },
@@ -696,7 +644,7 @@ export function isFieldFilled(field: Field, value: unknown): boolean {
   if (typeof value === 'string') return value.trim().length > 0;
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value === 'boolean') return true;
+  if (typeof value === 'boolean') return value === true || !field.required;
   return false;
 }
 
