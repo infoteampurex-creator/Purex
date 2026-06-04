@@ -53,6 +53,29 @@ export type SubmitEnquiryResult =
 export async function submitEnquiry(
   formData: FormData
 ): Promise<SubmitEnquiryResult> {
+  try {
+    return await submitEnquiryInner(formData);
+  } catch (err) {
+    // Top-level safety net — if anything inside throws (Supabase client
+    // init, an unexpected DB error, a Resend SDK crash, a revalidate
+    // failure) we never want to bubble a 5xx to the visitor's browser.
+    // Log enough context to debug from Vercel logs.
+    console.error('[enquiries] UNHANDLED submitEnquiry exception', {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      formKeys: Array.from(formData.keys()),
+    });
+    return {
+      ok: false,
+      error:
+        'Something went wrong on our side. Please try again, or WhatsApp us directly.',
+    };
+  }
+}
+
+async function submitEnquiryInner(
+  formData: FormData
+): Promise<SubmitEnquiryResult> {
   const raw = {
     fullName: formData.get('fullName')?.toString() ?? '',
     whatsapp: formData.get('whatsapp')?.toString() ?? '',
