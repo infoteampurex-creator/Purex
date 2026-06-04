@@ -386,6 +386,8 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-// Re-export for admin status updates
-export type { EnquiryStatus };
-export { ENQUIRY_STATUS_LABEL };
+// NOTE: do not re-export types or constants from this file. Next 16's
+// stricter Turbopack pipeline for 'use server' files only allows
+// exported ASYNC FUNCTIONS — re-exporting types or values crashes
+// the module load with ReferenceError at runtime. Consumers should
+// import directly from '@/lib/data/enquiries-types' instead.
