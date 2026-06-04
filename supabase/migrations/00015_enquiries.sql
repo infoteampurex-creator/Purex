@@ -82,10 +82,13 @@ create index if not exists idx_enquiries_whatsapp on public.enquiries(whatsapp);
 -- 2. updated_at trigger
 -- ════════════════════════════════════════════════════════════════════
 
+-- Reuses public.set_updated_at() from 00001_auth_foundation.sql
+-- (also exists as touch_updated_at after 00013 — set_updated_at is
+-- the canonical one across every environment, so we pin to that.)
 drop trigger if exists trg_enquiries_touch on public.enquiries;
 create trigger trg_enquiries_touch
   before update on public.enquiries
-  for each row execute function public.touch_updated_at();
+  for each row execute function public.set_updated_at();
 
 
 -- ════════════════════════════════════════════════════════════════════
