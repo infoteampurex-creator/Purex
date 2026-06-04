@@ -259,6 +259,120 @@ export async function assignEnquirySpecialist(
   return { ok: true };
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Edit applicant fields + admin-captured discovery fields.
+// One action because the admin team edits both at once in the same
+// panel and it keeps the round-trip count down.
+// ────────────────────────────────────────────────────────────────────
+
+const onlyDigitsOpt = (v: string | null | undefined) =>
+  (v ?? '').toString().replace(/\D/g, '');
+
+const adminDataSchema = z
+  .object({
+    temperature: z.enum(['cold', 'warm', 'hot']).optional(),
+    plan_discussed: z
+      .enum([
+        'one_to_one',
+        'group',
+        'transformation',
+        'nutrition_only',
+        'consultation',
+        'undecided',
+      ])
+      .optional(),
+    pricing_discussed: z.boolean().optional(),
+    budget_inr: z.string().max(80).optional(),
+    objections: z.string().max(2000).optional(),
+    next_step: z
+      .enum([
+        'send_application',
+        'follow_up',
+        'send_pricing',
+        'book_call',
+        'awaiting_decision',
+        'closed_won',
+        'closed_lost',
+      ])
+      .optional(),
+    discovery_call_date: z.string().max(40).optional(),
+    follow_up_at: z.string().max(40).optional(),
+    source_channel: z.string().max(120).optional(),
+  })
+  .strict();
+
+const updateFieldsSchema = z.object({
+  enquiryId: z.string().uuid(),
+  fullName: z.string().min(2).max(120).optional(),
+  whatsapp: z
+    .string()
+    .transform(onlyDigitsOpt)
+    .refine(
+      (v) => v === '' || /^[0-9]{10}$/.test(v),
+      'Enter a 10-digit number'
+    )
+    .optional(),
+  email: z.string().email().max(160).optional(),
+  primaryGoal: z
+    .enum(PRIMARY_GOAL_OPTIONS.map((o) => o.value) as [string, ...string[]])
+    .optional(),
+  startTiming: z
+    .enum(START_TIMING_OPTIONS.map((o) => o.value) as [string, ...string[]])
+    .optional(),
+  message: z.string().max(2000).nullable().optional(),
+  adminData: adminDataSchema.optional(),
+});
+
+export async function updateEnquiryFields(
+  input: z.input<typeof updateFieldsSchema>
+): Promise<AdminResult> {
+  const adminUser = await requireAuth({ adminOnly: true });
+  if (!adminUser) return { ok: false, error: 'Not authorised.' };
+
+  const parsed = updateFieldsSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Invalid input',
+    };
+  }
+
+  const d = parsed.data;
+  const patch: Record<string, unknown> = {};
+  if (d.fullName !== undefined) patch.full_name = d.fullName.trim();
+  if (d.whatsapp !== undefined && d.whatsapp !== '') patch.whatsapp = d.whatsapp;
+  if (d.email !== undefined) patch.email = d.email.trim().toLowerCase();
+  if (d.primaryGoal !== undefined) patch.primary_goal = d.primaryGoal;
+  if (d.startTiming !== undefined) patch.start_timing = d.startTiming;
+  if (d.message !== undefined) {
+    patch.message = d.message ? d.message.trim() : null;
+  }
+  if (d.adminData !== undefined) {
+    // Strip undefineds before storing so the JSONB stays clean.
+    const clean: Record<string, unknown> = {};
+    Object.entries(d.adminData).forEach(([k, v]) => {
+      if (v !== undefined && v !== '' && v !== null) clean[k] = v;
+    });
+    patch.admin_data = clean;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return { ok: true };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('enquiries')
+    .update(patch)
+    .eq('id', d.enquiryId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath('/admin/applications');
+  revalidatePath(`/admin/applications/${d.enquiryId}`);
+  return { ok: true };
+}
+
 const notesSchema = z.object({
   enquiryId: z.string().uuid(),
   notes: z.string().max(5000),

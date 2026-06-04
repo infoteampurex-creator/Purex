@@ -3,13 +3,12 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Mail, MessageCircle, Calendar, ExternalLink } from 'lucide-react';
 import { ApplicationActionsPanel } from '@/components/admin/ApplicationActionsPanel';
 import { CopyApplicationLink } from '@/components/admin/CopyApplicationLink';
+import { EnquiryEditForm } from '@/components/admin/EnquiryEditForm';
 import {
   getAdminEnquiryById,
   getAssignableSpecialists,
 } from '@/lib/data/enquiries';
 import {
-  PRIMARY_GOAL_OPTIONS,
-  START_TIMING_OPTIONS,
   ENQUIRY_STATUS_LABEL,
   ENQUIRY_STATUS_COLOR,
 } from '@/lib/data/enquiries-types';
@@ -28,13 +27,6 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
     getAssignableSpecialists(),
   ]);
   if (!enquiry) notFound();
-
-  const goalLabel =
-    PRIMARY_GOAL_OPTIONS.find((o) => o.value === enquiry.primaryGoal)?.label ??
-    enquiry.primaryGoal;
-  const timingLabel =
-    START_TIMING_OPTIONS.find((o) => o.value === enquiry.startTiming)?.label ??
-    enquiry.startTiming;
 
   const submittedAt = new Date(enquiry.createdAt).toLocaleString('en-GB', {
     day: 'numeric',
@@ -112,30 +104,19 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Answers */}
-          <div className="rounded-2xl bg-bg-card border border-border p-5 md:p-6">
-            <h2 className="font-display font-semibold text-lg tracking-tight mb-4">
-              Answers
-            </h2>
-            <dl className="space-y-4">
-              <Pair label="Primary goal" value={goalLabel} accent />
-              <Pair label="Can start" value={timingLabel} />
-              {enquiry.message && (
-                <Pair
-                  label="Message"
-                  value={enquiry.message}
-                  wrap
-                />
-              )}
-              {enquiry.source && (
-                <Pair
-                  label="Source"
-                  value={enquiry.source}
-                  mono
-                />
-              )}
-            </dl>
-          </div>
+          {/* Edit & enrich — applicant fields + admin discovery data */}
+          <EnquiryEditForm enquiry={enquiry} />
+
+          {enquiry.source && (
+            <div className="rounded-2xl bg-bg-card border border-border p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold mb-1.5">
+                Source
+              </div>
+              <div className="font-mono text-xs text-text-muted break-all">
+                {enquiry.source}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions sidebar */}
@@ -148,38 +129,5 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
         </div>
       </div>
     </>
-  );
-}
-
-function Pair({
-  label,
-  value,
-  accent,
-  wrap,
-  mono,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  wrap?: boolean;
-  mono?: boolean;
-}) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold mb-1">
-        {label}
-      </dt>
-      <dd
-        className={
-          (accent ? 'text-accent ' : 'text-text ') +
-          (mono ? 'font-mono text-xs ' : '') +
-          (wrap ? 'whitespace-pre-wrap leading-relaxed ' : '') +
-          'font-medium'
-        }
-        style={{ fontSize: accent ? 17 : 15 }}
-      >
-        {value}
-      </dd>
-    </div>
   );
 }
