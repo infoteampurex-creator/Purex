@@ -53,6 +53,29 @@ export type SubmitEnquiryResult =
 export async function submitEnquiry(
   formData: FormData
 ): Promise<SubmitEnquiryResult> {
+  try {
+    return await submitEnquiryInner(formData);
+  } catch (err) {
+    // Top-level safety net — if anything inside throws (Supabase client
+    // init, an unexpected DB error, a Resend SDK crash, a revalidate
+    // failure) we never want to bubble a 5xx to the visitor's browser.
+    // Log enough context to debug from Vercel logs.
+    console.error('[enquiries] UNHANDLED submitEnquiry exception', {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      formKeys: Array.from(formData.keys()),
+    });
+    return {
+      ok: false,
+      error:
+        'Something went wrong on our side. Please try again, or WhatsApp us directly.',
+    };
+  }
+}
+
+async function submitEnquiryInner(
+  formData: FormData
+): Promise<SubmitEnquiryResult> {
   const raw = {
     fullName: formData.get('fullName')?.toString() ?? '',
     whatsapp: formData.get('whatsapp')?.toString() ?? '',
@@ -363,6 +386,8 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-// Re-export for admin status updates
-export type { EnquiryStatus };
-export { ENQUIRY_STATUS_LABEL };
+// NOTE: do not re-export types or constants from this file. Next 16's
+// stricter Turbopack pipeline for 'use server' files only allows
+// exported ASYNC FUNCTIONS — re-exporting types or values crashes
+// the module load with ReferenceError at runtime. Consumers should
+// import directly from '@/lib/data/enquiries-types' instead.
