@@ -42,7 +42,9 @@ const enquirySchema = z.object({
   website: z.string().max(0, '').optional().or(z.literal('')),
 });
 
-export type SubmitEnquiryResult =
+// Internal type — NOT exported. Next 16's Turbopack crashes on
+// non-async-function exports from 'use server' files.
+type SubmitEnquiryResult =
   | { ok: true; id: string }
   | {
       ok: false;
@@ -191,7 +193,8 @@ const updateStatusSchema = z.object({
   ]),
 });
 
-export type AdminResult = { ok: true } | { ok: false; error: string };
+// Internal type — see note above.
+type AdminResult = { ok: true } | { ok: false; error: string };
 
 export async function updateEnquiryStatus(
   input: z.input<typeof updateStatusSchema>
