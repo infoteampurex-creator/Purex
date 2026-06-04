@@ -17,7 +17,9 @@ import { BRAND } from '@/lib/constants';
 // PUBLIC submission
 // ════════════════════════════════════════════════════════════════════
 
-export type SubmitApplicationResult =
+// Internal type — NOT exported. Next 16's Turbopack crashes on
+// non-async-function exports from 'use server' files.
+type SubmitApplicationResult =
   | { ok: true; id: string }
   | {
       ok: false;
@@ -141,7 +143,8 @@ const updateApplicationStatusSchema = z.object({
   status: z.enum(['submitted', 'reviewing', 'onboarded', 'archived']),
 });
 
-export type AdminResult = { ok: true } | { ok: false; error: string };
+// Internal type — see note above.
+type AdminResult = { ok: true } | { ok: false; error: string };
 
 export async function updateApplicationStatus(
   input: z.input<typeof updateApplicationStatusSchema>
