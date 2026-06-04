@@ -118,12 +118,19 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
               </div>
             </div>
           )}
+
+          {/* Danger zone lives in the main column (not the sticky
+              sidebar) so it's always reachable on any zoom level
+              and any sidebar height. */}
+          <DeleteEnquiryButton
+            enquiryId={enquiry.id}
+            applicantName={enquiry.fullName}
+          />
         </div>
 
-        {/* Actions sidebar — sticky on md+, scrolls internally when
-            its own content exceeds the viewport so the Delete
-            "danger zone" card at the bottom remains reachable
-            without zooming out. */}
+        {/* Actions sidebar — sticky on md+. Sales / status / notes
+            actions stay pinned. Destructive delete is intentionally
+            NOT here so it can't get clipped off-screen. */}
         <div
           className="space-y-5 md:sticky md:top-24 self-start md:max-h-[calc(100vh-7rem)] md:overflow-y-auto md:pr-1"
           style={{ scrollbarGutter: 'stable' }}
@@ -133,10 +140,6 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
             specialists={specialists}
           />
           <CopyApplicationLink enquiryId={enquiry.id} email={enquiry.email} />
-          <DeleteEnquiryButton
-            enquiryId={enquiry.id}
-            applicantName={enquiry.fullName}
-          />
         </div>
       </div>
     </>
