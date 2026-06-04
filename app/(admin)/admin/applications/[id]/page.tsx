@@ -4,6 +4,7 @@ import { ArrowLeft, Mail, MessageCircle, Calendar, ExternalLink } from 'lucide-r
 import { ApplicationActionsPanel } from '@/components/admin/ApplicationActionsPanel';
 import { CopyApplicationLink } from '@/components/admin/CopyApplicationLink';
 import { EnquiryEditForm } from '@/components/admin/EnquiryEditForm';
+import { DeleteEnquiryButton } from '@/components/admin/DeleteEnquiryButton';
 import {
   getAdminEnquiryById,
   getAssignableSpecialists,
@@ -126,6 +127,10 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
             specialists={specialists}
           />
           <CopyApplicationLink enquiryId={enquiry.id} email={enquiry.email} />
+          <DeleteEnquiryButton
+            enquiryId={enquiry.id}
+            applicantName={enquiry.fullName}
+          />
         </div>
       </div>
     </>

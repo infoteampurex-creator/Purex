@@ -373,6 +373,41 @@ export async function updateEnquiryFields(
   return { ok: true };
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Delete an enquiry. Permanent. Admin-only. Used when an application
+// is spam, a duplicate, or was created in error.
+// ────────────────────────────────────────────────────────────────────
+
+const deleteSchema = z.object({
+  enquiryId: z.string().uuid(),
+});
+
+export async function deleteEnquiry(
+  input: z.input<typeof deleteSchema>
+): Promise<AdminResult> {
+  const adminUser = await requireAuth({ adminOnly: true });
+  if (!adminUser) return { ok: false, error: 'Not authorised.' };
+
+  const parsed = deleteSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Invalid input',
+    };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('enquiries')
+    .delete()
+    .eq('id', parsed.data.enquiryId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath('/admin/applications');
+  return { ok: true };
+}
+
 const notesSchema = z.object({
   enquiryId: z.string().uuid(),
   notes: z.string().max(5000),
