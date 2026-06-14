@@ -21,6 +21,8 @@ import { AdminHealthyStreakPanel } from '@/components/admin/AdminHealthyStreakPa
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import { WeeklyScheduleEditor } from '@/components/admin/WeeklyScheduleEditor';
 import { getWeeklyPlanForClient } from '@/lib/data/weekly-plan-server';
+import { ClientFeedbackScheduleCard } from '@/components/admin/ClientFeedbackScheduleCard';
+import { getFeedbackSlotForClient } from '@/lib/data/feedback-schedule';
 import { ClientDietEditor } from '@/components/admin/ClientDietEditor';
 import { getMealPlanForClient } from '@/lib/data/meal-plan-server';
 import { MaterializedWorkoutsDiagnostic } from '@/components/admin/MaterializedWorkoutsDiagnostic';
@@ -106,6 +108,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     weeklyPlan,
     mealPlan,
     upcomingWorkouts,
+    feedbackSlot,
   ] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
@@ -120,6 +123,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getWeeklyPlanForClient(client.id),
     getMealPlanForClient(client.id),
     getUpcomingMaterializedWorkouts(client.id, 14),
+    getFeedbackSlotForClient(client.id),
   ]);
 
   // Editor only needs id/name/category/muscle for its template dropdown
@@ -298,6 +302,27 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
           was written" instead of leaving it as silent failure. */}
       <div className="mt-6">
         <MaterializedWorkoutsDiagnostic workouts={upcomingWorkouts} />
+      </div>
+
+      {/* Weekly feedback call — recurring day-of-week + time slot the
+          client gave us. Coach sees this client's slot here; the full
+          weekly grid lives at /admin/feedback-schedule. */}
+      <div className="mt-6">
+        <ClientFeedbackScheduleCard
+          clientId={client.id}
+          clientFirstName={titleCase(client.fullName).split(/\s+/)[0] ?? 'Client'}
+          initial={
+            feedbackSlot
+              ? {
+                  dayOfWeek: feedbackSlot.dayOfWeek,
+                  timeOfDay: feedbackSlot.timeOfDay,
+                  durationMin: feedbackSlot.durationMin,
+                  notes: feedbackSlot.notes,
+                  paused: feedbackSlot.paused,
+                }
+              : null
+          }
+        />
       </div>
 
       {/* Diet plan — recurring daily meals + macro/lifestyle targets.
