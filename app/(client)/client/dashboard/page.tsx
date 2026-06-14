@@ -2,6 +2,7 @@ import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { PlanFromCoachBanner } from '@/components/client/dashboard/PlanFromCoachBanner';
+import { DashboardMoreDetails } from '@/components/client/dashboard/DashboardMoreDetails';
 import { getCoachPlanFreshness } from '@/lib/data/plan-updates-server';
 // AdminSwitcher removed — middleware now redirects admins away from
 // /client/* entirely, so the "Switch to admin panel" banner can never
@@ -206,54 +207,40 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6 md:space-y-7">
+      {/* ─── Greeting (always visible — small, identity) ──────────── */}
       <WelcomeHeader />
 
-      {/* ─── PureX Score (hero) — single 0-100 number with breakdown
-          sheet on tap. Placed above all the raw-input cards because
-          this is the metric the user *should* return to daily. */}
+      {/* ─── PureX Score (hero) — the single 0-100 metric the user
+          should return to daily. Kept above the four essential cards
+          because it IS the dashboard's answer to "how am I doing
+          today?" — without it the four data cards lose their frame. */}
       <PureXScoreCard score={pureXScore} showPreview={pureXScoreEmpty} />
 
-      {/* ─── Plan from coach — surfaces "Schedule / Diet updated Xh
-          ago" + upcoming-workout count. Auto-hides when nothing is
-          set yet. Also our first-line debug signal when a client
-          reports "I can't see my workouts." */}
-      {userId && <PlanFromCoachBanner freshness={coachPlanFreshness} />}
+      {/* ════════════════════════════════════════════════════════════
+          Above the fold — the four essential cards per team feedback:
+            1. Today's Tasks
+            2. Meal Progress + Water Intake + Steps  (all four metrics
+               render inside AppFitnessTiles as one visually unified grid)
+            3. Workout / Today's Plan
+          Anything that previously sat in this region (Mood, Smart
+          Alerts, Streak, Twin, etc.) now lives behind the "More on
+          your day" toggle below so the first viewport stays clean.
+          ════════════════════════════════════════════════════════════ */}
 
-      {/* ─── Morning Mood Check-In — 8-chip "how is your body today?"
-          prompt. Sits just below PureX Score because it's a daily
-          ritual: open dashboard → see score → log mood → see
-          recommendation. Only shown when signed in (no point on a
-          signed-out preview). */}
-      {userId && <MoodCheckInCard current={todaysMood} />}
+      {/* 1. Today's Tasks — coach-assigned checklist */}
+      <TaskChecklist tasks={tasks} />
 
-      {/* ─── Smart Alerts — context-aware nudges (dehydration, low
-          sleep, missed workout, streak save, etc). Computed server-
-          side from current inputs + recent history so the first
-          render already has the alerts (no client-side flash).
-          Only shown when there's at least one active alert. */}
-      {userId && smartAlerts.length > 0 && (
-        <SmartAlertsCard alerts={smartAlerts} />
-      )}
-
-      {/* Health Connect auto-sync card — app-only (returns null on
-          web, and dynamic-imported so the plugin's JS never lands in
-          the web bundle). Handles install / connect / sync flows and
-          pushes readings to client_daily_logs server-side. */}
-      <HealthSyncCard />
-
-      {/* Raw fitness numbers — app-only (renders null on web). Sits
-          near the top so steps/sleep/water/nutrition are the first
-          thing visible after the greeting. */}
+      {/* 2. Meals · Water · Steps · Sleep — app-only fitness tiles.
+            Renders null on web, so web visitors see a tighter view. */}
       <AppFitnessTiles
         inputs={twinInputs}
         nutrition={nutritionSnapshot}
         todaysMeals={todaysMeals}
       />
 
-      {/* BodyMeasurementsCard moved to /client/health — single source
-          of truth for body data. Still imported here only because it
-          drives twinProportions for the TwinSection below. */}
-
+      {/* 3. Today's workout — full plan card. Below the metric tiles
+            because the workout is the day's biggest single action;
+            seeing the metrics first sets context for it. */}
       {userId && (
         <TodaysPlanCard
           plan={dailyPlan}
@@ -262,43 +249,60 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         />
       )}
 
-      {/* Healthy Streak — current/best/today + 7-day calendar */}
-      <HealthyStreakCard
-        history={streakHistory}
-        todayScore={todayScore}
-      />
+      {/* Health Connect auto-sync — renders null on web; the actual
+          sync UI only matters in the Capacitor app surface. */}
+      <HealthSyncCard />
 
-      {/* PureX Twin + Future Clone — APP-ONLY. Web visitors see
-          nothing here (no silhouette, no skeleton) — by product
-          decision the premium gamified body twin is reserved for the
-          mobile app surface. */}
-      <TwinSection
-        stats={twinStats}
-        state={twinState}
-        message={twinMessage}
-        level={level}
-        streakDays={currentStreakDays}
-        mission={mission}
-        workoutDoneToday={twinInputs.workoutCompletedToday}
-        proportions={proportions}
-        hasMeasurements={hasMeasurements}
-        gender={bodySettings.gender}
-      />
+      {/* ════════════════════════════════════════════════════════════
+          Everything else lives behind a tap. Default collapsed so the
+          first viewport is just the four cards above. State persists
+          per device in localStorage. Hidden subtree is conditionally
+          rendered so the heavier secondary components don't run any
+          client-side work until the user expands.
+          ════════════════════════════════════════════════════════════ */}
+      <DashboardMoreDetails>
+        {/* Plan from coach — surfaces "Schedule / Diet updated Xh ago"
+            + upcoming-workout count. Auto-hides when nothing is set
+            yet. First-line debug signal when a client reports "I
+            can't see my workouts." */}
+        {userId && <PlanFromCoachBanner freshness={coachPlanFreshness} />}
 
-      <CommitmentWidget pact={pact} />
+        {/* Morning Mood Check-In — 8-chip prompt. Only when signed in. */}
+        {userId && <MoodCheckInCard current={todaysMood} />}
 
-      {/* HealthPassportCard + BodyMeasurementsCard moved to
-          /client/health (Health tab in bottom nav). The dashboard
-          now stays focused on "today's actions" while Health is
-          "your body's data." */}
+        {/* Smart Alerts — context-aware nudges (dehydration, low sleep,
+            missed workout, streak save, etc). Server-computed so the
+            first render already has them. */}
+        {userId && smartAlerts.length > 0 && (
+          <SmartAlertsCard alerts={smartAlerts} />
+        )}
 
-      {/* ScoreWidget removed — PureXScoreCard at the top of the
-          dashboard now serves as the single hero score. Keeping both
-          was redundant (two big-number cards on one screen) and the
-          old widget's "Your score will appear here" empty state was
-          confusing once the new one was present. */}
+        {/* Healthy Streak — current/best/today + 7-day calendar. */}
+        <HealthyStreakCard history={streakHistory} todayScore={todayScore} />
 
-      <TaskChecklist tasks={tasks} />
+        {/* PureX Twin + Future Clone — APP-ONLY. Web visitors see
+            nothing here (no silhouette, no skeleton) by product
+            decision: the premium gamified body twin is reserved for
+            the mobile app surface. */}
+        <TwinSection
+          stats={twinStats}
+          state={twinState}
+          message={twinMessage}
+          level={level}
+          streakDays={currentStreakDays}
+          mission={mission}
+          workoutDoneToday={twinInputs.workoutCompletedToday}
+          proportions={proportions}
+          hasMeasurements={hasMeasurements}
+          gender={bodySettings.gender}
+        />
+
+        <CommitmentWidget pact={pact} />
+      </DashboardMoreDetails>
+
+      {/* HealthPassportCard + BodyMeasurementsCard live on /client/health
+          (Health tab in bottom nav). The dashboard stays focused on
+          "today's actions" while Health is "your body's data." */}
     </div>
   );
 }
