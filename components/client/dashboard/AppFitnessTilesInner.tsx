@@ -1,12 +1,25 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { Footprints, Moon, Droplets, Apple, Plus } from 'lucide-react';
 import type { DailyInputs, NutritionSnapshot } from '@/lib/data/twin';
 import type { MealRow } from '@/lib/data/meals';
-import { QuickLogSheet, type QuickLogType } from './QuickLogSheet';
-import { MealLogSheet } from './MealLogSheet';
+import type { QuickLogType } from './QuickLogSheet';
+
+// Heavy log sheets (~1300+ lines combined including their own children).
+// Dynamic-import so they only enter the bundle when the user actually
+// taps a tile to open one. ssr:false because they're stateful overlays —
+// SSR'ing closed sheets is pure waste.
+const QuickLogSheet = dynamic(
+  () => import('./QuickLogSheet').then((m) => ({ default: m.QuickLogSheet })),
+  { ssr: false }
+);
+const MealLogSheet = dynamic(
+  () => import('./MealLogSheet').then((m) => ({ default: m.MealLogSheet })),
+  { ssr: false }
+);
 
 interface Props {
   inputs: DailyInputs;
@@ -174,24 +187,30 @@ export function AppFitnessTilesInner({ inputs, nutrition, todaysMeals }: Props) 
         })}
       </motion.div>
 
-      <QuickLogSheet
-        open={sheetType !== null}
-        type={sheetType}
-        currentValue={sheetCurrent}
-        onClose={() => setSheetType(null)}
-      />
+      {/* Gate mount on `open` so the lazy chunk only loads after the
+          first user tap, not on initial dashboard render. */}
+      {sheetType !== null && (
+        <QuickLogSheet
+          open={true}
+          type={sheetType}
+          currentValue={sheetCurrent}
+          onClose={() => setSheetType(null)}
+        />
+      )}
 
-      <MealLogSheet
-        open={mealOpen}
-        onClose={() => setMealOpen(false)}
-        today={{
-          caloriesConsumed: nutrition.caloriesConsumed,
-          caloriesTarget: nutrition.caloriesTarget,
-          proteinG: nutrition.proteinG,
-          proteinTargetG: nutrition.proteinTargetG,
-        }}
-        todaysMeals={todaysMeals}
-      />
+      {mealOpen && (
+        <MealLogSheet
+          open={true}
+          onClose={() => setMealOpen(false)}
+          today={{
+            caloriesConsumed: nutrition.caloriesConsumed,
+            caloriesTarget: nutrition.caloriesTarget,
+            proteinG: nutrition.proteinG,
+            proteinTargetG: nutrition.proteinTargetG,
+          }}
+          todaysMeals={todaysMeals}
+        />
+      )}
     </>
   );
 }

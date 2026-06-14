@@ -76,6 +76,12 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   const selectedDate =
     requestedDate && DATE_PATTERN.test(requestedDate) ? requestedDate : today;
 
+  // ─── All dashboard queries kick off in parallel ───────────────────
+  // Previously this page ran TWO sequential Promise.all blocks: the
+  // page only started fetching twin/meals/measurements/mood AFTER the
+  // tasks/plan/freshness round-trip resolved. Two waves = double the
+  // network latency. Now they all fire as one Promise.all so the slowest
+  // single query bounds the total wait time, not the sum of two waves.
   let tasks: Awaited<ReturnType<typeof getClientTasksLive>>['rows'] = [];
   let dailyPlan = EMPTY_DAILY_PLAN;
   let coachPlanFreshness: Awaited<
@@ -87,22 +93,10 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     nextWorkoutDate: null,
   };
 
-  if (userId) {
-    const [tasksRes, plan, freshness] = await Promise.all([
-      getClientTasksLive(userId, selectedDate),
-      getDailyPlan(userId, selectedDate),
-      getCoachPlanFreshness(userId),
-    ]);
-    tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
-    dailyPlan = plan;
-    coachPlanFreshness = freshness;
-  }
-
-  // ─── Twin + Future Clone + Healthy Streak (Phase 4 — live data) ───
+  // Twin + Future Clone + Healthy Streak (Phase 4 — live data).
   // Pull real inputs from client_daily_logs + client_workouts. When the
   // client has no logs yet we fall through to deterministic empty
-  // inputs so the Twin renders in 'depleted' state with a "no data
-  // yet" feel rather than fake numbers.
+  // inputs so the Twin renders in 'depleted' state.
   let twinInputs: DailyInputs = emptyTwinInputs();
   let streakHistory: Awaited<ReturnType<typeof getStreakHistory>> = [];
   let nutritionSnapshot: NutritionSnapshot = EMPTY_NUTRITION_SNAPSHOT;
@@ -110,29 +104,45 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   let latestMeasurements: BodyMeasurements | null = null;
   let bodySettings: ProfileBodySettings = EMPTY_PROFILE_BODY_SETTINGS;
   let todaysMood: MoodState | null = null;
+
   if (userId) {
-    const [inputsResult, history, meals, meas, bodyProfile, moodRow] =
-      await Promise.all([
-        getTwinDailyInputs(userId, today),
-        getStreakHistory(userId, 7),
-        getTodaysMeals(userId, today),
-        getLatestMeasurements(userId),
-        getProfileBodySettings(userId),
-        // Fetch today's mood_state directly from client_daily_logs —
-        // small enough query that adding it to getTwinDailyInputs would
-        // bloat that function's selected columns. Returns null if no
-        // log row yet OR mood not set.
-        (async () => {
-          const sb = await createSupabaseClient();
-          const { data } = await sb
-            .from('client_daily_logs')
-            .select('mood_state')
-            .eq('client_id', userId)
-            .eq('log_date', today)
-            .maybeSingle();
-          return (data?.mood_state ?? null) as MoodState | null;
-        })(),
-      ]);
+    const [
+      tasksRes,
+      plan,
+      freshness,
+      inputsResult,
+      history,
+      meals,
+      meas,
+      bodyProfile,
+      moodRow,
+    ] = await Promise.all([
+      getClientTasksLive(userId, selectedDate),
+      getDailyPlan(userId, selectedDate),
+      getCoachPlanFreshness(userId),
+      getTwinDailyInputs(userId, today),
+      getStreakHistory(userId, 7),
+      getTodaysMeals(userId, today),
+      getLatestMeasurements(userId),
+      getProfileBodySettings(userId),
+      // Fetch today's mood_state directly from client_daily_logs —
+      // small enough query that adding it to getTwinDailyInputs would
+      // bloat that function's selected columns. Returns null if no
+      // log row yet OR mood not set.
+      (async () => {
+        const sb = await createSupabaseClient();
+        const { data } = await sb
+          .from('client_daily_logs')
+          .select('mood_state')
+          .eq('client_id', userId)
+          .eq('log_date', today)
+          .maybeSingle();
+        return (data?.mood_state ?? null) as MoodState | null;
+      })(),
+    ]);
+    tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
+    dailyPlan = plan;
+    coachPlanFreshness = freshness;
     twinInputs = inputsResult.inputs;
     streakHistory = history;
     nutritionSnapshot = inputsResult.nutrition;
