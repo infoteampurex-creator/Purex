@@ -3,13 +3,47 @@ import { Metadata } from 'next';
 import { ArrowLeft, Info, TrendingUp, TrendingDown, Minus, Activity, ArrowRight } from 'lucide-react';
 import { getMockClientScore, statusLabel, statusColor } from '@/lib/data/score';
 import { ScoreTrendChart } from '@/components/client/ScoreTrendChart';
+import { SmartAlertsCard } from '@/components/client/dashboard/SmartAlertsCard';
+import { computeSmartAlerts } from '@/lib/data/smart-alerts';
+import { getCurrentUserId } from '@/lib/data/client-live';
+import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import type { MoodState } from '@/lib/data/mood';
 
 export const metadata: Metadata = {
   title: 'My PURE X Score · PURE X',
 };
 
-export default function ScorePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function ScorePage() {
   const score = getMockClientScore();
+
+  // Live alerts data — surfaces context-aware nudges (dehydration,
+  // low sleep, missed workout, streak save) here on the Score page
+  // since it's the "how am I doing" hub. Moved from the dashboard
+  // in the v2 redesign so the home stays focused on today's number.
+  const userId = await getCurrentUserId();
+  let smartAlerts: ReturnType<typeof computeSmartAlerts> = [];
+  if (userId) {
+    const today = new Date().toISOString().slice(0, 10);
+    const [inputsResult, history, moodToday] = await Promise.all([
+      getTwinDailyInputs(userId, today),
+      getStreakHistory(userId, 7),
+      fetchTodaysMood(userId, today),
+    ]);
+    const recentScores = history
+      .filter((h) => h.hasData)
+      .map((h) => h.score)
+      .reverse();
+    smartAlerts = computeSmartAlerts({
+      inputs: inputsResult.inputs,
+      recentScores,
+      workouts7d: inputsResult.inputs.workoutsLast7,
+      moodToday,
+      currentHour: new Date().getHours(),
+    });
+  }
 
   // No score data yet — show empty state explaining what the score is
   if (!score) {
@@ -23,6 +57,16 @@ export default function ScorePage() {
             <ArrowLeft size={12} />
             Back to dashboard
           </Link>
+
+          {/* Live smart alerts — moved here from the dashboard in
+              PR #66. Only renders when there's at least one active
+              alert; auto-hides otherwise so the empty-state pitch
+              below stays clean. */}
+          {smartAlerts.length > 0 && (
+            <div className="mb-6">
+              <SmartAlertsCard alerts={smartAlerts} />
+            </div>
+          )}
 
           <div className="rounded-2xl bg-bg-card border border-accent/30 p-8 md:p-12 relative overflow-hidden">
             <div
@@ -322,4 +366,23 @@ function Pillar({
       <p className="text-xs text-text-muted leading-relaxed">{text}</p>
     </div>
   );
+}
+
+/** Today's mood_state (or null) — used by smart-alerts compute. */
+async function fetchTodaysMood(
+  userId: string,
+  today: string
+): Promise<MoodState | null> {
+  try {
+    const sb = await createSupabaseClient();
+    const { data } = await sb
+      .from('client_daily_logs')
+      .select('mood_state')
+      .eq('client_id', userId)
+      .eq('log_date', today)
+      .maybeSingle();
+    return (data?.mood_state ?? null) as MoodState | null;
+  } catch {
+    return null;
+  }
 }

@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
 import { Dumbbell } from 'lucide-react';
 import { PlanPageView } from '@/components/client/plan/PlanPageView';
+import { PlanFromCoachBanner } from '@/components/client/dashboard/PlanFromCoachBanner';
 import { getCurrentUserId } from '@/lib/data/client-live';
 import { getPlanData } from '@/lib/data/plan-server';
+import { getCoachPlanFreshness } from '@/lib/data/plan-updates-server';
 
 export const metadata = {
   title: 'PureX Plan · This week + training history',
@@ -32,7 +34,10 @@ export default async function PlanPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const data = await getPlanData(userId, today);
+  const [data, freshness] = await Promise.all([
+    getPlanData(userId, today),
+    getCoachPlanFreshness(userId),
+  ]);
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
@@ -67,6 +72,14 @@ export default async function PlanPage() {
             workouts your coach has assigned.
           </p>
         </header>
+
+        {/* "Schedule / Diet updated Xh ago + upcoming workouts" banner.
+            Moved from the dashboard in PR #66 — its natural home is
+            the Plan page where the coach's actual schedule lives.
+            Auto-hides when there's nothing to surface. */}
+        <div className="mb-5">
+          <PlanFromCoachBanner freshness={freshness} />
+        </div>
 
         <PlanPageView data={data} />
       </div>
