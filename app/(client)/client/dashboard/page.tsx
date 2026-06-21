@@ -1,9 +1,11 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
+import { DailyWeightCard } from '@/components/client/dashboard/DailyWeightCard';
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { PlanFromCoachBanner } from '@/components/client/dashboard/PlanFromCoachBanner';
 import { DashboardMoreDetails } from '@/components/client/dashboard/DashboardMoreDetails';
 import { getCoachPlanFreshness } from '@/lib/data/plan-updates-server';
+import { getDailyWeight, type DailyWeight } from '@/lib/data/daily-weight';
 // AdminSwitcher removed — middleware now redirects admins away from
 // /client/* entirely, so the "Switch to admin panel" banner can never
 // render. Coaches use /admin for everything; they preview client data
@@ -105,6 +107,11 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   let latestMeasurements: BodyMeasurements | null = null;
   let bodySettings: ProfileBodySettings = EMPTY_PROFILE_BODY_SETTINGS;
   let todaysMood: MoodState | null = null;
+  let dailyWeight: DailyWeight = {
+    todayKg: null,
+    previousKg: null,
+    previousDate: null,
+  };
 
   if (userId) {
     const [
@@ -117,6 +124,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       meas,
       bodyProfile,
       moodRow,
+      weightRow,
     ] = await Promise.all([
       getClientTasksLive(userId, selectedDate),
       getDailyPlan(userId, selectedDate),
@@ -140,6 +148,9 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           .maybeSingle();
         return (data?.mood_state ?? null) as MoodState | null;
       })(),
+      // Daily weight (today + previous, for delta). Separate from the
+      // twin inputs because it's not part of the avatar derivation.
+      getDailyWeight(userId, today),
     ]);
     tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
     dailyPlan = plan;
@@ -151,6 +162,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     latestMeasurements = meas;
     bodySettings = bodyProfile;
     todaysMood = moodRow;
+    dailyWeight = weightRow;
   }
   const twinStats = deriveTwinStats(twinInputs);
   const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
@@ -237,6 +249,11 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         nutrition={nutritionSnapshot}
         todaysMeals={todaysMeals}
       />
+
+      {/* 2a. Daily weigh-in — quick log + delta vs last weigh-in.
+            Sits beside the fitness tiles because morning weight is
+            part of the same "log my daily numbers" ritual. */}
+      <DailyWeightCard weight={dailyWeight} />
 
       {/* 3. Today's workout — full plan card. Below the metric tiles
             because the workout is the day's biggest single action;

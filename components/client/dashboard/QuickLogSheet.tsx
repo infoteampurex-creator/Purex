@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Droplets, Footprints, Loader2, Moon, X } from 'lucide-react';
+import { Droplets, Footprints, Loader2, Moon, Scale, X } from 'lucide-react';
 import { manualFitnessEntry } from '@/lib/actions/manual-fitness-entry';
 
-export type QuickLogType = 'steps' | 'sleep' | 'water';
+export type QuickLogType = 'steps' | 'sleep' | 'water' | 'weight';
 
 interface Props {
   open: boolean;
@@ -22,7 +22,7 @@ interface TypeConfig {
   icon: React.ReactNode;
   color: string;
   mode: 'set' | 'add';
-  field: 'steps' | 'sleep_hours' | 'water_glasses';
+  field: 'steps' | 'sleep_hours' | 'water_glasses' | 'weight_kg';
   unit: string;
   /** Quick-add chips (numeric values appended to current). */
   presets: Array<{ label: string; value: number }>;
@@ -32,6 +32,8 @@ interface TypeConfig {
   toDbValue: (input: number) => number;
   /** Convert DB column unit → display unit. */
   fromDbValue: (db: number) => number;
+  /** Decimal places to show on the input (default 0). */
+  decimals?: number;
 }
 
 const TYPE_META: Record<QuickLogType, TypeConfig> = {
@@ -85,6 +87,20 @@ const TYPE_META: Record<QuickLogType, TypeConfig> = {
     hint: 'Adds to today’s water total (1 glass = 250 ml).',
     toDbValue: (ml) => Math.round(ml / 250),
     fromDbValue: (glasses) => glasses * 250,
+  },
+  weight: {
+    title: 'Log weight',
+    icon: <Scale size={16} />,
+    color: '#ff8a4d',
+    mode: 'set',
+    field: 'weight_kg',
+    unit: 'kg',
+    presets: [],
+    hint:
+      'Weigh-in routine: same time each morning, after bathroom, before food / water.',
+    toDbValue: (kg) => Math.round(kg * 100) / 100,
+    fromDbValue: (db) => db,
+    decimals: 1,
   },
 };
 
@@ -244,7 +260,8 @@ export function QuickLogSheet({
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  inputMode="numeric"
+                  inputMode={cfg.decimals ? 'decimal' : 'numeric'}
+                  step={cfg.decimals ? Math.pow(10, -cfg.decimals) : 1}
                   value={input || ''}
                   onChange={(e) => setInput(Number(e.target.value) || 0)}
                   placeholder="0"
