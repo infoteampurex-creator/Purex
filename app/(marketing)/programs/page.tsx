@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowRight, Check, X, Sparkles } from 'lucide-react';
-import { FALLBACK_PROGRAMS } from '@/lib/constants';
 import { ProgramsGrid } from '@/components/marketing/sections/ProgramsGrid';
+import { getMergedPrograms } from '@/lib/data/pricing-merged';
 
 export const metadata: Metadata = {
   title: 'Programs & Pricing · PURE X',
@@ -25,7 +25,8 @@ const COMPARISON_FEATURES = [
   { label: 'Mental Health access',     foundation: false, core: false, elite: true },
 ];
 
-export default function ProgramsPage() {
+export default async function ProgramsPage() {
+  const programs = await getMergedPrograms();
   return (
     <main className="relative bg-bg text-text">
       {/* Hero */}
@@ -57,7 +58,7 @@ export default function ProgramsPage() {
       </section>
 
       {/* Program cards */}
-      <ProgramsGrid />
+      <ProgramsGrid programs={programs} />
 
       {/* Comparison table */}
       <section className="relative py-16 md:py-24 border-t border-border-soft">

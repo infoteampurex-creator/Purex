@@ -16,6 +16,7 @@ import {
   Target,
 } from 'lucide-react';
 import { FALLBACK_PROGRAMS, FALLBACK_EXPERTS, whatsappLink } from '@/lib/constants';
+import { getMergedPrograms } from '@/lib/data/pricing-merged';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -286,13 +287,18 @@ const PROGRAM_DETAILS: Record<
 };
 
 // ─── Next.js dynamic route boilerplate ───────────────────────────────
+// generateStaticParams only sees the in-code FALLBACK_PROGRAMS at
+// build time. Sheet-added programs are served dynamically by the
+// default dynamicParams=true behaviour — they work fine, just don't
+// get static-generated on the first build (next ISR cycle covers them).
 export async function generateStaticParams() {
   return FALLBACK_PROGRAMS.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const program = FALLBACK_PROGRAMS.find((p) => p.slug === slug);
+  const programs = await getMergedPrograms();
+  const program = programs.find((p) => p.slug === slug);
   if (!program) return { title: 'Plan not found · PURE X' };
   return {
     title: `${program.name} · ${program.priceDisplay}${program.priceSuffix} · PURE X`,
@@ -303,11 +309,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // ─── Page component ─────────────────────────────────────────────────
 export default async function ProgramDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const program = FALLBACK_PROGRAMS.find((p) => p.slug === slug);
+  const programs = await getMergedPrograms();
+  const program = programs.find((p) => p.slug === slug);
   if (!program) notFound();
 
   const details = PROGRAM_DETAILS[slug];
-  const otherPrograms = FALLBACK_PROGRAMS.filter((p) => p.slug !== slug);
+  const otherPrograms = programs.filter((p) => p.slug !== slug);
 
   return (
     <main className="relative bg-bg text-text">

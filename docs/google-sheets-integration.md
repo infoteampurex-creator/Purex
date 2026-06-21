@@ -117,6 +117,80 @@ tier even with bursts.
 To force a fresh fetch in dev: restart the Next dev server, or wait
 out the cache window.
 
+## Pricing / programs Sheet schema
+
+Single tab "Pricing":
+
+| Col | Header | Notes |
+|---|---|---|
+| A | `slug` | kebab-case unique id (e.g. `pure-core`) |
+| B | `name` | display name |
+| C | `tag` | short pill (e.g. "Most Popular") |
+| D | `tagline` | one-line hook |
+| E | `description` | paragraph |
+| F | `price_inr` | integer |
+| G | `price_display` | formatted display ("₹4,999") |
+| H | `price_suffix` | "/month", "", etc. |
+| I | `duration_months` | integer |
+| J | `is_featured` | TRUE/FALSE |
+| K | `is_premium` | TRUE/FALSE |
+| L | `inclusions` | pipe-separated list (`Doctor consult\|Physio\|Weekly call`) |
+
+Set `SHEET_PRICING_ID` to the spreadsheet id, share with the service
+account, redeploy. Sheet rows merge with the in-code `FALLBACK_PROGRAMS`
+in `lib/constants.ts` — Sheet wins on slug collision, so the admin can
+override pricing or copy on a built-in program by adding a row with
+the matching slug.
+
+The marketing pages `/programs` and `/programs/[slug]` consume the
+merged list.
+
+## Workout templates Sheet schema
+
+Two tabs in the same spreadsheet.
+
+**Tab "Templates":**
+
+| Col | Header | Notes |
+|---|---|---|
+| A | `id` | unique id (kebab-case, e.g. `chest-day-a`) |
+| B | `name` | display name |
+| C | `category` | Strength \| HYROX \| Conditioning \| Mobility \| Cardio \| Sport \| Rest |
+| D | `target_muscle_group` | "Push (Chest · Shoulders · Triceps)" |
+| E | `description` | paragraph |
+| F | `trainer_notes` | default coaching notes |
+| G | `next_day_instructions` | string |
+| H | `estimated_duration_minutes` | integer |
+| I | `difficulty` | beginner \| intermediate \| advanced |
+| J | `is_shared` | TRUE/FALSE (default TRUE) |
+
+**Tab "Exercises":**
+
+| Col | Header | Notes |
+|---|---|---|
+| A | `template_id` | must match an `id` from Templates tab |
+| B | `exercise_order` | integer |
+| C | `exercise_name` | required |
+| D | `target_muscle` | string |
+| E | `sets` | integer |
+| F | `reps` | text ("8-12", "AMRAP", etc.) |
+| G | `target_weight_kg` | decimal |
+| H | `rest_seconds` | integer |
+| I | `tempo` | text ("2-0-1-0") |
+| J | `rpe_target` | number 1-10 |
+| K | `trainer_instruction` | string |
+
+Set `SHEET_WORKOUT_TEMPLATES_ID` to the spreadsheet id and share with
+the service account. The adapter `getSheetWorkoutTemplates()` returns
+parsed templates with exercises grouped by `template_id`.
+
+**Note:** the admin Templates page UI wiring is intentionally deferred
+to a follow-up PR because the existing flow is tightly coupled to the
+DB schema. The adapter is in place so that follow-up is a single
+small file changes — merge DB summaries with Sheet additions, deal
+with duplicate-id resolution (DB wins for active templates, Sheet for
+new ones).
+
 ## Pattern for the next dataset
 
 `lib/google/sheets-client.ts` exposes `fetchSheet({ spreadsheetId,
