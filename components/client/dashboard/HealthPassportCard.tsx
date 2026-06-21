@@ -30,6 +30,13 @@ import {
   reportFileSize,
   type HealthReport,
 } from '@/lib/data/health-reports';
+import {
+  canPersistLocally,
+  saveLocalFile,
+  openLocalFile,
+  deleteLocalFile,
+  extFromMime,
+} from '@/lib/local/local-files';
 
 interface Props {
   initialReports: HealthReport[];
@@ -121,6 +128,22 @@ export function HealthPassportCard({ initialReports }: Props) {
         setUploadError(result.error);
         return;
       }
+
+      // ── Persist a copy to the device's private storage ─────────
+      // The server only kept the extracted markers. Save the actual
+      // PDF / image locally on the user's phone so they can open it
+      // again later. No-op on web; on mobile this writes to the app's
+      // private Data directory.
+      if (canPersistLocally()) {
+        const mime = pendingFile.type || 'application/octet-stream';
+        void saveLocalFile({
+          scope: 'health-reports',
+          id: result.report.id,
+          base64,
+          ext: extFromMime(mime),
+        });
+      }
+
       setReports((prev) => [result.report, ...prev]);
       setPendingFile(null);
       setReportLabel('');
@@ -141,8 +164,23 @@ export function HealthPassportCard({ initialReports }: Props) {
   };
 
   // ─── View report ───────────────────────────────────────────────
-
+  // Two paths:
+  //  1. Legacy rows (server still has the file) → signed URL from
+  //     storage opens in a new tab.
+  //  2. New "file-stays-on-device" rows → open the local copy via
+  //     Capacitor Filesystem. The mime is implicitly known from the
+  //     extracted_data.report_type? Not reliable — fall back to the
+  //     original filename extension when available.
   const handleView = async (report: HealthReport) => {
+    if (isFileOnDevice(report)) {
+      const ext = extFromFilename(report.originalFilename) ?? 'pdf';
+      const result = await openLocalFile('health-reports', report.id, ext);
+      if (!result.ok) {
+        // eslint-disable-next-line no-console
+        console.warn('No local copy on this device:', result.error);
+      }
+      return;
+    }
     const result = await getReportViewUrl(report.id);
     if (!result.ok) {
       // eslint-disable-next-line no-console
@@ -163,6 +201,13 @@ export function HealthPassportCard({ initialReports }: Props) {
         // eslint-disable-next-line no-console
         console.warn('Delete failed:', result.error);
         return;
+      }
+      // Best-effort: also drop the local copy on this device so the
+      // delete is a true "gone everywhere this user has touched it"
+      // operation (within this device). No-op on web.
+      if (isFileOnDevice(report)) {
+        const ext = extFromFilename(report.originalFilename) ?? 'pdf';
+        void deleteLocalFile('health-reports', report.id, ext);
       }
       setReports((prev) => prev.filter((r) => r.id !== report.id));
       router.refresh();
@@ -445,14 +490,27 @@ export function HealthPassportCard({ initialReports }: Props) {
                 )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                {/* View button is hidden for "file-on-device" rows since
-                    we no longer keep the original PDF/image server-side.
-                    Markers + summary are still visible inline. */}
-                {!isFileOnDevice(r) && (
+                {/* View affordance:
+                    - Legacy rows (file in Storage) → always show
+                    - File-on-device rows → show ONLY when running in
+                      the mobile app (Capacitor). On the regular web
+                      we have nothing to open, so hide it.
+                    Either way, handleView routes to the right
+                    source (signed URL vs. local file URI). */}
+                {(!isFileOnDevice(r) || canPersistLocally()) && (
                   <button
                     type="button"
                     onClick={() => handleView(r)}
-                    aria-label="View report"
+                    aria-label={
+                      isFileOnDevice(r)
+                        ? 'Open file from this device'
+                        : 'View report'
+                    }
+                    title={
+                      isFileOnDevice(r)
+                        ? 'Open file from this device'
+                        : 'View report'
+                    }
                     className="w-7 h-7 rounded-md border border-border-soft text-text-muted hover:border-accent hover:text-accent transition-colors flex items-center justify-center"
                   >
                     <Eye size={12} />
@@ -639,6 +697,16 @@ const STATUS_META: Record<
 };
 
 // ─── Helpers ──────────────────────────────────────────────────
+
+/** Strip the dot and lowercase the extension from a filename like
+ *  "Lipid_Profile_2026.PDF" → "pdf". Returns null when there's no
+ *  dot in the filename. */
+function extFromFilename(filename: string | null): string | null {
+  if (!filename) return null;
+  const dot = filename.lastIndexOf('.');
+  if (dot < 0 || dot === filename.length - 1) return null;
+  return filename.slice(dot + 1).toLowerCase();
+}
 
 /**
  * Read a File into base64. Used so we can hand the file to a JSON
