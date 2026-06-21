@@ -37,10 +37,15 @@ export interface ExtractedReportPayload {
 export interface HealthReport {
   id: string;
   clientId: string;
-  storagePath: string;
+  /**
+   * New "file stays on user's device" rows have storage_path === null
+   * (and mime / size also null) because we never persisted the file.
+   * Legacy rows uploaded before that policy still have it populated.
+   */
+  storagePath: string | null;
   originalFilename: string | null;
-  mimeType: string;
-  fileSizeBytes: number;
+  mimeType: string | null;
+  fileSizeBytes: number | null;
   reportLabel: string | null;
   reportDate: string | null;           // YYYY-MM-DD
   coachReviewNote: string | null;
@@ -68,7 +73,8 @@ export function reportDisplayName(report: HealthReport): string {
   })}`;
 }
 
-export function reportFileSize(bytes: number): string {
+export function reportFileSize(bytes: number | null): string {
+  if (bytes == null) return 'on device';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -77,6 +83,16 @@ export function reportFileSize(bytes: number): string {
 /** Returns true if mime points to a PDF (different preview UI). */
 export function isPdfReport(report: HealthReport): boolean {
   return report.mimeType === 'application/pdf';
+}
+
+/**
+ * True for rows uploaded under the "file stays on the user's device"
+ * policy — i.e. we never persisted the original file to Storage and
+ * only have the structured extraction. The admin "View" + client
+ * "Open file" affordances are hidden for these rows.
+ */
+export function isFileOnDevice(report: HealthReport): boolean {
+  return report.storagePath === null;
 }
 
 // ─── Safety disclaimer copy (shown wherever reports are listed) ──

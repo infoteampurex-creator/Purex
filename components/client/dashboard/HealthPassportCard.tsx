@@ -24,6 +24,7 @@ import {
 } from '@/lib/actions/health-reports';
 import {
   HEALTH_PASSPORT_DISCLAIMER,
+  isFileOnDevice,
   isPdfReport,
   reportDisplayName,
   reportFileSize,
@@ -240,7 +241,8 @@ export function HealthPassportCard({ initialReports }: Props) {
               className="mt-1 leading-snug"
               style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}
             >
-              PDF or photo. Your coach reviews it and adjusts your plan.
+              PDF or photo. Your file stays on your device — only the
+              extracted markers are saved so your coach can review them.
             </p>
           </>
         )}
@@ -443,14 +445,19 @@ export function HealthPassportCard({ initialReports }: Props) {
                 )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleView(r)}
-                  aria-label="View report"
-                  className="w-7 h-7 rounded-md border border-border-soft text-text-muted hover:border-accent hover:text-accent transition-colors flex items-center justify-center"
-                >
-                  <Eye size={12} />
-                </button>
+                {/* View button is hidden for "file-on-device" rows since
+                    we no longer keep the original PDF/image server-side.
+                    Markers + summary are still visible inline. */}
+                {!isFileOnDevice(r) && (
+                  <button
+                    type="button"
+                    onClick={() => handleView(r)}
+                    aria-label="View report"
+                    className="w-7 h-7 rounded-md border border-border-soft text-text-muted hover:border-accent hover:text-accent transition-colors flex items-center justify-center"
+                  >
+                    <Eye size={12} />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleDelete(r)}

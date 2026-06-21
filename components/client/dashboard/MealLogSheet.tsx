@@ -271,7 +271,10 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
       carbsG,
       fatsG,
       fiberG,
-      source: photoUrl ? 'ai_photo' : 'manual',
+      // Use aiRaw (not photoUrl) to detect AI-photo flow now that the
+      // photo itself is never persisted to Supabase. photoUrl is always
+      // null under the "photo stays on device" policy.
+      source: aiRaw ? 'ai_photo' : 'manual',
       photoUrl: photoUrl ?? null,
       aiRaw: aiRaw ?? null,
       aiConfidence: aiConfidence ?? null,

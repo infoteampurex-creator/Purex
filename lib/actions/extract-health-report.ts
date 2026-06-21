@@ -134,6 +134,18 @@ export type ExtractResult =
  * 'failed' with the error message, and the upload itself is never
  * blocked. The user keeps their file in storage either way.
  */
+/**
+ * Stored-file extraction path (LEGACY).
+ *
+ * Used only by the retry button on health reports uploaded BEFORE the
+ * "file stays on device" migration shipped — when storage_path was
+ * still populated. Downloads the file from Storage, then funnels
+ * into runExtractionOnBytes.
+ *
+ * New uploads do NOT go through this; they call
+ * extractHealthReportFromBytes directly so the file never lands in
+ * Storage in the first place.
+ */
 export async function extractHealthReport(
   reportId: string
 ): Promise<ExtractResult> {
@@ -143,12 +155,7 @@ export async function extractHealthReport(
 
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
-    // Mark as skipped rather than failed — the report itself is fine.
-    // eslint-disable-next-line no-console
-    console.warn(
-      '[extract-health-report] GOOGLE_AI_API_KEY missing — report saved without extraction',
-      { reportId }
-    );
+    logMissingKey(reportId);
     await markStatus(
       reportId,
       'skipped',
@@ -181,10 +188,24 @@ export async function extractHealthReport(
       return { ok: false, status: 'failed', error: 'Report not found' };
     }
 
+    // No stored file → cannot retry from server. User must re-upload.
+    if (!report.storage_path) {
+      await markStatus(
+        report.id,
+        'skipped',
+        'File stays on your device — re-upload to re-extract.'
+      );
+      return {
+        ok: false,
+        status: 'skipped',
+        error: 'File stays on your device — re-upload to re-extract.',
+      };
+    }
+
     // Mark processing
     await markStatus(report.id, 'processing', null);
 
-    // Download the file from storage
+    // Download the file from storage (legacy path)
     const { data: file, error: downloadErr } = await supabase.storage
       .from('health-reports')
       .download(report.storage_path);
@@ -201,184 +222,16 @@ export async function extractHealthReport(
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
 
-    // Map MIME for Gemini. Gemini accepts application/pdf + the common
-    // image types. HEIC/HEIF are converted to JPEG by the browser
-    // before upload in most cases; if a raw HEIC slips through, Gemini
-    // doesn't handle it — fall back to skipped with a hint.
-    const supportedMimes = new Set([
-      'application/pdf',
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/webp',
-    ]);
-    if (!supportedMimes.has(report.mime_type.toLowerCase())) {
-      await markStatus(
-        report.id,
-        'skipped',
-        `File type ${report.mime_type} not supported for AI extraction`
-      );
-      return {
-        ok: false,
-        status: 'skipped',
-        error: `File type ${report.mime_type} not supported`,
-      };
-    }
-
-    // ─── Call Gemini ─────────────────────────────────────────────
-    // Model fallback chain — if the primary errors (quota, regional
-    // availability, transient 500), we drop to the next one. Without
-    // this, a single bad model day knocks out the entire feature.
-    //
-    // Each attempt gets a hard wall-clock budget via AbortSignal so a
-    // single hung Gemini call can't eat the entire Vercel function
-    // budget (60s on Hobby). With PER_MODEL_TIMEOUT_MS = 20s and a
-    // 3-model chain we burn at most ~60s end-to-end and still leave
-    // a few seconds for the DB write at the bottom of this function.
-    const PER_MODEL_TIMEOUT_MS = 20_000;
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const MODEL_CHAIN = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash-latest',
-    ] as const;
-
-    const inlinePart = {
-      inlineData: {
-        data: base64,
-        mimeType:
-          report.mime_type.toLowerCase() === 'image/jpg'
-            ? 'image/jpeg'
-            : report.mime_type,
-      },
-    };
-    const promptPart = {
-      text: 'Extract every visible test marker from this lab report.',
-    };
-
-    let text: string | null = null;
-    let lastModelError: string | null = null;
-    let modelUsed: string | null = null;
-
-    for (const modelName of MODEL_CHAIN) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          systemInstruction: SYSTEM_INSTRUCTION,
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema,
-            temperature: 0.1,
-            // Reports can have many markers; budget enough tokens for
-            // the thinking step + a fully populated JSON.
-            maxOutputTokens: 8192,
-          },
-        });
-        const result = await Promise.race([
-          model.generateContent([inlinePart, promptPart]),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () =>
-                reject(
-                  new Error(`Timeout after ${PER_MODEL_TIMEOUT_MS}ms`)
-                ),
-              PER_MODEL_TIMEOUT_MS
-            )
-          ),
-        ]);
-        text = result.response.text();
-        modelUsed = modelName;
-        break;
-      } catch (modelErr) {
-        const msg =
-          modelErr instanceof Error ? modelErr.message : String(modelErr);
-        lastModelError = `${modelName}: ${msg}`;
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[extract-health-report] ${modelName} failed, trying next`,
-          msg
-        );
-        continue;
-      }
-    }
-
-    if (!text) {
-      const msg = lastModelError ?? 'All Gemini models failed';
-      // eslint-disable-next-line no-console
-      console.error('[extract-health-report] all models exhausted', {
-        reportId: report.id,
-        lastModelError: msg,
-      });
-      await markStatus(report.id, 'failed', msg);
-      return { ok: false, status: 'failed', error: msg };
-    }
-
-    // eslint-disable-next-line no-console
-    console.log(
-      `[extract-health-report] ${report.id} extracted via ${modelUsed}`
-    );
-
-    let parsed: ExtractedReportData;
-    try {
-      // Gemini sometimes wraps JSON in ```json ... ``` fences even when
-      // responseMimeType is JSON. Strip any fenced wrapper before parsing.
-      const cleaned = text
-        .trim()
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .trim();
-      const raw = JSON.parse(cleaned);
-      parsed = aiResponseSchema.parse(raw);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unexpected response shape';
-      // eslint-disable-next-line no-console
-      console.error('[extract-health-report] parse failed', {
-        reportId: report.id,
-        snippet: text.slice(0, 400),
-        message: msg,
-      });
-      await markStatus(report.id, 'failed', `Parse error: ${msg}`);
-      return { ok: false, status: 'failed', error: msg };
-    }
-
-    // Build a 1-line summary
-    const summary = buildSummary(parsed);
-
-    // Persist the result. Use a service-role write so RLS doesn't
-    // block when an admin triggers extraction on someone else's
-    // report (we already auth-checked above).
-    const { error: updateErr } = await supabase
-      .from('client_health_reports')
-      .update({
-        extraction_status: 'done',
-        extracted_at: new Date().toISOString(),
-        extracted_data: parsed,
-        extracted_summary: summary,
-        extraction_error: null,
-        // Also fill in the report_date if user didn't provide one
-        // and Gemini extracted a date confidently.
-        ...(parsed.report_date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.report_date)
-          ? { report_date: parsed.report_date }
-          : {}),
-        ...(parsed.lab_name && !parsed.lab_name.match(/^\s*$/)
-          ? { report_label: parsed.lab_name + ' — ' + (parsed.report_type ?? 'report') }
-          : {}),
-      })
-      .eq('id', report.id);
-
-    if (updateErr) {
-      return { ok: false, status: 'failed', error: updateErr.message };
-    }
-
-    revalidatePath('/client/health');
-    revalidatePath('/client/dashboard');
-    revalidatePath(`/admin/clients/${report.client_id}`);
-
-    return { ok: true, status: 'done', data: parsed };
+    return await runExtractionOnBytes({
+      reportId: report.id,
+      base64,
+      mimeType: report.mime_type ?? 'application/octet-stream',
+      apiKey,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Extraction failed';
     // eslint-disable-next-line no-console
-    console.error('[extract-health-report] unhandled exception', {
+    console.error('[extract-health-report] unhandled exception (storage path)', {
       reportId,
       message: msg,
       stack: err instanceof Error ? err.stack : undefined,
@@ -386,6 +239,246 @@ export async function extractHealthReport(
     await markStatus(reportId, 'failed', msg);
     return { ok: false, status: 'failed', error: msg };
   }
+}
+
+/**
+ * NEW: inline extraction path — file bytes come straight from the
+ * client and never touch Supabase Storage. The DB row exists, but
+ * only its extracted_data / summary / status columns get populated.
+ *
+ * This is the primary path for all new health-report uploads.
+ */
+export async function extractHealthReportFromBytes(input: {
+  reportId: string;
+  base64: string;
+  mimeType: string;
+}): Promise<ExtractResult> {
+  const { reportId, base64, mimeType } = input;
+  if (!reportId || !base64 || !mimeType) {
+    return { ok: false, status: 'failed', error: 'Missing required input' };
+  }
+
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) {
+    logMissingKey(reportId);
+    await markStatus(
+      reportId,
+      'skipped',
+      'AI extraction not configured. Ask admin to set GOOGLE_AI_API_KEY.'
+    );
+    return {
+      ok: false,
+      status: 'skipped',
+      error: 'AI extraction not configured',
+    };
+  }
+
+  try {
+    await markStatus(reportId, 'processing', null);
+    return await runExtractionOnBytes({ reportId, base64, mimeType, apiKey });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Extraction failed';
+    // eslint-disable-next-line no-console
+    console.error('[extract-health-report] unhandled exception (bytes path)', {
+      reportId,
+      message: msg,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    await markStatus(reportId, 'failed', msg);
+    return { ok: false, status: 'failed', error: msg };
+  }
+}
+
+function logMissingKey(reportId: string) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[extract-health-report] GOOGLE_AI_API_KEY missing — report saved without extraction',
+    { reportId }
+  );
+}
+
+/**
+ * Shared core that runs the Gemini extraction on already-in-memory
+ * bytes + writes the result back to client_health_reports.
+ */
+async function runExtractionOnBytes(args: {
+  reportId: string;
+  base64: string;
+  mimeType: string;
+  apiKey: string;
+}): Promise<ExtractResult> {
+  const { reportId, base64, mimeType, apiKey } = args;
+
+  // Map MIME for Gemini. Gemini accepts application/pdf + the common
+  // image types. HEIC/HEIF are converted to JPEG by the browser
+  // before upload in most cases; if a raw HEIC slips through, Gemini
+  // doesn't handle it — fall back to skipped with a hint.
+  const supportedMimes = new Set([
+    'application/pdf',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+  ]);
+  if (!supportedMimes.has(mimeType.toLowerCase())) {
+    await markStatus(
+      reportId,
+      'skipped',
+      `File type ${mimeType} not supported for AI extraction`
+    );
+    return {
+      ok: false,
+      status: 'skipped',
+      error: `File type ${mimeType} not supported`,
+    };
+  }
+
+  const supabase = await createClient();
+
+  // ─── Call Gemini ───────────────────────────────────────────────
+  // Model fallback chain — if the primary errors (quota, regional
+  // availability, transient 500), we drop to the next one. Without
+  // this, a single bad model day knocks out the entire feature.
+  //
+  // Each attempt gets a hard wall-clock budget via Promise.race so a
+  // single hung Gemini call can't eat the entire Vercel function
+  // budget (60s on Hobby). With PER_MODEL_TIMEOUT_MS = 20s and a
+  // 3-model chain we burn at most ~60s end-to-end and still leave
+  // a few seconds for the DB write at the bottom of this function.
+  const PER_MODEL_TIMEOUT_MS = 20_000;
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const MODEL_CHAIN = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
+  ] as const;
+
+  const normalisedMime =
+    mimeType.toLowerCase() === 'image/jpg' ? 'image/jpeg' : mimeType;
+
+  const inlinePart = {
+    inlineData: {
+      data: base64,
+      mimeType: normalisedMime,
+    },
+  };
+  const promptPart = {
+    text: 'Extract every visible test marker from this lab report.',
+  };
+
+  let text: string | null = null;
+  let lastModelError: string | null = null;
+  let modelUsed: string | null = null;
+
+  for (const modelName of MODEL_CHAIN) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: SYSTEM_INSTRUCTION,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema,
+          temperature: 0.1,
+          maxOutputTokens: 8192,
+        },
+      });
+      const result = await Promise.race([
+        model.generateContent([inlinePart, promptPart]),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(new Error(`Timeout after ${PER_MODEL_TIMEOUT_MS}ms`)),
+            PER_MODEL_TIMEOUT_MS
+          )
+        ),
+      ]);
+      text = result.response.text();
+      modelUsed = modelName;
+      break;
+    } catch (modelErr) {
+      const msg =
+        modelErr instanceof Error ? modelErr.message : String(modelErr);
+      lastModelError = `${modelName}: ${msg}`;
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[extract-health-report] ${modelName} failed, trying next`,
+        msg
+      );
+      continue;
+    }
+  }
+
+  if (!text) {
+    const msg = lastModelError ?? 'All Gemini models failed';
+    // eslint-disable-next-line no-console
+    console.error('[extract-health-report] all models exhausted', {
+      reportId,
+      lastModelError: msg,
+    });
+    await markStatus(reportId, 'failed', msg);
+    return { ok: false, status: 'failed', error: msg };
+  }
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `[extract-health-report] ${reportId} extracted via ${modelUsed}`
+  );
+
+  let parsed: ExtractedReportData;
+  try {
+    // Gemini sometimes wraps JSON in ```json ... ``` fences even when
+    // responseMimeType is JSON. Strip any fenced wrapper before parsing.
+    const cleaned = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim();
+    const raw = JSON.parse(cleaned);
+    parsed = aiResponseSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unexpected response shape';
+    // eslint-disable-next-line no-console
+    console.error('[extract-health-report] parse failed', {
+      reportId,
+      snippet: text.slice(0, 400),
+      message: msg,
+    });
+    await markStatus(reportId, 'failed', `Parse error: ${msg}`);
+    return { ok: false, status: 'failed', error: msg };
+  }
+
+  const summary = buildSummary(parsed);
+
+  const { data: updatedRow, error: updateErr } = await supabase
+    .from('client_health_reports')
+    .update({
+      extraction_status: 'done',
+      extracted_at: new Date().toISOString(),
+      extracted_data: parsed,
+      extracted_summary: summary,
+      extraction_error: null,
+      ...(parsed.report_date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.report_date)
+        ? { report_date: parsed.report_date }
+        : {}),
+      ...(parsed.lab_name && !parsed.lab_name.match(/^\s*$/)
+        ? { report_label: parsed.lab_name + ' — ' + (parsed.report_type ?? 'report') }
+        : {}),
+    })
+    .eq('id', reportId)
+    .select('client_id')
+    .maybeSingle();
+
+  if (updateErr) {
+    return { ok: false, status: 'failed', error: updateErr.message };
+  }
+
+  revalidatePath('/client/health');
+  revalidatePath('/client/dashboard');
+  if (updatedRow?.client_id) {
+    revalidatePath(`/admin/clients/${updatedRow.client_id}`);
+  }
+
+  return { ok: true, status: 'done', data: parsed };
 }
 
 // ─── helpers ────────────────────────────────────────────────────
