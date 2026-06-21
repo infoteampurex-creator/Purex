@@ -3,9 +3,35 @@ import { ArrowUpRight, Check, Crown } from 'lucide-react';
 import { FALLBACK_PROGRAMS } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 
-export function ProgramsGrid() {
-  const premiumProgram = FALLBACK_PROGRAMS.find((p) => p.isPremium);
-  const standardPrograms = FALLBACK_PROGRAMS.filter((p) => !p.isPremium);
+interface ProgramShape {
+  slug: string;
+  name: string;
+  tag: string;
+  tagline: string;
+  description: string;
+  priceInr: number;
+  priceDisplay: string;
+  priceSuffix: string;
+  durationMonths: number;
+  isFeatured: boolean;
+  isPremium: boolean;
+  inclusions: readonly string[];
+}
+
+interface Props {
+  /**
+   * Optional list override. /programs and /programs/[slug] pass the
+   * Sheets-merged list so admin-added programs surface here. Defaults
+   * to the in-code FALLBACK_PROGRAMS when not provided (so existing
+   * marketing layout pages that include this grid directly keep
+   * working without a code change).
+   */
+  programs?: readonly ProgramShape[];
+}
+
+export function ProgramsGrid({ programs = FALLBACK_PROGRAMS }: Props = {}) {
+  const premiumProgram = programs.find((p) => p.isPremium);
+  const standardPrograms = programs.filter((p) => !p.isPremium);
 
   return (
     <section id="programs" className="py-20 md:py-28 bg-bg-inset">
@@ -66,7 +92,7 @@ export function ProgramsGrid() {
 }
 
 // ─── Standard program card ──────────────────────────────────────
-type Program = (typeof FALLBACK_PROGRAMS)[number];
+type Program = ProgramShape;
 
 function StandardCard({ program }: { program: Program }) {
   return (
