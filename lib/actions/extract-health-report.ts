@@ -342,10 +342,15 @@ async function runExtractionOnBytes(args: {
   //
   // Each attempt gets a hard wall-clock budget via Promise.race so a
   // single hung Gemini call can't eat the entire Vercel function
-  // budget (60s on Hobby). With PER_MODEL_TIMEOUT_MS = 20s and a
-  // 3-model chain we burn at most ~60s end-to-end and still leave
-  // a few seconds for the DB write at the bottom of this function.
-  const PER_MODEL_TIMEOUT_MS = 20_000;
+  // budget (60s on Hobby). Previously PER_MODEL_TIMEOUT_MS = 20s,
+  // which left exactly ZERO headroom: 3 × 20s = 60s consumed everything
+  // before the final DB write, so on any scheduling jitter the row
+  // got stuck in 'processing' forever (UI showed "Stalled" after 90s).
+  //
+  // Reduced to 12s per model. 3 × 12s = 36s burns the model budget,
+  // leaving ~24s for status writes + the final DB update. In practice
+  // the primary model usually wins on the first attempt within 5-10s.
+  const PER_MODEL_TIMEOUT_MS = 12_000;
   const genAI = new GoogleGenerativeAI(apiKey);
   const MODEL_CHAIN = [
     'gemini-2.5-flash',
@@ -371,6 +376,7 @@ async function runExtractionOnBytes(args: {
   let modelUsed: string | null = null;
 
   for (const modelName of MODEL_CHAIN) {
+    const startedAt = Date.now();
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
@@ -394,15 +400,21 @@ async function runExtractionOnBytes(args: {
       ]);
       text = result.response.text();
       modelUsed = modelName;
+      // eslint-disable-next-line no-console
+      console.log(
+        `[extract-health-report] ${modelName} OK in ${Date.now() - startedAt}ms`,
+        { reportId }
+      );
       break;
     } catch (modelErr) {
+      const ms = Date.now() - startedAt;
       const msg =
         modelErr instanceof Error ? modelErr.message : String(modelErr);
       lastModelError = `${modelName}: ${msg}`;
       // eslint-disable-next-line no-console
       console.warn(
-        `[extract-health-report] ${modelName} failed, trying next`,
-        msg
+        `[extract-health-report] ${modelName} failed in ${ms}ms — trying next`,
+        { reportId, msg }
       );
       continue;
     }
