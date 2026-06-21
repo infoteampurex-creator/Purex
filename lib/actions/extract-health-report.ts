@@ -374,27 +374,31 @@ async function runExtractionOnBytes(args: {
   const supabase = await createClient();
 
   // ─── Call Gemini ───────────────────────────────────────────────
-  // Model fallback chain — if the primary errors (quota, regional
-  // availability, transient 500), we drop to the next one. Without
-  // this, a single bad model day knocks out the entire feature.
   //
-  // Each attempt gets a hard wall-clock budget via Promise.race so a
-  // single hung Gemini call can't eat the entire Vercel function
-  // budget (60s on Hobby). Previously PER_MODEL_TIMEOUT_MS = 20s,
-  // which left exactly ZERO headroom: 3 × 20s = 60s consumed everything
-  // before the final DB write, so on any scheduling jitter the row
-  // got stuck in 'processing' forever (UI showed "Stalled" after 90s).
+  // Per-model timeouts.
   //
-  // Reduced to 12s per model. 3 × 12s = 36s burns the model budget,
-  // leaving ~24s for status writes + the final DB update. In practice
-  // the primary model usually wins on the first attempt within 5-10s.
-  const PER_MODEL_TIMEOUT_MS = 12_000;
+  // The PRIMARY model (gemini-2.5-flash) is the only one that actually
+  // works on most accounts as of late 2026. Multi-page lab PDFs need
+  // 15–25s on Flash, so a 28s budget keeps it within the function's
+  // 60s ceiling on Hobby while giving real PDFs a fair chance.
+  //
+  // The FALLBACK (gemini-2.5-pro) only runs if Flash actually errors
+  // (network, transient 500, real timeout). Pro is slower but more
+  // capable — when Flash struggles on a dense scan, Pro often wins.
+  // 18s budget for Pro keeps total worst-case at 28 + 18 = 46s.
+  //
+  // What we REMOVED: gemini-2.0-flash (free-tier quota is 0 on many
+  // accounts — returns 429 in <300ms, wasted attempt) and
+  // gemini-1.5-flash-latest (retired by Google — returns 404 in
+  // <300ms, wasted attempt). User logs confirmed both. Better to
+  // try Flash longer than to cycle through dead models.
+  const PRIMARY_TIMEOUT_MS = 28_000;
+  const FALLBACK_TIMEOUT_MS = 18_000;
   const genAI = new GoogleGenerativeAI(apiKey);
-  const MODEL_CHAIN = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash-latest',
-  ] as const;
+  const MODEL_CHAIN: Array<{ name: string; timeoutMs: number }> = [
+    { name: 'gemini-2.5-flash', timeoutMs: PRIMARY_TIMEOUT_MS },
+    { name: 'gemini-2.5-pro',   timeoutMs: FALLBACK_TIMEOUT_MS },
+  ];
 
   const normalisedMime =
     mimeType.toLowerCase() === 'image/jpg' ? 'image/jpeg' : mimeType;
@@ -413,7 +417,7 @@ async function runExtractionOnBytes(args: {
   let lastModelError: string | null = null;
   let modelUsed: string | null = null;
 
-  for (const modelName of MODEL_CHAIN) {
+  for (const { name: modelName, timeoutMs } of MODEL_CHAIN) {
     const startedAt = Date.now();
     try {
       const model = genAI.getGenerativeModel({
@@ -430,9 +434,8 @@ async function runExtractionOnBytes(args: {
         model.generateContent([inlinePart, promptPart]),
         new Promise<never>((_, reject) =>
           setTimeout(
-            () =>
-              reject(new Error(`Timeout after ${PER_MODEL_TIMEOUT_MS}ms`)),
-            PER_MODEL_TIMEOUT_MS
+            () => reject(new Error(`Timeout after ${timeoutMs}ms`)),
+            timeoutMs
           )
         ),
       ]);
