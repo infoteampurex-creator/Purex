@@ -11,10 +11,14 @@ import {
   Check,
   X,
   ClipboardList,
+  RefreshCw,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import {
   setCoachReviewNote,
   getReportViewUrl,
+  retryHealthReportExtraction,
 } from '@/lib/actions/health-reports';
 import {
   isPdfReport,
@@ -98,9 +102,43 @@ function ReportRow({ report }: { report: HealthReport }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(report.coachReviewNote ?? '');
   const [saving, startSave] = useTransition();
+  const [retrying, startRetry] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const reviewed = !!report.coachReviewNote?.trim();
+
+  // ─── Extraction status (admin diagnostic) ──────────────────────
+  // Mirrors the client-side ExtractionStatusRow. A processing /
+  // pending report that hasn't moved in 90s is treated as Stalled
+  // so we surface a Re-extract affordance instead of leaving the
+  // admin staring at a frozen spinner.
+  const extractionStatus = report.extractionStatus;
+  const stale = (() => {
+    if (extractionStatus !== 'processing' && extractionStatus !== 'pending')
+      return false;
+    const last = report.extractedAt ?? report.uploadedAt;
+    return Date.now() - new Date(last).getTime() > 90 * 1000;
+  })();
+  const effectiveStatus: typeof extractionStatus | 'stale' = stale
+    ? 'stale'
+    : extractionStatus;
+  const canRetry = ['failed', 'skipped', 'stale', 'done'].includes(
+    effectiveStatus
+  );
+  const meta = ADMIN_STATUS_META[effectiveStatus] ?? ADMIN_STATUS_META.pending;
+
+  const handleRetry = () => {
+    setRetryError(null);
+    startRetry(async () => {
+      const res = await retryHealthReportExtraction(report.id);
+      if (!res.ok) {
+        setRetryError(res.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
 
   const handleView = async () => {
     const res = await getReportViewUrl(report.id);
@@ -199,6 +237,69 @@ function ReportRow({ report }: { report: HealthReport }) {
               </button>
             </div>
           </div>
+
+          {/* Extraction status pill + Re-extract control */}
+          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+            <span
+              className="inline-flex items-center gap-1 font-mono uppercase tracking-[0.14em] font-bold rounded-full px-1.5 py-0.5"
+              style={{
+                fontSize: 9,
+                color: meta.color,
+                background: meta.bg,
+                border: '1px solid ' + meta.border,
+              }}
+            >
+              <span
+                className={meta.spin ? 'animate-spin inline-flex' : 'inline-flex'}
+              >
+                {meta.icon}
+              </span>
+              {effectiveStatus === 'done' && report.extractedSummary
+                ? report.extractedSummary
+                : meta.label}
+            </span>
+            {report.extractionError && effectiveStatus === 'failed' && (
+              <span
+                title={report.extractionError}
+                style={{
+                  fontSize: 10,
+                  color: 'rgba(255,153,153,0.70)',
+                }}
+              >
+                {report.extractionError.slice(0, 90)}
+              </span>
+            )}
+            {canRetry && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={retrying}
+                className="inline-flex items-center gap-1 font-mono uppercase tracking-[0.14em] font-bold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{
+                  fontSize: 9,
+                  color: '#7dd3ff',
+                }}
+              >
+                <RefreshCw
+                  size={10}
+                  className={retrying ? 'animate-spin' : ''}
+                />
+                {retrying
+                  ? 'Re-reading…'
+                  : effectiveStatus === 'done'
+                  ? 'Re-extract'
+                  : 'Retry extract'}
+              </button>
+            )}
+          </div>
+          {retryError && (
+            <div
+              className="font-mono mt-1"
+              style={{ fontSize: 10, color: '#ff9999' }}
+            >
+              {retryError}
+            </div>
+          )}
 
           {/* Note display + edit */}
           {!editing ? (
@@ -314,3 +415,60 @@ function ReportRow({ report }: { report: HealthReport }) {
     </div>
   );
 }
+
+// ─── Extraction status meta (admin) ─────────────────────────────
+const ADMIN_STATUS_META: Record<
+  string,
+  {
+    label: string;
+    icon: React.ReactNode;
+    color: string;
+    bg: string;
+    border: string;
+    spin?: boolean;
+  }
+> = {
+  done: {
+    label: 'Extracted',
+    icon: <Check size={9} strokeWidth={3} />,
+    color: '#c6ff3d',
+    bg: 'rgba(198,255,61,0.08)',
+    border: 'rgba(198,255,61,0.25)',
+  },
+  processing: {
+    label: 'Reading…',
+    icon: <RefreshCw size={9} />,
+    color: '#7dd3ff',
+    bg: 'rgba(125,211,255,0.08)',
+    border: 'rgba(125,211,255,0.25)',
+    spin: true,
+  },
+  pending: {
+    label: 'Queued',
+    icon: <Clock size={9} />,
+    color: '#7dd3ff',
+    bg: 'rgba(125,211,255,0.08)',
+    border: 'rgba(125,211,255,0.25)',
+  },
+  stale: {
+    label: 'Stalled',
+    icon: <AlertTriangle size={9} />,
+    color: '#ffb84d',
+    bg: 'rgba(255,184,77,0.08)',
+    border: 'rgba(255,184,77,0.30)',
+  },
+  failed: {
+    label: 'Failed',
+    icon: <AlertTriangle size={9} />,
+    color: '#ff9999',
+    bg: 'rgba(255,107,107,0.08)',
+    border: 'rgba(255,107,107,0.30)',
+  },
+  skipped: {
+    label: 'Skipped',
+    icon: <AlertTriangle size={9} />,
+    color: 'rgba(255,255,255,0.55)',
+    bg: 'rgba(255,255,255,0.04)',
+    border: 'rgba(255,255,255,0.15)',
+  },
+};
