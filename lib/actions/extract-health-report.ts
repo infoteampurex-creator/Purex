@@ -229,6 +229,13 @@ export async function extractHealthReport(
     // Model fallback chain — if the primary errors (quota, regional
     // availability, transient 500), we drop to the next one. Without
     // this, a single bad model day knocks out the entire feature.
+    //
+    // Each attempt gets a hard wall-clock budget via AbortSignal so a
+    // single hung Gemini call can't eat the entire Vercel function
+    // budget (60s on Hobby). With PER_MODEL_TIMEOUT_MS = 20s and a
+    // 3-model chain we burn at most ~60s end-to-end and still leave
+    // a few seconds for the DB write at the bottom of this function.
+    const PER_MODEL_TIMEOUT_MS = 20_000;
     const genAI = new GoogleGenerativeAI(apiKey);
     const MODEL_CHAIN = [
       'gemini-2.5-flash',
@@ -267,7 +274,18 @@ export async function extractHealthReport(
             maxOutputTokens: 8192,
           },
         });
-        const result = await model.generateContent([inlinePart, promptPart]);
+        const result = await Promise.race([
+          model.generateContent([inlinePart, promptPart]),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () =>
+                reject(
+                  new Error(`Timeout after ${PER_MODEL_TIMEOUT_MS}ms`)
+                ),
+              PER_MODEL_TIMEOUT_MS
+            )
+          ),
+        ]);
         text = result.response.text();
         modelUsed = modelName;
         break;
@@ -286,6 +304,11 @@ export async function extractHealthReport(
 
     if (!text) {
       const msg = lastModelError ?? 'All Gemini models failed';
+      // eslint-disable-next-line no-console
+      console.error('[extract-health-report] all models exhausted', {
+        reportId: report.id,
+        lastModelError: msg,
+      });
       await markStatus(report.id, 'failed', msg);
       return { ok: false, status: 'failed', error: msg };
     }
