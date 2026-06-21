@@ -14,22 +14,30 @@ interface Props {
   showPreview?: boolean;
 }
 
+// ─── Signature gold palette ──────────────────────────────────────────
+// Champagne → warm gold → deep gold. Sits BEHIND the band colour so
+// the score still reads peak/strong/steady at a glance, but every
+// card frame gets the premium feel of a signature gold card.
+const GOLD_LIGHT = '#fbe6a3';
+const GOLD = '#ffd24d';
+const GOLD_DEEP = '#b88d2c';
+
 /**
- * Whoop-inspired hero gauge for the dashboard.
+ * PURE X Signature Gold Score Card.
  *
- * Single colossal number at the centre, a stroked circular ring
- * showing progress 0..100, status word underneath, and an optional
- * 7-day delta chip in the corner. Everything else on the dashboard
- * lives in service of THIS number — Recovery / Strain / Sleep are
- * sub-pages a tap away.
+ * Composition (back to front):
+ *   1. Card surface — deep gradient with radial gold + band tints
+ *   2. Animated shine sweep — diagonal champagne-light pass every 7s
+ *   3. Subtle dotted-wave SVG glued to the bottom edge (Google-Fit
+ *      flavour, low opacity so it never competes with the number)
+ *   4. Score ring — band-coloured stroke shadowed against a
+ *      champagne-gold soft halo
+ *   5. Centre: colossal score number with soft glow
+ *   6. Status word + tagline
+ *   7. 7-day delta chip in the corner
  *
- * Design notes:
- *   - SVG ring with stroke-dashoffset animation (framer-motion)
- *   - Gradient stroke colour shifts band → band (lime / warm / amber)
- *   - Soft glow under the number reads as "important"
- *   - Generous padding — the whole card is mostly negative space
- *   - Mobile-first: ring scales with the card width; legible on
- *     320 → 600px containers without media-query gymnastics
+ * Performance: shine + wave are pure CSS / SVG keyframe animations,
+ * no JS tick. Ring stroke uses framer-motion ONCE on first render.
  */
 export function PureXScoreHero({ score, weeklyDelta, showPreview }: Props) {
   const total = showPreview ? 0 : score.total;
@@ -53,110 +61,206 @@ export function PureXScoreHero({ score, weeklyDelta, showPreview }: Props) {
 
   return (
     <section
-      className="relative overflow-hidden rounded-3xl border border-border"
+      className="relative overflow-hidden rounded-3xl"
       style={{
-        background: `
-          radial-gradient(ellipse at 50% 0%, ${color}1A 0%, transparent 60%),
-          linear-gradient(180deg, #10160e 0%, #0a0c09 100%)
-        `,
+        // Gold gradient border via padding-trick: outer element gets a
+        // gradient, inner card sits on top with a darker fill so the
+        // border reads as a 1px champagne edge that never goes flat.
+        padding: 1,
+        background: `linear-gradient(140deg, ${GOLD_LIGHT}66 0%, ${GOLD}33 30%, transparent 50%, ${GOLD_DEEP}44 100%)`,
+        boxShadow:
+          '0 18px 64px rgba(255,210,77,0.10), 0 2px 12px rgba(0,0,0,0.45)',
       }}
     >
-      {/* Top header strip */}
-      <div className="flex items-baseline justify-between px-5 pt-5 pb-1">
+      <div
+        className="relative overflow-hidden rounded-3xl"
+        style={{
+          background: `
+            radial-gradient(ellipse at 50% 0%, ${color}1F 0%, transparent 55%),
+            radial-gradient(ellipse at 100% 100%, ${GOLD}10 0%, transparent 60%),
+            linear-gradient(180deg, #14110a 0%, #0a0c09 78%)
+          `,
+        }}
+      >
+        {/* ─── 1. Animated diagonal shine sweep ──────────────────── */}
         <div
-          className="font-mono uppercase tracking-[0.22em] font-bold"
-          style={{ fontSize: 11, color }}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden"
         >
-          PureX Score · Today
-        </div>
-        {trend && weeklyDelta != null && (
-          <TrendChip trend={trend} delta={weeklyDelta} />
-        )}
-      </div>
-
-      {/* Gauge */}
-      <div className="relative flex items-center justify-center pt-2 pb-7">
-        <svg
-          viewBox="0 0 200 200"
-          className="w-[220px] h-[220px] -rotate-90 drop-shadow-[0_0_24px_rgba(198,255,61,0.08)]"
-        >
-          {/* Track */}
-          <circle
-            cx={100}
-            cy={100}
-            r={RADIUS}
-            stroke="rgba(255,255,255,0.06)"
-            strokeWidth={STROKE}
-            fill="none"
-          />
-          {/* Progress */}
-          <motion.circle
-            cx={100}
-            cy={100}
-            r={RADIUS}
-            stroke={color}
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={CIRC}
-            initial={{ strokeDashoffset: CIRC }}
-            animate={{ strokeDashoffset: dashOffset }}
-            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+          <div
+            className="absolute -inset-[20%] purex-shine"
             style={{
-              filter: `drop-shadow(0 0 8px ${color}80)`,
+              background:
+                `linear-gradient(110deg, transparent 38%, ${GOLD_LIGHT}22 47%, ${GOLD}33 50%, ${GOLD_LIGHT}22 53%, transparent 62%)`,
+              filter: 'blur(8px)',
             }}
           />
-        </svg>
+        </div>
 
-        {/* Centre stack */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {showPreview ? (
-            <div
-              className="font-display font-extrabold leading-none tabular-nums"
-              style={{
-                fontSize: 60,
-                color: 'rgba(255,255,255,0.20)',
-              }}
-            >
-              —
-            </div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="font-display font-extrabold leading-none tabular-nums"
-              style={{
-                fontSize: 72,
-                color,
-                letterSpacing: '-0.04em',
-                textShadow: `0 0 32px ${color}40`,
-              }}
-            >
-              {total}
-            </motion.div>
-          )}
+        {/* ─── 2. Top strip: label + delta chip ──────────────────── */}
+        <div className="relative flex items-baseline justify-between px-5 pt-5 pb-1">
           <div
-            className="font-mono uppercase tracking-[0.18em] font-bold mt-2"
-            style={{ fontSize: 10, color: 'rgba(255,255,255,0.50)' }}
+            className="font-mono uppercase tracking-[0.24em] font-bold"
+            style={{
+              fontSize: 11,
+              background: `linear-gradient(90deg, ${color} 0%, ${GOLD} 100%)`,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              color: 'transparent',
+            }}
           >
-            {showPreview ? 'Calibrating' : band.label}
+            PureX Score · Today
+          </div>
+          {trend && weeklyDelta != null && (
+            <TrendChip trend={trend} delta={weeklyDelta} />
+          )}
+        </div>
+
+        {/* ─── 3. Gauge ──────────────────────────────────────────── */}
+        <div className="relative flex items-center justify-center pt-2 pb-6">
+          <svg
+            viewBox="0 0 200 200"
+            className="w-[224px] h-[224px] -rotate-90 drop-shadow-[0_0_28px_rgba(255,210,77,0.10)]"
+          >
+            <defs>
+              {/* Champagne halo behind the progress arc — adds the
+                  "signature gold" wrap regardless of band colour. */}
+              <radialGradient id="goldHalo" cx="50%" cy="50%" r="50%">
+                <stop offset="60%" stopColor={GOLD} stopOpacity="0.05" />
+                <stop offset="85%" stopColor={GOLD} stopOpacity="0.18" />
+                <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
+              </radialGradient>
+              {/* Sweep gradient on the progress arc — light → band
+                  → light so the stroke "breathes" gold without
+                  losing the band-coded status read. */}
+              <linearGradient
+                id="ringSweep"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
+                <stop offset="0%" stopColor={GOLD_LIGHT} />
+                <stop offset="50%" stopColor={color} />
+                <stop offset="100%" stopColor={GOLD} />
+              </linearGradient>
+            </defs>
+
+            {/* Champagne halo */}
+            <circle cx={100} cy={100} r={RADIUS + 8} fill="url(#goldHalo)" />
+
+            {/* Track */}
+            <circle
+              cx={100}
+              cy={100}
+              r={RADIUS}
+              stroke="rgba(255,255,255,0.05)"
+              strokeWidth={STROKE}
+              fill="none"
+            />
+
+            {/* Progress with sweep gradient */}
+            <motion.circle
+              cx={100}
+              cy={100}
+              r={RADIUS}
+              stroke="url(#ringSweep)"
+              strokeWidth={STROKE}
+              strokeLinecap="round"
+              fill="none"
+              strokeDasharray={CIRC}
+              initial={{ strokeDashoffset: CIRC }}
+              animate={{ strokeDashoffset: dashOffset }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                filter: `drop-shadow(0 0 10px ${color}90)`,
+              }}
+            />
+          </svg>
+
+          {/* Centre stack */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {showPreview ? (
+              <div
+                className="font-display font-extrabold leading-none tabular-nums"
+                style={{
+                  fontSize: 60,
+                  color: 'rgba(255,255,255,0.18)',
+                }}
+              >
+                —
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="font-display font-extrabold leading-none tabular-nums"
+                style={{
+                  fontSize: 76,
+                  background: `linear-gradient(170deg, ${GOLD_LIGHT} 0%, ${color} 55%, ${GOLD} 100%)`,
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  color: 'transparent',
+                  letterSpacing: '-0.04em',
+                  textShadow: `0 0 32px ${color}30`,
+                }}
+              >
+                {total}
+              </motion.div>
+            )}
+            <div
+              className="font-mono uppercase tracking-[0.22em] font-bold mt-2"
+              style={{ fontSize: 10, color: GOLD }}
+            >
+              {showPreview ? 'Calibrating' : band.label}
+            </div>
           </div>
         </div>
+
+        {/* ─── 4. Tagline ────────────────────────────────────────── */}
+        <div
+          className="relative text-center px-6 leading-relaxed"
+          style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)' }}
+        >
+          {showPreview
+            ? "Log a meal, your steps, or last night's sleep — your score builds itself."
+            : band.tagline}
+        </div>
+
+        {/* ─── 5. Dotted-wave bottom edge (Google Fit feel) ──────── */}
+        <DottedWave color={GOLD} />
       </div>
 
-      {/* Tagline */}
-      <div
-        className="text-center px-6 pb-5 leading-relaxed"
-        style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}
-      >
-        {showPreview
-          ? 'Log a meal, your steps, or last night\'s sleep — your score builds itself.'
-          : band.tagline}
-      </div>
+      {/* Keyframes — local style for the shine + wave drift. */}
+      <style>{`
+        @keyframes purex-shine {
+          0%   { transform: translateX(-30%); opacity: 0; }
+          12%  { opacity: 0.55; }
+          50%  { transform: translateX(30%); opacity: 0.55; }
+          88%  { opacity: 0; }
+          100% { transform: translateX(30%); opacity: 0; }
+        }
+        .purex-shine {
+          animation: purex-shine 7s ease-in-out infinite;
+          will-change: transform, opacity;
+        }
+        @keyframes purex-wave {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-120px); }
+        }
+        .purex-wave {
+          animation: purex-wave 14s linear infinite;
+          will-change: transform;
+        }
+      `}</style>
     </section>
   );
 }
+
+// ─── Sub-components ────────────────────────────────────────────────
 
 function TrendChip({
   trend,
@@ -170,14 +274,14 @@ function TrendChip({
       ? {
           color: '#c6ff3d',
           bg: 'rgba(198,255,61,0.10)',
-          border: 'rgba(198,255,61,0.25)',
+          border: 'rgba(198,255,61,0.30)',
           icon: <TrendingUp size={10} />,
         }
       : trend === 'down'
       ? {
           color: '#ff9999',
           bg: 'rgba(255,107,107,0.10)',
-          border: 'rgba(255,107,107,0.25)',
+          border: 'rgba(255,107,107,0.30)',
           icon: <TrendingDown size={10} />,
         }
       : {
@@ -204,5 +308,66 @@ function TrendChip({
       {display}
       <span style={{ opacity: 0.6, marginLeft: 2 }}>vs 7d</span>
     </span>
+  );
+}
+
+/**
+ * Looping dotted-wave strip glued to the bottom of the card. Inspired
+ * by Google Fit's wavy progress edge but rendered as SVG dots so we
+ * keep brand control. Pattern repeats horizontally and drifts left
+ * at a slow tempo — animation is GPU-cheap (translate only).
+ */
+function DottedWave({ color }: { color: string }) {
+  // Two seamless tiles side-by-side so we can translate -1 tile and
+  // re-enter cleanly. Each tile is 240×40.
+  const Tile = (
+    <g>
+      {Array.from({ length: 48 }).map((_, i) => {
+        const x = i * 5 + 2;
+        // Sin wave — amplitude 10px, period 240px (full tile).
+        const y = 20 + Math.sin((x / 240) * Math.PI * 2) * 10;
+        // Fade in toward the middle of the tile so the join is invisible.
+        const fade =
+          x < 20 || x > 220
+            ? 0.25
+            : 0.6;
+        return (
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={1.2}
+            fill={color}
+            opacity={fade}
+          />
+        );
+      })}
+    </g>
+  );
+
+  return (
+    <div
+      aria-hidden
+      className="relative w-full overflow-hidden mt-4"
+      style={{ height: 40 }}
+    >
+      <svg
+        viewBox="0 0 480 40"
+        className="purex-wave absolute left-0 top-0"
+        style={{ width: 480, height: 40 }}
+        preserveAspectRatio="none"
+      >
+        <g transform="translate(0,0)">{Tile}</g>
+        <g transform="translate(240,0)">{Tile}</g>
+      </svg>
+      {/* Right-edge fade so the loop doesn't show a hard cut. */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(10,12,9,0) 0%, transparent 8%, transparent 92%, rgba(10,12,9,0.85) 100%)',
+        }}
+      />
+    </div>
   );
 }
