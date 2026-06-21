@@ -3,6 +3,7 @@ import { PureXScoreHero } from '@/components/client/dashboard/PureXScoreHero';
 import { DashboardTodayPanel } from '@/components/client/dashboard/DashboardTodayPanel';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
+import { TwinCloneTeaser } from '@/components/client/dashboard/TwinCloneTeaser';
 import { computePureXScore } from '@/lib/data/purex-score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
@@ -11,11 +12,22 @@ import {
   EMPTY_NUTRITION_SNAPSHOT,
   type DailyInputs,
   type NutritionSnapshot,
+  deriveTwinStats,
+  deriveVisualState,
+  twinOverallScore,
+  dailyTwinMessage,
+  computeCurrentStreak,
 } from '@/lib/data/twin';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import { getTodaysMeals, type MealRow } from '@/lib/data/meals';
 import { getDailyWeight, type DailyWeight } from '@/lib/data/daily-weight';
-import { computeCurrentStreak } from '@/lib/data/twin';
+import {
+  getLatestMeasurements,
+  getProfileBodySettings,
+  EMPTY_PROFILE_BODY_SETTINGS,
+} from '@/lib/data/body-measurements';
+import { deriveBodyProportions } from '@/lib/data/body-proportions';
+import { avatarFor } from '@/lib/data/avatar-asset';
 
 // Bump serverless timeout — the dashboard can host health-report
 // uploads via HealthPassportCard, and Gemini extraction runs inline
@@ -76,16 +88,29 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     previousDate: null,
   };
 
+  let latestMeas: Awaited<ReturnType<typeof getLatestMeasurements>> = null;
+  let bodySettings = EMPTY_PROFILE_BODY_SETTINGS;
+
   if (userId) {
-    const [tasksRes, plan, inputsResult, history, meals, weight] =
-      await Promise.all([
-        getClientTasksLive(userId, selectedDate),
-        getDailyPlan(userId, selectedDate),
-        getTwinDailyInputs(userId, today),
-        getStreakHistory(userId, 7),
-        getTodaysMeals(userId, today),
-        getDailyWeight(userId, today),
-      ]);
+    const [
+      tasksRes,
+      plan,
+      inputsResult,
+      history,
+      meals,
+      weight,
+      meas,
+      bodyProfile,
+    ] = await Promise.all([
+      getClientTasksLive(userId, selectedDate),
+      getDailyPlan(userId, selectedDate),
+      getTwinDailyInputs(userId, today),
+      getStreakHistory(userId, 7),
+      getTodaysMeals(userId, today),
+      getDailyWeight(userId, today),
+      getLatestMeasurements(userId),
+      getProfileBodySettings(userId),
+    ]);
     tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
     dailyPlan = plan;
     twinInputs = inputsResult.inputs;
@@ -93,7 +118,22 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     nutritionSnapshot = inputsResult.nutrition;
     todaysMeals = meals;
     dailyWeight = weight;
+    latestMeas = meas;
+    bodySettings = bodyProfile;
   }
+
+  // Twin teaser data — small derived block, no DB hits beyond the
+  // ones already in the Promise.all above.
+  const twinStats = deriveTwinStats(twinInputs);
+  const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
+  const twinOverall = twinOverallScore(twinStats);
+  const twinMessage = dailyTwinMessage(twinState, today);
+  const proportions = deriveBodyProportions(
+    latestMeas,
+    bodySettings.heightCm,
+    bodySettings.gender
+  );
+  const avatarSrc = avatarFor(bodySettings.gender, proportions.bodyType);
 
   const currentStreakDays = computeCurrentStreak(streakHistory);
   const pureXScore = computePureXScore(twinInputs, currentStreakDays);
@@ -131,6 +171,19 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         todaysMeals={todaysMeals}
         todaysWeightKg={dailyWeight.todayKg}
       />
+
+      {/* Twin + Future Clone teaser — brings the gamified avatar
+          "feel" back to the dashboard without dragging the full
+          200+-line TwinSection into the home view. Tap → drills
+          into /client/twin (full immersive page) or /client/future-clone. */}
+      {userId && (
+        <TwinCloneTeaser
+          avatarSrc={avatarSrc}
+          state={twinState}
+          overall={twinOverall}
+          message={twinMessage}
+        />
+      )}
 
       {/* Today's workout — full plan card. */}
       {userId && (
