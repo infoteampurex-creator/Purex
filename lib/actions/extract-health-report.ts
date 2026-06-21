@@ -253,8 +253,22 @@ export async function extractHealthReportFromBytes(input: {
   base64: string;
   mimeType: string;
 }): Promise<ExtractResult> {
+  const fnStartedAt = Date.now();
   const { reportId, base64, mimeType } = input;
+  // eslint-disable-next-line no-console
+  console.log('[extract-from-bytes] ENTER', {
+    reportId,
+    mimeType,
+    base64Length: base64?.length ?? 0,
+  });
+
   if (!reportId || !base64 || !mimeType) {
+    // eslint-disable-next-line no-console
+    console.error('[extract-from-bytes] missing input', {
+      hasReportId: !!reportId,
+      hasBase64: !!base64,
+      hasMimeType: !!mimeType,
+    });
     return { ok: false, status: 'failed', error: 'Missing required input' };
   }
 
@@ -274,15 +288,39 @@ export async function extractHealthReportFromBytes(input: {
   }
 
   try {
+    // eslint-disable-next-line no-console
+    console.log('[extract-from-bytes] marking processing', {
+      reportId,
+      elapsedMs: Date.now() - fnStartedAt,
+    });
     await markStatus(reportId, 'processing', null);
-    return await runExtractionOnBytes({ reportId, base64, mimeType, apiKey });
+    // eslint-disable-next-line no-console
+    console.log('[extract-from-bytes] calling runExtractionOnBytes', {
+      reportId,
+      elapsedMs: Date.now() - fnStartedAt,
+    });
+    const result = await runExtractionOnBytes({
+      reportId,
+      base64,
+      mimeType,
+      apiKey,
+    });
+    // eslint-disable-next-line no-console
+    console.log('[extract-from-bytes] EXIT', {
+      reportId,
+      ok: result.ok,
+      status: result.status,
+      totalElapsedMs: Date.now() - fnStartedAt,
+    });
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Extraction failed';
     // eslint-disable-next-line no-console
-    console.error('[extract-health-report] unhandled exception (bytes path)', {
+    console.error('[extract-from-bytes] CAUGHT EXCEPTION', {
       reportId,
       message: msg,
       stack: err instanceof Error ? err.stack : undefined,
+      totalElapsedMs: Date.now() - fnStartedAt,
     });
     await markStatus(reportId, 'failed', msg);
     return { ok: false, status: 'failed', error: msg };
@@ -502,7 +540,7 @@ async function markStatus(
 ) {
   try {
     const supabase = await createClient();
-    await supabase
+    const { error: updateErr } = await supabase
       .from('client_health_reports')
       .update({
         extraction_status: status,
@@ -512,6 +550,20 @@ async function markStatus(
           : {}),
       })
       .eq('id', reportId);
+    if (updateErr) {
+      // eslint-disable-next-line no-console
+      console.error('[extract-health-report] markStatus failed', {
+        reportId,
+        status,
+        error: updateErr.message,
+        code: (updateErr as { code?: string }).code,
+      });
+    } else {
+      // eslint-disable-next-line no-console
+      console.log(`[extract-health-report] markStatus(${status}) OK`, {
+        reportId,
+      });
+    }
   } catch {
     // Best-effort — status update failures shouldn't crash extraction.
   }
