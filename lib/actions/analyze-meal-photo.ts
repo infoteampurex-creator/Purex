@@ -105,7 +105,12 @@ const aiResponseSchema = z.object({
 export type AnalyzeMealPhotoResult =
   | {
       ok: true;
-      photoUrl: string;
+      /**
+       * Always null under the "photo stays on user's device" policy.
+       * Field kept on the response shape (rather than deleted) so
+       * existing callers don't error during the transition.
+       */
+      photoUrl: string | null;
       analysis: z.infer<typeof aiResponseSchema>;
     }
   | { ok: false; error: string };
@@ -147,32 +152,15 @@ export async function analyzeMealPhoto(
     } = await supabase.auth.getUser();
     if (!user) return { ok: false, error: 'Not signed in' };
 
-    // ─── 1. Upload to Supabase Storage ──────────────────────────
-    const ext = mediaType === 'image/png' ? 'png' : mediaType === 'image/webp' ? 'webp' : 'jpg';
-    const path = `${user.id}/${logDate}/${crypto.randomUUID()}.${ext}`;
-    const fileBuffer = Buffer.from(photoBase64, 'base64');
+    // ─── DATA-MINIMISATION: photo stays on the user's device ────
+    // We send the photo bytes inline to Gemini for analysis but do
+    // NOT persist them to Supabase Storage. The client app stores
+    // the photo locally (Capacitor Filesystem on mobile, in-memory
+    // only on web) if it wants to surface it again. Only the macro
+    // breakdown is saved to client_meals.calories / protein_g etc.
+    // by the addMeal action.
 
-    const { error: uploadError } = await supabase.storage
-      .from('meal-photos')
-      .upload(path, fileBuffer, {
-        contentType: mediaType,
-        upsert: false,
-      });
-    if (uploadError) {
-      console.error('[PURE X] meal-photo upload failed:', uploadError);
-      return { ok: false, error: `Upload failed: ${uploadError.message}` };
-    }
-
-    // Signed URL — 1 year, since the bucket is private but we want
-    // the photo to display in the meal history view long-term.
-    const { data: signed, error: signError } = await supabase.storage
-      .from('meal-photos')
-      .createSignedUrl(path, 60 * 60 * 24 * 365);
-    if (signError || !signed?.signedUrl) {
-      return { ok: false, error: `Could not sign URL: ${signError?.message ?? 'unknown'}` };
-    }
-
-    // ─── 2. Call Gemini 2.5 Flash ───────────────────────────────
+    // ─── Call Gemini 2.5 Flash ──────────────────────────────────
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       // gemini-2.5-flash: current flagship low-cost vision model
@@ -230,7 +218,7 @@ export async function analyzeMealPhoto(
 
     return {
       ok: true,
-      photoUrl: signed.signedUrl,
+      photoUrl: null,
       analysis: analysis.data,
     };
   } catch (err) {

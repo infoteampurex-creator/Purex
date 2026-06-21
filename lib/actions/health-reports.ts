@@ -4,7 +4,10 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import type { HealthReport } from '@/lib/data/health-reports';
-import { extractHealthReport } from './extract-health-report';
+import {
+  extractHealthReport,
+  extractHealthReportFromBytes,
+} from './extract-health-report';
 
 // NOTE on maxDuration: server-action files marked 'use server' can
 // only export async functions, so the timeout config must live on
@@ -109,44 +112,27 @@ export async function uploadHealthReport(
       return { ok: false, error: 'You are not signed in.' };
     }
 
-    // Derive extension from MIME (safer than trusting filename suffix)
-    const ext = (() => {
-      switch (mimeType.toLowerCase()) {
-        case 'application/pdf': return 'pdf';
-        case 'image/jpeg':
-        case 'image/jpg':       return 'jpg';
-        case 'image/png':       return 'png';
-        case 'image/webp':      return 'webp';
-        case 'image/heic':      return 'heic';
-        case 'image/heif':      return 'heif';
-        default:                return 'bin';
-      }
-    })();
+    // ─── DATA-MINIMISATION: file stays on the user's device ──────
+    // We intentionally do NOT upload the PDF / image to Supabase
+    // Storage. The file bytes pass through this server action only
+    // long enough to be sent to Gemini for extraction; nothing is
+    // persisted in our backend except the structured markers + the
+    // 1-line summary. This reduces PHI exposure surface and meets
+    // the privacy commitment in the user-signed consent agreement.
+    //
+    // The client app stores the original file locally (Capacitor
+    // Filesystem) for the user's own future viewing — that piece
+    // ships in the mobile app, not here.
 
-    // Path convention: <client_id>/<uuid>.<ext> — matches storage RLS
-    const fileId = crypto.randomUUID();
-    const storagePath = `${user.id}/${fileId}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('health-reports')
-      .upload(storagePath, buffer, {
-        contentType: mimeType,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      return { ok: false, error: `Upload failed: ${uploadError.message}` };
-    }
-
-    // Create the DB row
+    // Create the DB row WITHOUT storage_path / mime_type / file_size.
     const { data: row, error: insertError } = await supabase
       .from('client_health_reports')
       .insert({
         client_id: user.id,
-        storage_path: storagePath,
+        storage_path: null,
         original_filename: filename,
-        mime_type: mimeType,
-        file_size_bytes: buffer.length,
+        mime_type: null,
+        file_size_bytes: null,
         report_label: reportLabel ?? null,
         report_date: reportDate ?? null,
       })
@@ -154,8 +140,6 @@ export async function uploadHealthReport(
       .single();
 
     if (insertError || !row) {
-      // Best-effort cleanup — orphan in storage otherwise
-      await supabase.storage.from('health-reports').remove([storagePath]);
       return {
         ok: false,
         error: `Could not save report record: ${insertError?.message ?? 'unknown error'}`,
@@ -165,24 +149,24 @@ export async function uploadHealthReport(
     revalidatePath('/client/dashboard');
     revalidatePath('/client/profile');
 
-    // ─── Synchronous AI extraction ──────────────────────────────
-    // We tried fire-and-forget first; Vercel kills background
-    // promises shortly after the request returns, so extractions
-    // sat in 'pending' forever. Awaiting keeps the request alive
-    // until Gemini responds — the user sees a slightly longer
-    // "Uploading…" spinner but the report appears with markers
-    // already populated. Failures are non-fatal: the file + row
-    // exist regardless, and the user can hit Re-extract from the UI.
+    // ─── Synchronous AI extraction from in-memory bytes ─────────
+    // Skips a round-trip to Storage entirely. Failures are non-
+    // fatal: the row exists regardless, and the user is told that
+    // re-extracting requires re-uploading (because we no longer
+    // keep the file).
     try {
-      await extractHealthReport(row.id);
+      await extractHealthReportFromBytes({
+        reportId: row.id,
+        base64,
+        mimeType,
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn('[health-reports] inline extraction threw', err);
-      // Swallow — upload itself succeeded.
+      // Swallow — DB row is in place; user sees the error pill.
     }
 
-    // Re-fetch the row so we return the post-extraction state to the
-    // client (markers available immediately on the Health page).
+    // Re-fetch so we return the post-extraction state to the client.
     const { data: finalRow } = await supabase
       .from('client_health_reports')
       .select('*')
@@ -313,9 +297,12 @@ export async function deleteHealthReport(
       return { ok: false, error: 'Report not found' };
     }
 
-    // Best-effort delete storage object first; if that fails we still
-    // proceed so the user can clean up the row
-    await supabase.storage.from('health-reports').remove([row.storage_path]);
+    // Best-effort delete storage object first if it exists (legacy rows
+    // pre-"file stays on device" still have a storage_path). Newer rows
+    // have storage_path === null and skip this.
+    if (row.storage_path) {
+      await supabase.storage.from('health-reports').remove([row.storage_path]);
+    }
 
     const { error: deleteErr } = await supabase
       .from('client_health_reports')
@@ -468,6 +455,16 @@ export async function getReportViewUrl(
 
     if (!row) return { ok: false, error: 'Report not found' };
 
+    // New rows have storage_path === null because the file stays on
+    // the user's device. Nothing to sign — surface a clear message.
+    if (!row.storage_path) {
+      return {
+        ok: false,
+        error:
+          'This report only lives on the client’s device by design. The extracted markers are still available below.',
+      };
+    }
+
     const { data: signed, error } = await supabase.storage
       .from('health-reports')
       .createSignedUrl(row.storage_path, 5 * 60);
@@ -490,10 +487,12 @@ export async function getReportViewUrl(
 interface HealthReportRow {
   id: string;
   client_id: string;
-  storage_path: string;
+  // After 00030 these are nullable — new "file-stays-on-device" rows
+  // have all three set to null. Legacy rows still have them populated.
+  storage_path: string | null;
   original_filename: string | null;
-  mime_type: string;
-  file_size_bytes: number;
+  mime_type: string | null;
+  file_size_bytes: number | null;
   report_label: string | null;
   report_date: string | null;
   coach_review_note: string | null;

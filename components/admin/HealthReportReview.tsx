@@ -21,6 +21,7 @@ import {
   retryHealthReportExtraction,
 } from '@/lib/actions/health-reports';
 import {
+  isFileOnDevice,
   isPdfReport,
   reportDisplayName,
   reportFileSize,
@@ -227,14 +228,34 @@ function ReportRow({ report }: { report: HealthReport }) {
                   Reviewed
                 </span>
               )}
-              <button
-                type="button"
-                onClick={handleView}
-                aria-label="View report"
-                className="w-7 h-7 rounded-md border border-border-soft text-text-muted hover:border-accent hover:text-accent transition-colors flex items-center justify-center"
-              >
-                <Eye size={11} />
-              </button>
+              {/* "View" is hidden for rows where the original file lives
+                  on the client's device — there's nothing on the server
+                  to sign a URL for. Markers + summary still render
+                  inline so the coach gets the data they need. */}
+              {!isFileOnDevice(report) && (
+                <button
+                  type="button"
+                  onClick={handleView}
+                  aria-label="View report"
+                  className="w-7 h-7 rounded-md border border-border-soft text-text-muted hover:border-accent hover:text-accent transition-colors flex items-center justify-center"
+                >
+                  <Eye size={11} />
+                </button>
+              )}
+              {isFileOnDevice(report) && (
+                <span
+                  className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-mono uppercase tracking-[0.14em] font-bold"
+                  style={{
+                    fontSize: 8.5,
+                    color: 'rgba(255,255,255,0.55)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.03)',
+                  }}
+                  title="Original file stays on the client's device. Only extracted markers are on the server."
+                >
+                  on device
+                </span>
+              )}
             </div>
           </div>
 
