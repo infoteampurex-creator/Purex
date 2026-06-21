@@ -6,11 +6,19 @@ import { createClient } from '@/lib/supabase/server';
 
 const schema = z.object({
   logDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  field: z.enum(['steps', 'sleep_hours', 'water_glasses']),
+  field: z.enum([
+    'steps',
+    'sleep_hours',
+    'water_glasses',
+    // New: daily weigh-in. weight_kg is numeric(5,2) in the DB so two
+    // decimal places of precision are preserved (e.g. 71.45).
+    'weight_kg',
+  ]),
   value: z.number().min(0).max(200000),
   /**
    * 'set'  → overwrite the column with `value` (use for steps,
-   *          sleep_hours — these represent absolute totals for the day).
+   *          sleep_hours, weight_kg — these represent absolute
+   *          measurements for the day).
    * 'add'  → increment the existing column by `value` (use for
    *          water_glasses — users tend to log a glass at a time).
    */
