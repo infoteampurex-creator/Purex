@@ -4,13 +4,16 @@ import { AvatarImage } from '@/components/client/twin/AvatarImage';
 import { TwinStatsPanel } from '@/components/client/twin/TwinStatsPanel';
 import { TwinStatusBadge } from '@/components/client/twin/TwinStatusBadge';
 import { AnimatedNumber } from '@/components/client/twin/AnimatedNumber';
+import { MoodCheckInCard } from '@/components/client/dashboard/MoodCheckInCard';
 import {
   deriveTwinStats,
   deriveVisualState,
   dailyTwinMessage,
   twinOverallScore,
 } from '@/lib/data/twin';
+import type { MoodState } from '@/lib/data/mood';
 import { getTwinDailyInputs } from '@/lib/data/twin-server';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import {
   getLatestMeasurements,
   getProfileBodySettings,
@@ -28,17 +31,18 @@ export default async function TwinPage() {
   // inputs (deterministic zeros) so the page renders for anonymous
   // / preview contexts without crashing.
   const userId = await getCurrentUserId();
-  const [twinData, latestMeas, bodySettings] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [twinData, latestMeas, bodySettings, todaysMood] = await Promise.all([
     userId ? getTwinDailyInputs(userId) : Promise.resolve({ inputs: emptyPreviewInputs() }),
     userId ? getLatestMeasurements(userId) : Promise.resolve(null),
     userId ? getProfileBodySettings(userId) : Promise.resolve(EMPTY_PROFILE_BODY_SETTINGS),
+    userId ? fetchTodaysMood(userId, today) : Promise.resolve(null),
   ]);
   const { inputs } = twinData;
 
   const stats = deriveTwinStats(inputs);
   const state = deriveVisualState(stats, inputs.workoutCompletedToday);
   const overall = twinOverallScore(stats);
-  const today = new Date().toISOString().slice(0, 10);
   const message = dailyTwinMessage(state, today);
 
   // Pick the right avatar PNG based on the user's body type + gender
@@ -89,6 +93,15 @@ export default async function TwinPage() {
             into the five vectors below. Your Twin breathes with your day.
           </p>
         </header>
+
+        {/* Morning mood check-in — 8-chip "how is your body today?".
+            Moved here from the dashboard in PR #66 because /client/twin
+            is the wellness page. Only shown to signed-in users. */}
+        {userId && (
+          <div className="mb-6 md:mb-8">
+            <MoodCheckInCard current={todaysMood} />
+          </div>
+        )}
 
         {/* Main grid: silhouette on left, stats on right */}
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 md:gap-12 items-start">
@@ -177,4 +190,24 @@ function emptyPreviewInputs() {
     currentStreak: 0,
     bestStreak: 0,
   };
+}
+
+/** Today's mood_state (or null) — small dedicated query so adding it
+ *  to getTwinDailyInputs doesn't bloat the avatar pipeline. */
+async function fetchTodaysMood(
+  userId: string,
+  today: string
+): Promise<MoodState | null> {
+  try {
+    const sb = await createSupabaseClient();
+    const { data } = await sb
+      .from('client_daily_logs')
+      .select('mood_state')
+      .eq('client_id', userId)
+      .eq('log_date', today)
+      .maybeSingle();
+    return (data?.mood_state ?? null) as MoodState | null;
+  } catch {
+    return null;
+  }
 }
