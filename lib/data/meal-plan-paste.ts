@@ -48,6 +48,11 @@ export interface ParsedItem {
   foodName: string;
   /** Quantity text — "60g", "150ml", "275g (cooked)", null if absent. */
   quantity: string | null;
+  /** kcal per portion — paste parser doesn't try to extract this yet
+   *  (text formats vary too much). Always null from paste; the coach
+   *  fills it in directly in the editor row. Keeping the field on
+   *  ParsedItem keeps the editor's `applyPreview` shape uniform. */
+  calories: number | null;
 }
 
 export interface ParsedMeal {
@@ -341,7 +346,7 @@ export function parsePastedDietPlan(raw: string): ParsedDietPlan {
       out.unparsedLines.push({ mealName: currentMeal.name, raw: trimmed });
       continue;
     }
-    currentMeal.items.push({ foodName, quantity });
+    currentMeal.items.push({ foodName, quantity, calories: null });
   }
 
   if (notesAccumulator.length > 0) {

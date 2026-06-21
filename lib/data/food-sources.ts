@@ -1716,6 +1716,73 @@ export function foodsFor(
     });
 }
 
+/**
+ * Suggest alternatives at a similar kcal — used by the "Swap" affordance
+ * on /client/nutrition. Filters FOOD_SOURCES to entries within ±tolerance
+ * (default ±15%) of the source kcal, ideally for the same meal type
+ * (we fall back to all meal types if the strict filter returns too few).
+ *
+ * Sorted by closeness to source kcal, then Indian staples first.
+ * Excludes the source item itself when a name match is given.
+ */
+export function findAlternativesAtSimilarKcal(
+  sourceKcal: number,
+  options: {
+    mealType?: MealTypeExtended | null;
+    excludeName?: string | null;
+    tolerance?: number; // 0.15 = ±15%
+    maxResults?: number;
+    veg?: boolean | null;
+  } = {}
+): FoodSource[] {
+  const {
+    mealType = null,
+    excludeName = null,
+    tolerance = 0.15,
+    maxResults = 8,
+    veg = null,
+  } = options;
+
+  if (!Number.isFinite(sourceKcal) || sourceKcal <= 0) return [];
+
+  const lo = sourceKcal * (1 - tolerance);
+  const hi = sourceKcal * (1 + tolerance);
+
+  const matchKcal = (f: FoodSource) => f.kcal >= lo && f.kcal <= hi;
+  const matchMealType = (f: FoodSource) =>
+    !mealType || f.mealTypes.includes(mealType);
+  const matchName = (f: FoodSource) =>
+    !excludeName ||
+    f.name.trim().toLowerCase() !== excludeName.trim().toLowerCase();
+  const matchVeg = (f: FoodSource) => veg === null || f.veg === veg;
+
+  const sortByCloseness = (a: FoodSource, b: FoodSource) => {
+    const da = Math.abs(a.kcal - sourceKcal);
+    const db = Math.abs(b.kcal - sourceKcal);
+    if (da !== db) return da - db;
+    if (!!a.indianStaple !== !!b.indianStaple) {
+      return a.indianStaple ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  };
+
+  // First pass: strict (meal type + kcal + veg + not source).
+  const strict = FOOD_SOURCES.filter(
+    (f) => matchKcal(f) && matchMealType(f) && matchName(f) && matchVeg(f)
+  ).sort(sortByCloseness);
+
+  if (strict.length >= 3 || !mealType) {
+    return strict.slice(0, maxResults);
+  }
+
+  // Fallback: relax meal type so the user still sees options.
+  const relaxed = FOOD_SOURCES.filter(
+    (f) => matchKcal(f) && matchName(f) && matchVeg(f)
+  ).sort(sortByCloseness);
+
+  return relaxed.slice(0, maxResults);
+}
+
 /** All meal types in the order we want them displayed in tabs. */
 export const MEAL_TYPES_ORDERED: MealTypeExtended[] = [
   'pre_workout',

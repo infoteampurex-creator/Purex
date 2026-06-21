@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Utensils,
   ChevronDown,
@@ -9,12 +10,21 @@ import {
   Activity,
   Moon,
   Sparkles,
+  Repeat,
 } from 'lucide-react';
 import {
   isMealPlanEmpty,
   MEAL_TYPE_LABELS,
   type MealPlan,
+  type PlanMealType,
 } from '@/lib/data/meal-plan';
+
+// Heavy bottom sheet — only loads when the client taps "Swap" on an item.
+const MealSwapSheet = dynamic(
+  () =>
+    import('./MealSwapSheet').then((m) => ({ default: m.MealSwapSheet })),
+  { ssr: false }
+);
 
 interface Props {
   plan: MealPlan;
@@ -42,6 +52,13 @@ export function MealPlanCard({ plan, firstName }: Props) {
   const [expanded, setExpanded] = useState<Set<number>>(
     () => new Set(plan.meals.map((_, i) => i))
   );
+
+  /** Currently-open swap context — null when sheet is closed. */
+  const [swap, setSwap] = useState<{
+    foodName: string;
+    kcal: number;
+    mealType: PlanMealType | null;
+  } | null>(null);
 
   const toggleMeal = (idx: number) => {
     setExpanded((prev) => {
@@ -247,39 +264,91 @@ export function MealPlanCard({ plan, firstName }: Props) {
                   </button>
 
                   {isOpen && meal.items.length > 0 && (
-                    <ul className="px-4 pb-3 space-y-1">
-                      {meal.items.map((it, j) => (
-                        <li
-                          key={j}
-                          className="flex items-baseline gap-2"
-                          style={{ fontSize: 12 }}
-                        >
-                          <span
-                            style={{ color: 'rgba(255,255,255,0.40)' }}
+                    <ul className="px-4 pb-3 space-y-1.5">
+                      {meal.items.map((it, j) => {
+                        const canSwap =
+                          typeof it.calories === 'number' && it.calories > 0;
+                        return (
+                          <li
+                            key={j}
+                            className="flex items-center gap-2"
+                            style={{ fontSize: 12 }}
                           >
-                            ·
-                          </span>
-                          <span
-                            style={{
-                              color: 'rgba(255,255,255,0.85)',
-                              flex: 1,
-                            }}
-                          >
-                            {it.foodName}
-                          </span>
-                          {it.quantity && (
                             <span
-                              className="font-mono"
-                              style={{
-                                fontSize: 11,
-                                color: 'rgba(125,211,255,0.85)',
-                              }}
+                              style={{ color: 'rgba(255,255,255,0.40)' }}
                             >
-                              {it.quantity}
+                              ·
                             </span>
-                          )}
-                        </li>
-                      ))}
+                            <span
+                              style={{
+                                color: 'rgba(255,255,255,0.85)',
+                                flex: 1,
+                                minWidth: 0,
+                              }}
+                              className="truncate"
+                            >
+                              {it.foodName}
+                            </span>
+                            {it.quantity && (
+                              <span
+                                className="font-mono flex-shrink-0"
+                                style={{
+                                  fontSize: 11,
+                                  color: 'rgba(125,211,255,0.85)',
+                                }}
+                              >
+                                {it.quantity}
+                              </span>
+                            )}
+                            {typeof it.calories === 'number' && (
+                              <span
+                                className="font-mono tabular-nums flex-shrink-0 rounded-md px-1.5 py-0.5"
+                                style={{
+                                  fontSize: 10.5,
+                                  background: 'rgba(198,255,61,0.08)',
+                                  color: '#c6ff3d',
+                                  border: '1px solid rgba(198,255,61,0.18)',
+                                }}
+                                aria-label={`${it.calories} kcal`}
+                              >
+                                {it.calories}
+                                <span
+                                  className="uppercase tracking-[0.12em] font-bold ml-0.5"
+                                  style={{
+                                    fontSize: 8.5,
+                                    color: 'rgba(198,255,61,0.65)',
+                                  }}
+                                >
+                                  kcal
+                                </span>
+                              </span>
+                            )}
+                            {canSwap && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSwap({
+                                    foodName: it.foodName,
+                                    kcal: it.calories as number,
+                                    mealType: meal.mealType,
+                                  })
+                                }
+                                className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-colors"
+                                style={{
+                                  background: 'rgba(255,255,255,0.04)',
+                                  border:
+                                    '1px solid rgba(255,255,255,0.08)',
+                                  color: 'rgba(255,255,255,0.60)',
+                                }}
+                                title={`See alternatives at ~${it.calories} kcal`}
+                                aria-label={`Show alternatives to ${it.foodName} at similar calories`}
+                              >
+                                <Repeat size={11} />
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
 
@@ -351,6 +420,18 @@ export function MealPlanCard({ plan, firstName }: Props) {
             your day-by-day compliance against this plan.
           </div>
         </div>
+      )}
+
+      {/* Lazy-loaded alternatives sheet. Only mounts after the client
+          taps a Swap button on an item with kcal set. */}
+      {swap && (
+        <MealSwapSheet
+          open={true}
+          onClose={() => setSwap(null)}
+          itemName={swap.foodName}
+          itemKcal={swap.kcal}
+          mealType={swap.mealType}
+        />
       )}
     </section>
   );
