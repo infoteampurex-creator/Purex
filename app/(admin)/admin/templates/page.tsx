@@ -1,17 +1,19 @@
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { TemplatesList } from '@/components/admin/TemplatesList';
 import { loadWorkoutTemplate } from '@/lib/actions/workout-templates';
-import {
-  getCachedActiveExerciseLibrary,
-  getCachedWorkoutTemplates,
-} from '@/lib/data/cached-queries';
+import { getCachedActiveExerciseLibrary } from '@/lib/data/cached-queries';
+import { getMergedWorkoutTemplateSummaries } from '@/lib/data/workout-templates-merged';
 import { type LibraryExerciseOption } from '@/lib/data/daily-plan-types';
 
 export const metadata = { title: 'Admin · Templates' };
 
 export default async function AdminTemplatesPage() {
   const [templates, libraryRows] = await Promise.all([
-    getCachedWorkoutTemplates(),
+    // DB templates + Sheet templates (when SHEET_WORKOUT_TEMPLATES_ID
+    // is configured). Sheet rows render with a "Sheet" badge and are
+    // applied via the same flow — the apply action detects the id
+    // shape and reads from the right source.
+    getMergedWorkoutTemplateSummaries(),
     getCachedActiveExerciseLibrary(),
   ]);
 

@@ -82,7 +82,12 @@ export const getCachedWorkoutTemplates = unstable_cache(
       console.error('[PURE X] cached workout templates read failed:', error);
       return [];
     }
-    return (data ?? []) as unknown as WorkoutTemplateSummary[];
+    // Tag every DB-sourced row so consumers (admin list, picker
+    // dropdowns) can distinguish them from Sheet-synced rows.
+    return (data ?? []).map((row) => ({
+      ...(row as object),
+      source: 'db' as const,
+    })) as unknown as WorkoutTemplateSummary[];
   },
   ['workout-templates:summary'],
   {

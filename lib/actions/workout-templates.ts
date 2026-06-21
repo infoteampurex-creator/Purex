@@ -237,7 +237,10 @@ export async function deleteWorkoutTemplate(
 // ─── Apply template to a client's day ──────────────────────────────────
 
 const applyTemplateSchema = z.object({
-  templateId: z.string().uuid(),
+  // Was z.string().uuid() — relaxed to .min(1) so Sheet-sourced ids
+  // (kebab-case slugs like "chest-day-a") are accepted. The action body
+  // detects UUID-shape and routes to the DB or Sheet loader accordingly.
+  templateId: z.string().min(1).max(200),
   clientId: z.string().uuid(),
   planDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -269,32 +272,80 @@ export async function applyTemplateToClient(
   const { templateId, clientId, planDate } = parsed.data;
   const supabase = await createClient();
 
-  // 1. Load template header + exercises.
-  const { data: template, error: templateErr } = await supabase
-    .from('workout_templates')
-    .select(
-      'id, name, category, target_muscle_group, trainer_notes, next_day_instructions'
-    )
-    .eq('id', templateId)
-    .maybeSingle();
-
-  if (templateErr || !template) {
-    return {
-      ok: false,
-      error: templateErr?.message ?? 'Template not found.',
-    };
+  // 1. Load template header + exercises. Two paths:
+  //    - UUID id → DB (existing flow)
+  //    - kebab-case id → Sheet (new flow, via the merged loader)
+  interface TemplateHeader {
+    name: string | null;
+    category: string | null;
+    target_muscle_group: string | null;
+    trainer_notes: string | null;
+    next_day_instructions: string | null;
   }
+  interface TemplateExerciseRow {
+    exercise_name: string;
+    target_muscle: string | null;
+    sets: number | null;
+    reps: string | null;
+    target_weight_kg: number | null;
+    rest_seconds: number | null;
+    tempo: string | null;
+    rpe_target: number | null;
+    trainer_instruction: string | null;
+    exercise_order: number;
+  }
+  let template: TemplateHeader;
+  let templateExercises: TemplateExerciseRow[];
 
-  const { data: templateExercises, error: exercisesErr } = await supabase
-    .from('workout_template_exercises')
-    .select(
-      'exercise_name, target_muscle, sets, reps, target_weight_kg, rest_seconds, tempo, rpe_target, trainer_instruction, exercise_order'
-    )
-    .eq('template_id', templateId)
-    .order('exercise_order', { ascending: true });
+  const { isUuidLike, getMergedWorkoutTemplateById } = await import(
+    '@/lib/data/workout-templates-merged'
+  );
 
-  if (exercisesErr) {
-    return { ok: false, error: exercisesErr.message };
+  if (isUuidLike(templateId)) {
+    const { data, error: templateErr } = await supabase
+      .from('workout_templates')
+      .select(
+        'id, name, category, target_muscle_group, trainer_notes, next_day_instructions'
+      )
+      .eq('id', templateId)
+      .maybeSingle();
+    if (templateErr || !data) {
+      return { ok: false, error: templateErr?.message ?? 'Template not found.' };
+    }
+    template = data as TemplateHeader;
+    const { data: ex, error: exErr } = await supabase
+      .from('workout_template_exercises')
+      .select(
+        'exercise_name, target_muscle, sets, reps, target_weight_kg, rest_seconds, tempo, rpe_target, trainer_instruction, exercise_order'
+      )
+      .eq('template_id', templateId)
+      .order('exercise_order', { ascending: true });
+    if (exErr) return { ok: false, error: exErr.message };
+    templateExercises = (ex ?? []) as TemplateExerciseRow[];
+  } else {
+    const sheetTemplate = await getMergedWorkoutTemplateById(templateId);
+    if (!sheetTemplate) {
+      return { ok: false, error: 'Template not found in Sheet.' };
+    }
+    template = {
+      name: sheetTemplate.name,
+      category: sheetTemplate.category,
+      target_muscle_group: sheetTemplate.targetMuscleGroup,
+      trainer_notes: sheetTemplate.trainerNotes,
+      next_day_instructions: sheetTemplate.nextDayInstructions,
+    };
+    templateExercises = sheetTemplate.exercises.map((e) => ({
+      exercise_name: e.exerciseName,
+      target_muscle: e.targetMuscle,
+      sets: e.sets,
+      reps: e.reps,
+      target_weight_kg: e.targetWeightKg,
+      rest_seconds: e.restSeconds,
+      tempo: e.tempo,
+      rpe_target: e.rpeTarget,
+      trainer_instruction: e.trainerInstruction,
+      exercise_order: e.exerciseOrder,
+    }));
   }
 
   // 2. Upsert workout row for (client_id, plan_date). Same logic as
@@ -312,22 +363,15 @@ export async function applyTemplateToClient(
   }
 
   const existingId = existingRows?.[0]?.id as string | undefined;
-  const t = template as {
-    name: string | null;
-    category: string | null;
-    target_muscle_group: string | null;
-    trainer_notes: string | null;
-    next_day_instructions: string | null;
-  };
   const workoutPayload = {
     client_id: clientId,
     trainer_id: adminUser.id,
     workout_date: planDate,
-    name: t.name ?? 'Daily plan',
-    category: t.category,
-    target_muscle_group: t.target_muscle_group,
-    trainer_notes: t.trainer_notes,
-    next_day_instructions: t.next_day_instructions,
+    name: template.name ?? 'Daily plan',
+    category: template.category,
+    target_muscle_group: template.target_muscle_group,
+    trainer_notes: template.trainer_notes,
+    next_day_instructions: template.next_day_instructions,
   };
 
   let workoutId: string;
