@@ -102,6 +102,15 @@ export async function uploadHealthReport(
     };
   }
 
+  const startedAt = Date.now();
+  // eslint-disable-next-line no-console
+  console.log('[upload-health-report] BEGIN', {
+    filename,
+    mimeType,
+    base64Length: base64.length,
+    bytes: buffer.length,
+  });
+
   try {
     const supabase = await createClient();
     const {
@@ -109,8 +118,15 @@ export async function uploadHealthReport(
       error: authError,
     } = await supabase.auth.getUser();
     if (authError || !user) {
+      // eslint-disable-next-line no-console
+      console.warn('[upload-health-report] not signed in', { authError });
       return { ok: false, error: 'You are not signed in.' };
     }
+    // eslint-disable-next-line no-console
+    console.log('[upload-health-report] authed', {
+      userId: user.id,
+      elapsedMs: Date.now() - startedAt,
+    });
 
     // ─── DATA-MINIMISATION: file stays on the user's device ──────
     // We intentionally do NOT upload the PDF / image to Supabase
@@ -140,11 +156,23 @@ export async function uploadHealthReport(
       .single();
 
     if (insertError || !row) {
+      // eslint-disable-next-line no-console
+      console.error('[upload-health-report] INSERT FAILED', {
+        message: insertError?.message,
+        details: (insertError as { details?: string } | null)?.details,
+        hint: (insertError as { hint?: string } | null)?.hint,
+        code: (insertError as { code?: string } | null)?.code,
+      });
       return {
         ok: false,
         error: `Could not save report record: ${insertError?.message ?? 'unknown error'}`,
       };
     }
+    // eslint-disable-next-line no-console
+    console.log('[upload-health-report] row inserted', {
+      reportId: (row as { id: string }).id,
+      elapsedMs: Date.now() - startedAt,
+    });
 
     revalidatePath('/client/dashboard');
     revalidatePath('/client/profile');
@@ -154,15 +182,34 @@ export async function uploadHealthReport(
     // fatal: the row exists regardless, and the user is told that
     // re-extracting requires re-uploading (because we no longer
     // keep the file).
+    const extractStarted = Date.now();
+    // eslint-disable-next-line no-console
+    console.log('[upload-health-report] calling extractHealthReportFromBytes', {
+      reportId: row.id,
+      hasApiKey: !!process.env.GOOGLE_AI_API_KEY,
+    });
     try {
-      await extractHealthReportFromBytes({
+      const extractResult = await extractHealthReportFromBytes({
         reportId: row.id,
         base64,
         mimeType,
       });
+      // eslint-disable-next-line no-console
+      console.log('[upload-health-report] extract returned', {
+        reportId: row.id,
+        ok: extractResult.ok,
+        status: extractResult.status,
+        error: extractResult.ok ? null : extractResult.error,
+        extractElapsedMs: Date.now() - extractStarted,
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn('[health-reports] inline extraction threw', err);
+      console.error('[upload-health-report] extract THREW', {
+        reportId: row.id,
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        extractElapsedMs: Date.now() - extractStarted,
+      });
       // Swallow — DB row is in place; user sees the error pill.
     }
 
@@ -173,6 +220,13 @@ export async function uploadHealthReport(
       .eq('id', row.id)
       .maybeSingle();
 
+    // eslint-disable-next-line no-console
+    console.log('[upload-health-report] DONE', {
+      reportId: row.id,
+      finalStatus: (finalRow as { extraction_status?: string } | null)?.extraction_status,
+      totalElapsedMs: Date.now() - startedAt,
+    });
+
     revalidatePath('/client/health');
 
     return {
@@ -180,6 +234,12 @@ export async function uploadHealthReport(
       report: mapRowToReport((finalRow as HealthReportRow) ?? (row as HealthReportRow)),
     };
   } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[upload-health-report] OUTER CATCH', {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      totalElapsedMs: Date.now() - startedAt,
+    });
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Upload failed',
