@@ -18,6 +18,7 @@ import {
   type MealPlan,
   type PlanMealType,
 } from '@/lib/data/meal-plan';
+import type { FoodSource } from '@/lib/data/food-sources';
 
 // Heavy bottom sheet — only loads when the client taps "Swap" on an item.
 const MealSwapSheet = dynamic(
@@ -30,6 +31,13 @@ interface Props {
   plan: MealPlan;
   /** First name for friendlier copy. */
   firstName: string;
+  /**
+   * Optional override of the food source list driving Swap suggestions.
+   * Defaults to the in-code FOOD_SOURCES inside MealSwapSheet, but
+   * /client/nutrition passes the merged (in-code + Sheets sync) list
+   * so admin-added foods appear in alternatives.
+   */
+  foodSources?: FoodSource[];
 }
 
 /**
@@ -47,7 +55,7 @@ interface Props {
  * Empty state: a friendly nudge ("Your coach hasn't set a diet plan
  * yet. Once they do, your daily meals + targets will appear here.").
  */
-export function MealPlanCard({ plan, firstName }: Props) {
+export function MealPlanCard({ plan, firstName, foodSources }: Props) {
   const empty = isMealPlanEmpty(plan);
   const [expanded, setExpanded] = useState<Set<number>>(
     () => new Set(plan.meals.map((_, i) => i))
@@ -431,6 +439,7 @@ export function MealPlanCard({ plan, firstName }: Props) {
           itemName={swap.foodName}
           itemKcal={swap.kcal}
           mealType={swap.mealType}
+          foodSources={foodSources}
         />
       )}
     </section>

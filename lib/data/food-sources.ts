@@ -1733,6 +1733,13 @@ export function findAlternativesAtSimilarKcal(
     tolerance?: number; // 0.15 = ±15%
     maxResults?: number;
     veg?: boolean | null;
+    /**
+     * Custom source list — defaults to the in-code FOOD_SOURCES.
+     * The Google Sheets food-library sync (PR #63) lets the admin
+     * supplement these with custom rows; the nutrition page merges
+     * both and passes the union here.
+     */
+    sources?: FoodSource[];
   } = {}
 ): FoodSource[] {
   const {
@@ -1741,6 +1748,7 @@ export function findAlternativesAtSimilarKcal(
     tolerance = 0.15,
     maxResults = 8,
     veg = null,
+    sources = FOOD_SOURCES,
   } = options;
 
   if (!Number.isFinite(sourceKcal) || sourceKcal <= 0) return [];
@@ -1767,7 +1775,7 @@ export function findAlternativesAtSimilarKcal(
   };
 
   // First pass: strict (meal type + kcal + veg + not source).
-  const strict = FOOD_SOURCES.filter(
+  const strict = sources.filter(
     (f) => matchKcal(f) && matchMealType(f) && matchName(f) && matchVeg(f)
   ).sort(sortByCloseness);
 
@@ -1776,7 +1784,7 @@ export function findAlternativesAtSimilarKcal(
   }
 
   // Fallback: relax meal type so the user still sees options.
-  const relaxed = FOOD_SOURCES.filter(
+  const relaxed = sources.filter(
     (f) => matchKcal(f) && matchName(f) && matchVeg(f)
   ).sort(sortByCloseness);
 
