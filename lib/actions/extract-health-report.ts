@@ -144,8 +144,21 @@ export async function extractHealthReport(
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
     // Mark as skipped rather than failed — the report itself is fine.
-    await markStatus(reportId, 'skipped', 'AI extraction not configured');
-    return { ok: false, status: 'skipped', error: 'AI extraction not configured' };
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[extract-health-report] GOOGLE_AI_API_KEY missing — report saved without extraction',
+      { reportId }
+    );
+    await markStatus(
+      reportId,
+      'skipped',
+      'AI extraction not configured. Ask admin to set GOOGLE_AI_API_KEY.'
+    );
+    return {
+      ok: false,
+      status: 'skipped',
+      error: 'AI extraction not configured',
+    };
   }
 
   try {
@@ -213,41 +226,94 @@ export async function extractHealthReport(
     }
 
     // ─── Call Gemini ─────────────────────────────────────────────
+    // Model fallback chain — if the primary errors (quota, regional
+    // availability, transient 500), we drop to the next one. Without
+    // this, a single bad model day knocks out the entire feature.
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: SYSTEM_INSTRUCTION,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema,
-        temperature: 0.1,
-        // Reports can have many markers; budget enough tokens for the
-        // thinking step + a fully populated JSON.
-        maxOutputTokens: 8192,
-      },
-    });
+    const MODEL_CHAIN = [
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash-latest',
+    ] as const;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: base64,
-          mimeType: report.mime_type.toLowerCase() === 'image/jpg'
+    const inlinePart = {
+      inlineData: {
+        data: base64,
+        mimeType:
+          report.mime_type.toLowerCase() === 'image/jpg'
             ? 'image/jpeg'
             : report.mime_type,
-        },
       },
-      {
-        text: 'Extract every visible test marker from this lab report.',
-      },
-    ]);
+    };
+    const promptPart = {
+      text: 'Extract every visible test marker from this lab report.',
+    };
 
-    const text = result.response.text();
+    let text: string | null = null;
+    let lastModelError: string | null = null;
+    let modelUsed: string | null = null;
+
+    for (const modelName of MODEL_CHAIN) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: SYSTEM_INSTRUCTION,
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema,
+            temperature: 0.1,
+            // Reports can have many markers; budget enough tokens for
+            // the thinking step + a fully populated JSON.
+            maxOutputTokens: 8192,
+          },
+        });
+        const result = await model.generateContent([inlinePart, promptPart]);
+        text = result.response.text();
+        modelUsed = modelName;
+        break;
+      } catch (modelErr) {
+        const msg =
+          modelErr instanceof Error ? modelErr.message : String(modelErr);
+        lastModelError = `${modelName}: ${msg}`;
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[extract-health-report] ${modelName} failed, trying next`,
+          msg
+        );
+        continue;
+      }
+    }
+
+    if (!text) {
+      const msg = lastModelError ?? 'All Gemini models failed';
+      await markStatus(report.id, 'failed', msg);
+      return { ok: false, status: 'failed', error: msg };
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[extract-health-report] ${report.id} extracted via ${modelUsed}`
+    );
+
     let parsed: ExtractedReportData;
     try {
-      const raw = JSON.parse(text);
+      // Gemini sometimes wraps JSON in ```json ... ``` fences even when
+      // responseMimeType is JSON. Strip any fenced wrapper before parsing.
+      const cleaned = text
+        .trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+      const raw = JSON.parse(cleaned);
       parsed = aiResponseSchema.parse(raw);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unexpected response shape';
+      // eslint-disable-next-line no-console
+      console.error('[extract-health-report] parse failed', {
+        reportId: report.id,
+        snippet: text.slice(0, 400),
+        message: msg,
+      });
       await markStatus(report.id, 'failed', `Parse error: ${msg}`);
       return { ok: false, status: 'failed', error: msg };
     }
@@ -288,6 +354,12 @@ export async function extractHealthReport(
     return { ok: true, status: 'done', data: parsed };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Extraction failed';
+    // eslint-disable-next-line no-console
+    console.error('[extract-health-report] unhandled exception', {
+      reportId,
+      message: msg,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     await markStatus(reportId, 'failed', msg);
     return { ok: false, status: 'failed', error: msg };
   }
