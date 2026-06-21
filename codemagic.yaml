@@ -1,0 +1,98 @@
+# ═════════════════════════════════════════════════════════════════════
+# Codemagic — TEAM PURE X iOS cloud build
+# ─────────────────────────────────────────────────────────────────────
+# The Windows / non-Mac story: this file lets Codemagic's macOS runners
+# build the iOS app for us. Every push to `main` produces a signed
+# .ipa and uploads it to TestFlight automatically.
+#
+# Prerequisites (one-time, by a human — Codemagic can't do these):
+#
+#   1. Apple Developer Program enrolled at the team's Apple ID
+#      (info.teampurex@gmail.com). $99/year.
+#   2. App created in App Store Connect with bundle ID
+#      `com.teampurex.app` and SKU `teampurex-ios-001`.
+#   3. Codemagic.io account connected to this GitHub repo via
+#      "Add application → GitHub → Purex". Project type: Capacitor.
+#   4. Codemagic → App settings → Code signing identities →
+#      "Apple Developer Portal" → connect using:
+#         - Apple ID + app-specific password
+#         - Team ID (from developer.apple.com top-right)
+#      Codemagic generates + rotates the certs/profiles from then on.
+#   5. App Store Connect → Users and Access → Keys → create an
+#      "Integration" key with App Manager role. Upload the .p8 to
+#      Codemagic at: App settings → Integrations → App Store Connect.
+#
+# Once those are in place, the next push to main triggers a build.
+# Full runbook: docs/capacitor-ios-setup.md
+# ═════════════════════════════════════════════════════════════════════
+
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.teampurex.app
+      vars:
+        XCODE_WORKSPACE: "App.xcworkspace"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.teampurex.app"
+      node: 20.18.0
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+      - name: Add iOS platform (first run only)
+        script: |
+          if [ ! -d "ios" ]; then
+            echo "ios/ folder not present — generating via cap add ios"
+            npx cap add ios
+          else
+            echo "ios/ folder present — skipping cap add"
+          fi
+      - name: Sync Capacitor + install pods
+        script: |
+          npx cap sync ios
+          cd ios/App
+          pod install
+      - name: Set up provisioning profile
+        script: |
+          xcode-project use-profiles
+      - name: Increment build number
+        script: |
+          cd ios/App
+          # BUILD_NUMBER is provided by Codemagic. Falls back to 1.
+          NEW_BUILD=$(( ${BUILD_NUMBER:-0} + 1 ))
+          agvtool new-version -all $NEW_BUILD
+      - name: Build IPA
+        script: |
+          cd ios/App
+          xcode-project build-ipa \
+            --workspace App.xcworkspace \
+            --scheme App
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Push every successful build to TestFlight internal testers.
+        # Public beta requires Apple beta review — out of scope here.
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testing
+        # Don't auto-submit to App Store production. We do that
+        # manually from App Store Connect when ready, after a
+        # screenshot/metadata pass.
+        submit_to_app_store: false
