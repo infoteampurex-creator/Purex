@@ -1,6 +1,7 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
 import { PureXScoreHero } from '@/components/client/dashboard/PureXScoreHero';
 import { DashboardTodayPanel } from '@/components/client/dashboard/DashboardTodayPanel';
+import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
 import { TwinCloneTeaser } from '@/components/client/dashboard/TwinCloneTeaser';
@@ -160,6 +161,13 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         weeklyDelta={weeklyDelta}
         showPreview={pureXScoreEmpty}
       />
+
+      {/* Health Connect auto-sync banner — app-only (renders null on
+          web). When the user hasn't connected yet it surfaces a
+          "Connect Health Connect" CTA so the rings below populate
+          automatically from the phone's step / sleep / water sensors
+          instead of forcing manual logging. */}
+      <HealthSyncCard />
 
       {/* 4 activity rings + unified Log button. All log surfaces
           (weight / steps / sleep / water / meal) live behind ONE
