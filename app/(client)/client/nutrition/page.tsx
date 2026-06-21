@@ -5,6 +5,7 @@ import { getCurrentUserId } from '@/lib/data/client-live';
 import { getTwinDailyInputs } from '@/lib/data/twin-server';
 import { getTodaysMeals } from '@/lib/data/meals';
 import { getMealPlanForClient } from '@/lib/data/meal-plan-server';
+import { getMergedFoodSources } from '@/lib/data/food-sources-merged';
 import { createClient } from '@/lib/supabase/server';
 import {
   EMPTY_NUTRITION_SNAPSHOT,
@@ -49,12 +50,17 @@ export default async function NutritionPage() {
     .eq('id', userId)
     .maybeSingle();
 
-  const [inputsResult, meals, mealPlan, profileRes] = await Promise.all([
-    getTwinDailyInputs(userId, today),
-    getTodaysMeals(userId, today),
-    getMealPlanForClient(userId),
-    profilePromise,
-  ]);
+  const [inputsResult, meals, mealPlan, profileRes, foodSources] =
+    await Promise.all([
+      getTwinDailyInputs(userId, today),
+      getTodaysMeals(userId, today),
+      getMealPlanForClient(userId),
+      profilePromise,
+      // In-code FOOD_SOURCES merged with admin-added rows from the
+      // Google Sheets sync (when configured). Cached 5 min — only
+      // hits the network once per cache window across the whole app.
+      getMergedFoodSources(),
+    ]);
 
   const nutrition: NutritionSnapshot =
     inputsResult.nutrition ?? EMPTY_NUTRITION_SNAPSHOT;
@@ -101,6 +107,7 @@ export default async function NutritionPage() {
           meals={meals}
           mealPlan={mealPlan}
           firstName={firstName}
+          foodSources={foodSources}
         />
       </div>
     </main>

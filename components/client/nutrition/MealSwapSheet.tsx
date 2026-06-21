@@ -19,6 +19,12 @@ interface Props {
   itemKcal: number;
   /** Meal type from the parent meal — narrows initial suggestions. */
   mealType: PlanMealType | null;
+  /**
+   * Optional override of the food source list. Defaults to the
+   * in-code FOOD_SOURCES. /client/nutrition passes the merged
+   * (in-code + Sheets sync) list so admin-added foods appear here.
+   */
+  foodSources?: FoodSource[];
 }
 
 /**
@@ -35,6 +41,7 @@ export function MealSwapSheet({
   itemName,
   itemKcal,
   mealType,
+  foodSources,
 }: Props) {
   const mealTypeForLib = planToLibMealType(mealType);
   const alternatives = useMemo<FoodSource[]>(
@@ -44,8 +51,9 @@ export function MealSwapSheet({
         excludeName: itemName,
         tolerance: 0.15,
         maxResults: 10,
+        sources: foodSources,
       }),
-    [itemKcal, itemName, mealTypeForLib]
+    [itemKcal, itemName, mealTypeForLib, foodSources]
   );
 
   return (

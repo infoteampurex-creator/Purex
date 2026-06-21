@@ -11,12 +11,20 @@ import { useRouter } from 'next/navigation';
 import type { MealRow } from '@/lib/data/meals';
 import type { NutritionSnapshot } from '@/lib/data/twin';
 import type { MealPlan } from '@/lib/data/meal-plan';
+import type { FoodSource } from '@/lib/data/food-sources';
 
 interface Props {
   nutrition: NutritionSnapshot;
   meals: MealRow[];
   mealPlan: MealPlan;
   firstName: string;
+  /**
+   * In-code FOOD_SOURCES merged with admin-curated rows from the
+   * Google Sheets sync. Passed down to MealPlanCard → MealSwapSheet
+   * so swap suggestions include admin additions without the swap
+   * sheet needing a server round-trip on open.
+   */
+  foodSources: FoodSource[];
 }
 
 /**
@@ -38,6 +46,7 @@ export function NutritionPageView({
   meals,
   mealPlan,
   firstName,
+  foodSources,
 }: Props) {
   const router = useRouter();
   const [logSheetOpen, setLogSheetOpen] = useState(false);
@@ -67,7 +76,11 @@ export function NutritionPageView({
   return (
     <>
       {/* ─── Coach-assigned diet plan ─── */}
-      <MealPlanCard plan={mealPlan} firstName={firstName} />
+      <MealPlanCard
+        plan={mealPlan}
+        firstName={firstName}
+        foodSources={foodSources}
+      />
 
       {/* ─── Today's totals hero ─── */}
       <section className="rounded-3xl overflow-hidden border mb-5"
