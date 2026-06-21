@@ -14,6 +14,11 @@ import type {
   FoodSource,
   MealTypeExtended,
 } from '@/lib/data/food-sources';
+import {
+  canPersistLocally,
+  saveLocalFile,
+  extFromMime,
+} from '@/lib/local/local-files';
 
 // 455-line nested sheet — only loads when the user opens the food
 // browser inside the meal log. ssr:false because the sheet itself is
@@ -94,6 +99,15 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
   const [aiRaw, setAiRaw] = useState<unknown>(null);
   const [aiConfidence, setAiConfidence] = useState<number | null>(null);
   const [aiDescription, setAiDescription] = useState<string>('');
+  // Captured-photo bytes kept in component state so we can save them
+  // to the device's local filesystem AFTER addMeal succeeds (we need
+  // the meal id from the DB to key the local file). Cleared on close.
+  const [capturedPhotoBase64, setCapturedPhotoBase64] = useState<
+    string | null
+  >(null);
+  const [capturedPhotoMime, setCapturedPhotoMime] = useState<string | null>(
+    null
+  );
 
   // Food sources browser state — sheet opens above the meal log form.
   // Picks sum into current macros so the user can build a meal from
@@ -116,6 +130,8 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
       setAiRaw(null);
       setAiConfidence(null);
       setAiDescription('');
+      setCapturedPhotoBase64(null);
+      setCapturedPhotoMime(null);
     }
   }, [open]);
 
@@ -162,6 +178,12 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
         setMode('choose');
         return;
       }
+      // Stash the raw bytes — we'll write them to the device's local
+      // filesystem AFTER addMeal succeeds (we need the meal id to key
+      // the local file).
+      setCapturedPhotoBase64(photo.base64String);
+      setCapturedPhotoMime(mediaType);
+
       // Populate state from AI response — user can still edit before saving
       setPhotoUrl(res.photoUrl);
       setAiRaw(res.analysis);
@@ -281,6 +303,22 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
     });
     setSaving(false);
     if (res.ok) {
+      // Persist the original photo to the device's local filesystem
+      // now that we have the meal id from the server. The server only
+      // kept macros; the photo lives only here. No-op on web.
+      if (
+        canPersistLocally() &&
+        res.mealId &&
+        capturedPhotoBase64 &&
+        capturedPhotoMime
+      ) {
+        void saveLocalFile({
+          scope: 'meal-photos',
+          id: res.mealId,
+          base64: capturedPhotoBase64,
+          ext: extFromMime(capturedPhotoMime),
+        });
+      }
       onClose();
     } else {
       setError(res.error ?? 'Save failed');
