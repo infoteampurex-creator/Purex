@@ -375,29 +375,25 @@ async function runExtractionOnBytes(args: {
 
   // ─── Call Gemini ───────────────────────────────────────────────
   //
-  // Per-model timeouts.
+  // ONE model, generous timeout. Why not a fallback chain:
   //
-  // The PRIMARY model (gemini-2.5-flash) is the only one that actually
-  // works on most accounts as of late 2026. Multi-page lab PDFs need
-  // 15–25s on Flash, so a 28s budget keeps it within the function's
-  // 60s ceiling on Hobby while giving real PDFs a fair chance.
+  // - gemini-2.5-pro: free-tier quota is 0 on the project's API key
+  //   (logs confirmed 429 with "limit: 0, model: gemini-2.5-pro").
+  //   Trying it wastes ~250ms and the resulting error message is
+  //   what ends up in the UI — misleading the user. Until billing
+  //   is enabled in Google AI Studio, Pro is permanently dead.
+  // - gemini-2.0-flash: free-tier quota is also 0 — same story.
+  // - gemini-1.5-flash-latest: retired by Google, 404.
   //
-  // The FALLBACK (gemini-2.5-pro) only runs if Flash actually errors
-  // (network, transient 500, real timeout). Pro is slower but more
-  // capable — when Flash struggles on a dense scan, Pro often wins.
-  // 18s budget for Pro keeps total worst-case at 28 + 18 = 46s.
-  //
-  // What we REMOVED: gemini-2.0-flash (free-tier quota is 0 on many
-  // accounts — returns 429 in <300ms, wasted attempt) and
-  // gemini-1.5-flash-latest (retired by Google — returns 404 in
-  // <300ms, wasted attempt). User logs confirmed both. Better to
-  // try Flash longer than to cycle through dead models.
-  const PRIMARY_TIMEOUT_MS = 28_000;
-  const FALLBACK_TIMEOUT_MS = 18_000;
+  // So we go all-in on 2.5-flash with a 50s budget. The page sets
+  // maxDuration=60 and upload/insert/marking burns ~1s — leaving
+  // 50s for Flash plus ~9s of buffer to mark status + return is
+  // the safest envelope. Multi-page lab PDFs need 15–30s typical;
+  // 50s covers the long tail without bumping into Vercel's ceiling.
+  const PRIMARY_TIMEOUT_MS = 50_000;
   const genAI = new GoogleGenerativeAI(apiKey);
   const MODEL_CHAIN: Array<{ name: string; timeoutMs: number }> = [
     { name: 'gemini-2.5-flash', timeoutMs: PRIMARY_TIMEOUT_MS },
-    { name: 'gemini-2.5-pro',   timeoutMs: FALLBACK_TIMEOUT_MS },
   ];
 
   const normalisedMime =
