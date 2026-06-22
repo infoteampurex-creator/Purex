@@ -4,6 +4,7 @@ import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { extractText, getDocumentProxy } from 'unpdf';
 
 // NOTE on maxDuration: this is a 'use server' file, so config exports
 // like `maxDuration` can't live here. They go on the calling page
@@ -373,109 +374,169 @@ async function runExtractionOnBytes(args: {
 
   const supabase = await createClient();
 
-  // ─── Call Gemini ───────────────────────────────────────────────
+  // ─── Stage 1: text extraction (PDF only) ───────────────────────
   //
-  // Per-model timeouts.
+  // For text-PDFs we extract the raw text first and send TEXT to
+  // Gemini instead of the binary PDF. Why:
   //
-  // The PRIMARY model (gemini-2.5-flash) is the only one that actually
-  // works on most accounts as of late 2026. Multi-page lab PDFs need
-  // 15–25s on Flash, so a 28s budget keeps it within the function's
-  // 60s ceiling on Hobby while giving real PDFs a fair chance.
+  // - Asking an LLM to read a binary PDF means the model has to
+  //   render every page into tokens. On Gemini Flash that costs
+  //   15–50s on multi-page lab reports — right at the Vercel
+  //   ceiling. We've watched it time out repeatedly.
+  // - Text-only requests finish in 2–5s. Same accuracy on
+  //   text-PDFs, because lab reports are tabular text — there's
+  //   no visual signal Gemini needs beyond the marker rows.
+  // - For scanned/image PDFs, unpdf returns near-empty text. We
+  //   fall back to sending the binary in stage 2.
+  let pdfText: string | null = null;
+  if (mimeType.toLowerCase() === 'application/pdf') {
+    const textStart = Date.now();
+    try {
+      const pdfBytes = Uint8Array.from(Buffer.from(base64, 'base64'));
+      const pdf = await getDocumentProxy(pdfBytes);
+      const { text } = await extractText(pdf, { mergePages: true });
+      const joined = (Array.isArray(text) ? text.join('\n') : text).trim();
+      // Threshold: a typical 1-page lab report is 800–1500 chars.
+      // Anything under 200 chars is almost certainly a scanned PDF
+      // where pdfjs couldn't pull real text out — fall back to binary.
+      if (joined.length >= 200) {
+        pdfText = joined;
+      }
+      // eslint-disable-next-line no-console
+      console.log('[extract-health-report] pdf text extracted', {
+        reportId,
+        chars: joined.length,
+        usingTextStage: pdfText !== null,
+        elapsedMs: Date.now() - textStart,
+      });
+    } catch (textErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[extract-health-report] pdf text extraction failed, falling back to binary',
+        {
+          reportId,
+          msg: textErr instanceof Error ? textErr.message : String(textErr),
+        }
+      );
+    }
+  }
+
+  // ─── Stage 2: call Gemini ──────────────────────────────────────
   //
-  // The FALLBACK (gemini-2.5-pro) only runs if Flash actually errors
-  // (network, transient 500, real timeout). Pro is slower but more
-  // capable — when Flash struggles on a dense scan, Pro often wins.
-  // 18s budget for Pro keeps total worst-case at 28 + 18 = 46s.
+  // Two timeouts: text-only stays small (15s — should finish in
+  // ~3s on a 1500-char lab report) and binary gets the full
+  // headroom (50s) since that path is only used for scanned PDFs
+  // or images where Gemini does the visual heavy-lifting itself.
   //
-  // What we REMOVED: gemini-2.0-flash (free-tier quota is 0 on many
-  // accounts — returns 429 in <300ms, wasted attempt) and
-  // gemini-1.5-flash-latest (retired by Google — returns 404 in
-  // <300ms, wasted attempt). User logs confirmed both. Better to
-  // try Flash longer than to cycle through dead models.
-  const PRIMARY_TIMEOUT_MS = 28_000;
-  const FALLBACK_TIMEOUT_MS = 18_000;
+  // Single model: gemini-2.5-pro is paid-only on the project's
+  // free-tier key (429 limit=0), gemini-2.0-flash same, 1.5-flash
+  // retired. Cycling them just pollutes UI errors with quota dumps.
+  const TEXT_TIMEOUT_MS = 15_000;
+  const BINARY_TIMEOUT_MS = 50_000;
   const genAI = new GoogleGenerativeAI(apiKey);
-  const MODEL_CHAIN: Array<{ name: string; timeoutMs: number }> = [
-    { name: 'gemini-2.5-flash', timeoutMs: PRIMARY_TIMEOUT_MS },
-    { name: 'gemini-2.5-pro',   timeoutMs: FALLBACK_TIMEOUT_MS },
-  ];
+  const modelName = 'gemini-2.5-flash';
 
   const normalisedMime =
     mimeType.toLowerCase() === 'image/jpg' ? 'image/jpeg' : mimeType;
 
-  const inlinePart = {
-    inlineData: {
-      data: base64,
-      mimeType: normalisedMime,
-    },
-  };
+  const isTextStage = pdfText !== null;
+  const inputPart = isTextStage
+    ? { text: `Lab report text extracted from PDF:\n\n${pdfText}` }
+    : {
+        inlineData: {
+          data: base64,
+          mimeType: normalisedMime,
+        },
+      };
   const promptPart = {
     text: 'Extract every visible test marker from this lab report.',
   };
+  const timeoutMs = isTextStage ? TEXT_TIMEOUT_MS : BINARY_TIMEOUT_MS;
 
-  let text: string | null = null;
-  let lastModelError: string | null = null;
-  let modelUsed: string | null = null;
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    systemInstruction: SYSTEM_INSTRUCTION,
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema,
+      temperature: 0.1,
+      maxOutputTokens: 8192,
+    },
+  });
 
-  for (const { name: modelName, timeoutMs } of MODEL_CHAIN) {
+  const callGemini = async (
+    part: typeof inputPart,
+    budgetMs: number,
+    stage: 'text' | 'binary'
+  ): Promise<string> => {
     const startedAt = Date.now();
     try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction: SYSTEM_INSTRUCTION,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema,
-          temperature: 0.1,
-          maxOutputTokens: 8192,
-        },
-      });
       const result = await Promise.race([
-        model.generateContent([inlinePart, promptPart]),
+        model.generateContent([part, promptPart]),
         new Promise<never>((_, reject) =>
           setTimeout(
-            () => reject(new Error(`Timeout after ${timeoutMs}ms`)),
-            timeoutMs
+            () => reject(new Error(`Timeout after ${budgetMs}ms`)),
+            budgetMs
           )
         ),
       ]);
-      text = result.response.text();
-      modelUsed = modelName;
       // eslint-disable-next-line no-console
       console.log(
-        `[extract-health-report] ${modelName} OK in ${Date.now() - startedAt}ms`,
+        `[extract-health-report] ${modelName} (${stage}) OK in ${
+          Date.now() - startedAt
+        }ms`,
         { reportId }
       );
-      break;
-    } catch (modelErr) {
+      return result.response.text();
+    } catch (err) {
       const ms = Date.now() - startedAt;
-      const msg =
-        modelErr instanceof Error ? modelErr.message : String(modelErr);
-      lastModelError = `${modelName}: ${msg}`;
+      const msg = err instanceof Error ? err.message : String(err);
       // eslint-disable-next-line no-console
       console.warn(
-        `[extract-health-report] ${modelName} failed in ${ms}ms — trying next`,
+        `[extract-health-report] ${modelName} (${stage}) failed in ${ms}ms`,
         { reportId, msg }
       );
-      continue;
+      throw err;
+    }
+  };
+
+  let text: string;
+  try {
+    text = await callGemini(inputPart, timeoutMs, isTextStage ? 'text' : 'binary');
+  } catch (firstErr) {
+    // If the text-stage call failed (timeout, transient error, JSON
+    // shape issue), fall back to sending the binary PDF — the bytes
+    // are still in memory. This recovers the rare case where a
+    // text-PDF still confuses Gemini and we'd otherwise abandon it.
+    if (isTextStage) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[extract-health-report] text stage failed, retrying with binary PDF',
+        { reportId }
+      );
+      try {
+        const binaryPart = {
+          inlineData: { data: base64, mimeType: normalisedMime },
+        };
+        text = await callGemini(binaryPart, BINARY_TIMEOUT_MS, 'binary');
+      } catch (binaryErr) {
+        const msg =
+          binaryErr instanceof Error ? binaryErr.message : String(binaryErr);
+        // eslint-disable-next-line no-console
+        console.error('[extract-health-report] both stages failed', {
+          reportId,
+          msg,
+        });
+        await markStatus(reportId, 'failed', msg);
+        return { ok: false, status: 'failed', error: msg };
+      }
+    } else {
+      const msg =
+        firstErr instanceof Error ? firstErr.message : String(firstErr);
+      await markStatus(reportId, 'failed', msg);
+      return { ok: false, status: 'failed', error: msg };
     }
   }
-
-  if (!text) {
-    const msg = lastModelError ?? 'All Gemini models failed';
-    // eslint-disable-next-line no-console
-    console.error('[extract-health-report] all models exhausted', {
-      reportId,
-      lastModelError: msg,
-    });
-    await markStatus(reportId, 'failed', msg);
-    return { ok: false, status: 'failed', error: msg };
-  }
-
-  // eslint-disable-next-line no-console
-  console.log(
-    `[extract-health-report] ${reportId} extracted via ${modelUsed}`
-  );
 
   let parsed: ExtractedReportData;
   try {
