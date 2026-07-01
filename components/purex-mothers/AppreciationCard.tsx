@@ -80,10 +80,11 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           nameTop: 820,
           nameFont: 130,
           awardTitleTop: 970,
-          messageTop: 1058,
-          statsTop: 1140,
-          trainerTop: 1250,
-          footerTop: 1298,
+          messageTop: 1055,
+          statsTop: 1130,
+          teamTop: 1234,
+          trainerTop: 1276,
+          footerTop: 1320,
         }
       : {
           logoTop: 32,
@@ -101,9 +102,10 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           nameFont: 100,
           awardTitleTop: 748,
           messageTop: 0,
-          statsTop: 838,
-          trainerTop: 946,
-          footerTop: 990,
+          statsTop: 830,
+          teamTop: 928,
+          trainerTop: 968,
+          footerTop: 1010,
         };
 
     return (
@@ -462,11 +464,11 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           <StatBox icon="shoe" label="Daily Goal" value="10K Steps" />
         </div>
 
-        {/* ─── TEAM PURE X + Trainer nameplate ─── */}
+        {/* ─── TEAM PURE X wordmark ─── */}
         <div
           style={{
             position: 'absolute',
-            top: L.trainerTop,
+            top: L.teamTop,
             left: 0,
             right: 0,
             textAlign: 'center',
@@ -483,6 +485,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               textTransform: 'uppercase',
+              lineHeight: 1,
             }}
           >
             Team{' '}
@@ -491,9 +494,20 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             </span>{' '}
             X
           </div>
-          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
-            <TrainerNameplate name={PUREX_MOTHERS_META.trainerName} />
-          </div>
+        </div>
+
+        {/* ─── Trainer nameplate ─── */}
+        <div
+          style={{
+            position: 'absolute',
+            top: L.trainerTop,
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <TrainerNameplate name={PUREX_MOTHERS_META.trainerName} />
         </div>
 
         {/* ─── Footer motto ─── */}
@@ -797,51 +811,89 @@ function SixtyDaysSeal() {
 
 /** Ornate laurel wreath — one side, mirrored on the right. */
 function LaurelWreath({ side }: { side: 'left' | 'right' }) {
-  const flip = side === 'right' ? 'scale(-1,1) translate(-140,0)' : '';
+  // C-shaped laurel that curves inward toward the mother's name.
+  // Right-side wreath is the left mirrored via scale(-1,1).
+  const flip = side === 'right' ? 'scale(-1,1) translate(-180,0)' : '';
+  const W = 180;
+  const H = 220;
   return (
-    <svg width="140" height="180" viewBox="0 0 140 180" fill="none" style={{ transform: flip }}>
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="none" style={{ transform: flip }}>
       <defs>
         <linearGradient id={`laurGrad-${side}`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={G_LIGHT} />
+          <stop offset="50%" stopColor={G_BRIGHT} />
           <stop offset="100%" stopColor={G_DEEP} />
         </linearGradient>
       </defs>
-      {/* Curved spine */}
+      {/* Curved C-spine — opens to the right (name side) */}
       <path
-        d="M 130 20 Q 60 50 40 100 Q 30 140 60 170"
+        d="M 160 30 Q 60 60 40 110 Q 40 160 160 190"
         stroke={`url(#laurGrad-${side})`}
-        strokeWidth="2"
+        strokeWidth="2.5"
         fill="none"
       />
-      {/* Leaves */}
-      {Array.from({ length: 10 }).map((_, i) => {
-        const t = i / 9;
-        const x = 130 - t * 70;
-        const y = 20 + t * 150;
-        const rot = -50 - i * 12;
+      {/* Inner accent line */}
+      <path
+        d="M 160 42 Q 78 68 60 110 Q 60 152 160 178"
+        stroke={G_DEEP}
+        strokeWidth="1"
+        fill="none"
+        opacity="0.7"
+      />
+      {/* Outer leaves — angled outward from the spine */}
+      {Array.from({ length: 14 }).map((_, i) => {
+        const t = i / 13;
+        // Sweep along the C-curve
+        const angle = Math.PI * (0.15 + t * 0.7);
+        const cx = 100 + Math.cos(angle + Math.PI) * 60;
+        const cy = 110 + Math.sin(angle + Math.PI) * 80;
+        // Leaves rotate to point outward (away from center)
+        const rot = (angle * 180) / Math.PI - 90;
         return (
           <ellipse
             key={i}
-            cx={x}
-            cy={y}
-            rx="12"
-            ry="4"
-            transform={`rotate(${rot} ${x} ${y})`}
+            cx={cx}
+            cy={cy}
+            rx="16"
+            ry="5"
+            transform={`rotate(${rot} ${cx} ${cy})`}
             fill={`url(#laurGrad-${side})`}
-            opacity="0.85"
+            opacity="0.9"
           />
         );
       })}
-      {/* Berries */}
-      {[0.2, 0.5, 0.8].map((t, i) => (
-        <circle
-          key={i}
-          cx={130 - t * 70 + 6}
-          cy={20 + t * 150 + 6}
-          r="2.4"
-          fill={G_BRIGHT}
-        />
-      ))}
+      {/* Inner leaves — layered underneath for depth */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const t = i / 9;
+        const angle = Math.PI * (0.2 + t * 0.6);
+        const cx = 100 + Math.cos(angle + Math.PI) * 40;
+        const cy = 110 + Math.sin(angle + Math.PI) * 60;
+        const rot = (angle * 180) / Math.PI - 100;
+        return (
+          <ellipse
+            key={`in-${i}`}
+            cx={cx}
+            cy={cy}
+            rx="10"
+            ry="3.5"
+            transform={`rotate(${rot} ${cx} ${cy})`}
+            fill={G}
+            opacity="0.75"
+          />
+        );
+      })}
+      {/* Berries — small gold beads scattered on the wreath */}
+      {[0.2, 0.5, 0.8].map((t, i) => {
+        const angle = Math.PI * (0.2 + t * 0.6);
+        const cx = 100 + Math.cos(angle + Math.PI) * 55;
+        const cy = 110 + Math.sin(angle + Math.PI) * 75;
+        return (
+          <g key={`b-${i}`}>
+            <circle cx={cx} cy={cy} r="3" fill={G_BRIGHT} />
+            <circle cx={cx - 1} cy={cy - 1} r="1" fill={G_LIGHT} />
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -883,38 +935,30 @@ function StarFramedTitle({
             <stop offset="100%" stopColor={G_DEEP} />
           </linearGradient>
         </defs>
-        {/* Outer hairline top + bottom */}
-        <line x1="0" y1="6" x2={width} y2="6" stroke="url(#frmGrad)" strokeWidth="1" opacity="0.7" />
-        <line x1="0" y1={height - 6} x2={width} y2={height - 6} stroke="url(#frmGrad)" strokeWidth="1" opacity="0.7" />
-        {/* Main decorative frame with angled corner cuts */}
-        <path
-          d={`M 12 14
-              L 30 14 L 40 24 L 30 34 L 12 34 L 12 14 Z
-              M ${width - 12} 14
-              L ${width - 30} 14 L ${width - 40} 24 L ${width - 30} 34 L ${width - 12} 34 L ${width - 12} 14 Z`}
-          fill="none"
-          stroke="url(#frmGrad)"
-          strokeWidth="1.4"
-        />
-        {/* Central band — angled corners on both ends */}
-        <path
-          d={`M 40 14 L ${width - 40} 14
-              L ${width - 28} 24 L ${width - 40} 34
-              L 40 34 L 28 24 Z`}
+        {/* Single clean rectangle frame with hairline top+bottom band */}
+        <rect
+          x={16}
+          y={12}
+          width={width - 32}
+          height={height - 24}
           fill="rgba(255,215,74,0.04)"
           stroke="url(#frmGrad)"
           strokeWidth="1.4"
+          rx="2"
         />
-        {/* Corner diamond accents */}
+        {/* Outer double-line above and below */}
+        <line x1="0" y1="4" x2={width} y2="4" stroke="url(#frmGrad)" strokeWidth="1" opacity="0.55" />
+        <line x1="0" y1={height - 4} x2={width} y2={height - 4} stroke="url(#frmGrad)" strokeWidth="1" opacity="0.55" />
+        {/* Corner diamond accents (four corners of the inner rect) */}
         {[
-          [12, 14],
-          [12, 34],
-          [width - 12, 14],
-          [width - 12, 34],
+          [16, 12],
+          [width - 16, 12],
+          [16, height - 12],
+          [width - 16, height - 12],
         ].map(([x, y], i) => (
           <path
             key={i}
-            d={`M ${x} ${(y as number) - 3} L ${(x as number) + 3} ${y} L ${x} ${(y as number) + 3} L ${(x as number) - 3} ${y} Z`}
+            d={`M ${x} ${(y as number) - 4} L ${(x as number) + 4} ${y} L ${x} ${(y as number) + 4} L ${(x as number) - 4} ${y} Z`}
             fill={G_BRIGHT}
           />
         ))}
