@@ -13,6 +13,10 @@ interface Props {
   photoScale?: number;
   /** 'portrait' = 1080x1350 (WhatsApp status), 'square' = 1080x1080 (Insta) */
   aspect: 'portrait' | 'square';
+  /** When false, the award title + appreciation message are hidden
+   *  behind a "tap Generate to reveal" placeholder. The reveal is
+   *  the emotional payoff, so we don't spoil it in the preview. */
+  revealed?: boolean;
 }
 
 /**
@@ -36,6 +40,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
       photoOffsetY = 0,
       photoScale = 1,
       aspect,
+      revealed = true,
     },
     ref
   ) {
@@ -310,12 +315,26 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               fontSize: 30,
               fontWeight: 600,
               marginTop: 18,
-              color: '#f8f4ef',
+              color: revealed ? '#f8f4ef' : 'transparent',
               fontStyle: 'italic',
               letterSpacing: '0.01em',
+              minHeight: 36,
             }}
           >
-            {mother.title}
+            {revealed ? (
+              mother.title
+            ) : (
+              <span
+                style={{
+                  color: 'rgba(248,212,193,0.55)',
+                  fontStyle: 'italic',
+                  fontSize: 24,
+                  letterSpacing: '0.30em',
+                }}
+              >
+                ✦ ✦ ✦
+              </span>
+            )}
           </div>
         </div>
 
@@ -336,7 +355,23 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
                 fontWeight: 400,
               }}
             >
-              &ldquo;{mother.message}&rdquo;
+              {revealed ? (
+                <>&ldquo;{mother.message}&rdquo;</>
+              ) : (
+                <span
+                  style={{
+                    color: 'rgba(248,212,193,0.55)',
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: 14,
+                    letterSpacing: '0.28em',
+                    textTransform: 'uppercase',
+                    fontStyle: 'normal',
+                    fontWeight: 700,
+                  }}
+                >
+                  Tap Generate to reveal your award ✨
+                </span>
+              )}
             </div>
 
             <StatsRow top={1180} rose={ROSE} roseLight={ROSE_LIGHT} />

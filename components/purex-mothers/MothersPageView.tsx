@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Upload,
@@ -14,11 +13,12 @@ import {
   Dumbbell,
   Apple,
   Footprints,
-  UserCircle,
   Crown,
   Heart,
   Move,
   ChevronRight,
+  Lock,
+  MessageCircle,
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import confetti from 'canvas-confetti';
@@ -31,44 +31,91 @@ import {
 import { AppreciationCard } from './AppreciationCard';
 
 interface Props {
-  /** Preselected via /purex-mothers/[slug] route, otherwise null. */
+  /** Preselected via /purex-mothers/[slug] route. When null, the page
+   *  shows a landing view (hero + stats + wall + message) without any
+   *  card generator — each mother must open her own personal link. */
   initialMother: PureXMother | null;
 }
 
 type Aspect = 'portrait' | 'square';
 
 export function MothersPageView({ initialMother }: Props) {
-  const router = useRouter();
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(
-    initialMother?.slug ?? null
+  return (
+    <main
+      className="relative min-h-screen"
+      style={{ background: '#0a0a0d', color: '#f8f4ef' }}
+    >
+      <BackgroundAtmosphere />
+
+      <div className="relative container-safe max-w-5xl mx-auto px-4 pt-20 pb-24">
+        <HeroSection mother={initialMother} />
+        <StatsSection />
+
+        {initialMother ? (
+          <PersonalGenerator mother={initialMother} />
+        ) : (
+          <PersonalLinkNotice />
+        )}
+
+        <AppreciationWallSection />
+        <GroupMessageSection />
+        <CTASection />
+      </div>
+    </main>
   );
+}
+
+// ─── Background atmosphere ──────────────────────────────────────
+
+function BackgroundAtmosphere() {
+  return (
+    <div
+      aria-hidden
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        background: `
+          radial-gradient(ellipse at 20% 0%, rgba(255,47,143,0.12) 0%, transparent 55%),
+          radial-gradient(ellipse at 80% 60%, rgba(230,178,152,0.10) 0%, transparent 55%),
+          radial-gradient(ellipse at 50% 100%, rgba(255,215,0,0.05) 0%, transparent 55%)
+        `,
+      }}
+    />
+  );
+}
+
+// ─── Personal Generator (only shown on /purex-mothers/[slug]) ────
+
+function PersonalGenerator({ mother }: { mother: PureXMother }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [aspect, setAspect] = useState<Aspect>('portrait');
-  const [exporting, setExporting] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
-
-  const selectedMother = useMemo(
-    () => PUREX_MOTHERS.find((m) => m.slug === selectedSlug) ?? null,
-    [selectedSlug]
-  );
 
   const cardRef = useRef<HTMLDivElement | null>(null);
   const dragging = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
 
-  // Scroll to card generator when a mother is picked
-  const generatorRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (selectedMother && generatorRef.current) {
-      generatorRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }
-  }, [selectedMother]);
+  const cardWidth = 1080;
+  const cardHeight = aspect === 'portrait' ? 1350 : 1080;
 
-  // ─── Photo upload ─────────────────────────────────────────────
+  // Auto-scale the on-screen preview to the container width
+  const previewWrapRef = useRef<HTMLDivElement | null>(null);
+  const [previewScale, setPreviewScale] = useState(0.296);
+  useEffect(() => {
+    const update = () => {
+      const c = previewWrapRef.current;
+      if (!c) return;
+      setPreviewScale(c.clientWidth / cardWidth);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [cardWidth]);
+
+  // ─── Photo upload ────────────────────────────────────────────
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -80,6 +127,8 @@ export function MothersPageView({ initialMother }: Props) {
       return;
     }
     setValidationMsg(null);
+    setRevealed(false);
+    setGeneratedDataUrl(null);
     const reader = new FileReader();
     reader.onload = (e) => {
       setPhotoUrl(e.target?.result as string);
@@ -98,7 +147,7 @@ export function MothersPageView({ initialMother }: Props) {
     [handleFile]
   );
 
-  // ─── Drag-to-position on preview ──────────────────────────────
+  // ─── Drag-to-position on preview ─────────────────────────────
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!photoUrl) return;
@@ -114,7 +163,6 @@ export function MothersPageView({ initialMother }: Props) {
     if (!dragging.current) return;
     const dx = e.clientX - dragging.current.startX;
     const dy = e.clientY - dragging.current.startY;
-    // Scale by preview scale factor so 1px drag = 1px card
     setOffset({
       x: dragging.current.ox + dx / previewScale,
       y: dragging.current.oy + dy / previewScale,
@@ -129,428 +177,366 @@ export function MothersPageView({ initialMother }: Props) {
     }
   };
 
-  // ─── Preview scale factor ─────────────────────────────────────
-  // The card renders at real dimensions (1080x…) so the export is
-  // pixel-perfect. On screen we scale it down to fit the container.
-  const cardWidth = 1080;
-  const cardHeight = aspect === 'portrait' ? 1350 : 1080;
-  const [previewSize, setPreviewSize] = useState({ w: 320, s: 0.296 });
-  const previewScale = previewSize.s;
-  const previewWrapRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const update = () => {
-      const container = previewWrapRef.current;
-      if (!container) return;
-      const containerWidth = container.clientWidth;
-      const s = containerWidth / cardWidth;
-      setPreviewSize({ w: containerWidth, s });
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, [cardWidth]);
-
-  // ─── Generate + download ──────────────────────────────────────
+  // ─── Generate (reveal + export) ───────────────────────────────
 
   const runConfetti = () => {
-    // Rose-gold + pink confetti burst
+    // Rose-gold + pink burst
     confetti({
-      particleCount: 120,
-      spread: 80,
-      startVelocity: 45,
-      origin: { y: 0.35 },
-      colors: ['#ff2f8f', '#e8b298', '#f8d4c1', '#ffd700', '#c11f6b'],
-      scalar: 1.1,
+      particleCount: 140,
+      spread: 90,
+      startVelocity: 50,
+      origin: { y: 0.4 },
+      colors: ['#ff2f8f', '#e8b298', '#f8d4c1', '#ffd700', '#c11f6b', '#ffcbdd'],
+      scalar: 1.15,
     });
+    // Small follow-up burst 250ms later for depth
+    setTimeout(() => {
+      confetti({
+        particleCount: 60,
+        spread: 100,
+        startVelocity: 35,
+        origin: { y: 0.5 },
+        colors: ['#ffd700', '#e8b298', '#ff2f8f'],
+        scalar: 0.9,
+      });
+    }, 250);
   };
 
-  const validate = () => {
-    if (!selectedMother) {
-      setValidationMsg('Please select your name first.');
-      return false;
-    }
+  const generate = async () => {
     if (!photoUrl) {
       setValidationMsg('Please upload your photo to generate the card.');
-      return false;
+      return;
     }
     setValidationMsg(null);
-    return true;
-  };
-
-  const generateAndDownload = async () => {
-    if (!validate()) return;
-    if (!cardRef.current || !selectedMother) return;
-    setExporting(true);
+    setGenerating(true);
+    // Flip revealed BEFORE the export so the exported PNG contains
+    // the title. Give React one frame to paint the reveal.
+    setRevealed(true);
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    // Fire confetti alongside the export — feels instant
+    runConfetti();
     try {
-      runConfetti();
-      const dataUrl = await htmlToImage.toPng(cardRef.current, {
-        cacheBust: true,
-        pixelRatio: 1, // card already rendered at real px
-        width: cardWidth,
-        height: cardHeight,
-      });
-      const link = document.createElement('a');
-      link.download = `team-purex-mothers-${selectedMother.slug}-60-days-card.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[purex-mothers] export failed', err);
-      setValidationMsg('Could not generate the card. Please try again.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const shareOnWhatsApp = async () => {
-    if (!validate()) return;
-    if (!selectedMother) return;
-    // Try the native share sheet first (mobile) — if the browser can
-    // share a file, that's the best UX (image attached, caption ready).
-    try {
-      if (!cardRef.current) return;
+      if (!cardRef.current) throw new Error('Card node missing');
       const dataUrl = await htmlToImage.toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 1,
         width: cardWidth,
         height: cardHeight,
       });
-      const blob = await (await fetch(dataUrl)).blob();
+      setGeneratedDataUrl(dataUrl);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[purex-mothers] export failed', err);
+      setValidationMsg('Could not generate the card. Please try again.');
+      setRevealed(false);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const download = () => {
+    if (!generatedDataUrl) return;
+    const link = document.createElement('a');
+    link.download = `team-purex-mothers-${mother.slug}-60-days-card.png`;
+    link.href = generatedDataUrl;
+    link.click();
+  };
+
+  const shareOnWhatsApp = async () => {
+    if (!generatedDataUrl) return;
+    const caption = `60 Days of PURE X Mothers Strength ✨\n${mother.name} — ${mother.title}\nTrainer: ${PUREX_MOTHERS_META.trainerName}`;
+    try {
+      const blob = await (await fetch(generatedDataUrl)).blob();
       const file = new File(
         [blob],
-        `team-purex-mothers-${selectedMother.slug}-60-days-card.png`,
+        `team-purex-mothers-${mother.slug}-60-days-card.png`,
         { type: 'image/png' }
       );
-      const caption = `60 Days of PURE X Mothers Strength ✨\n${selectedMother.name} — ${selectedMother.title}\nTrainer: ${PUREX_MOTHERS_META.trainerName}`;
       const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
-      if (
-        nav.share &&
-        nav.canShare &&
-        nav.canShare({ files: [file] })
-      ) {
+      if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
         await nav.share({ files: [file], text: caption, title: caption });
         return;
       }
-      // Fallback: download the file then open WhatsApp with just the caption
-      const link = document.createElement('a');
-      link.download = file.name;
-      link.href = dataUrl;
-      link.click();
+      // Desktop fallback: download + open WhatsApp Web
+      download();
       const url = `https://wa.me/?text=${encodeURIComponent(caption + ' (Attach the card image you just downloaded.)')}`;
       window.open(url, '_blank');
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[purex-mothers] share failed', err);
-      setValidationMsg('Could not share. Try Download and share manually.');
+      setValidationMsg('Could not share. Try Download instead.');
     }
   };
 
+  // ─── Render ──────────────────────────────────────────────────
+
   return (
-    <main
-      className="relative min-h-screen"
-      style={{ background: '#0a0a0d', color: '#f8f4ef' }}
-    >
-      {/* Background atmosphere */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse at 20% 0%, rgba(255,47,143,0.12) 0%, transparent 55%),
-            radial-gradient(ellipse at 80% 60%, rgba(230,178,152,0.10) 0%, transparent 55%),
-            radial-gradient(ellipse at 50% 100%, rgba(255,215,0,0.05) 0%, transparent 55%)
-          `,
-        }}
+    <section id="generator" className="mt-16 scroll-mt-6">
+      <SectionHeader
+        kicker={revealed ? 'Your card is ready' : 'Almost there'}
+        title={
+          revealed
+            ? `Congratulations, ${mother.name}`
+            : `Upload your photo, ${mother.name}`
+        }
+        subtitle={
+          revealed
+            ? 'Save it to your phone or share it directly on WhatsApp.'
+            : 'Your award title is hidden until you tap Generate — that is the surprise. ✨'
+        }
       />
 
-      <div className="relative container-safe max-w-5xl mx-auto px-4 pt-20 pb-24">
-        <HeroSection />
-        <StatsSection />
-
-        {/* ─── Member picker ─────────────────────────────── */}
-        <section className="mt-16">
-          <SectionHeader
-            kicker="Step 1"
-            title="Choose your name to generate your card"
-            subtitle="Tap your name to preselect your appreciation card, then upload your photo below."
-          />
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-8">
-            {PUREX_MOTHERS.map((m) => {
-              const active = selectedSlug === m.slug;
-              return (
-                <button
-                  key={m.slug}
-                  onClick={() => {
-                    setSelectedSlug(m.slug);
-                    router.replace(`/purex-mothers/${m.slug}`, { scroll: false });
-                  }}
-                  className="text-left rounded-2xl border px-4 py-3.5 transition-all"
-                  style={{
-                    background: active
-                      ? 'linear-gradient(135deg, rgba(255,47,143,0.14), rgba(230,178,152,0.06))'
-                      : 'rgba(255,255,255,0.02)',
-                    borderColor: active
-                      ? 'rgba(255,47,143,0.55)'
-                      : 'rgba(255,255,255,0.08)',
-                    boxShadow: active
-                      ? '0 12px 28px rgba(255,47,143,0.20)'
-                      : 'none',
-                    transform: active ? 'translateY(-1px)' : 'none',
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <UserCircle
-                      size={16}
-                      style={{ color: active ? '#ff2f8f' : 'rgba(248,212,193,0.55)' }}
-                    />
-                    <div
-                      className="font-display font-bold tracking-tight"
-                      style={{
-                        fontSize: 16,
-                        color: active ? '#ff2f8f' : 'rgba(248,244,239,0.95)',
-                      }}
-                    >
-                      {m.name}
-                    </div>
-                  </div>
-                  <div
-                    className="font-mono uppercase tracking-[0.14em] font-bold mt-1"
-                    style={{
-                      fontSize: 9.5,
-                      color: 'rgba(248,244,239,0.55)',
-                    }}
-                  >
-                    {m.title}
-                  </div>
-                </button>
-              );
-            })}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 mt-8">
+        {/* ── Left panel: upload + generate ─────────────── */}
+        <div className="space-y-4">
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={onDrop}
+            className="rounded-2xl border-2 border-dashed p-6 text-center relative"
+            style={{
+              borderColor: 'rgba(255,47,143,0.35)',
+              background:
+                'radial-gradient(ellipse at 50% 0%, rgba(255,47,143,0.08), transparent 70%), rgba(255,255,255,0.02)',
+            }}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              aria-label="Upload photo"
+            />
+            <Upload
+              size={28}
+              className="mx-auto mb-3"
+              style={{ color: '#ff2f8f' }}
+            />
+            <div
+              className="font-display font-bold"
+              style={{
+                fontSize: 18,
+                color: 'rgba(248,244,239,0.95)',
+              }}
+            >
+              {photoUrl ? 'Change photo' : 'Upload your photo'}
+            </div>
+            <div
+              className="font-mono mt-1"
+              style={{
+                fontSize: 11,
+                color: 'rgba(248,244,239,0.55)',
+              }}
+            >
+              JPG or PNG · drag & drop or tap to browse
+            </div>
+            <div
+              className="font-mono mt-4"
+              style={{ fontSize: 10, color: 'rgba(248,212,193,0.55)' }}
+            >
+              Your photo is used only to generate your card.
+            </div>
           </div>
-        </section>
 
-        {/* ─── Photo + Preview ────────────────────────────── */}
-        <section ref={generatorRef} className="mt-16 scroll-mt-6">
-          <SectionHeader
-            kicker="Step 2 & 3"
-            title="Upload your photo, preview your card"
-            subtitle="Drag the photo inside the circle to reposition, or use the zoom slider."
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 mt-8">
-            {/* Left — upload + controls */}
-            <div className="space-y-4">
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={onDrop}
-                className="rounded-2xl border-2 border-dashed p-6 text-center relative"
-                style={{
-                  borderColor: 'rgba(255,47,143,0.35)',
-                  background:
-                    'radial-gradient(ellipse at 50% 0%, rgba(255,47,143,0.08), transparent 70%), rgba(255,255,255,0.02)',
-                }}
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFile(file);
-                  }}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  aria-label="Upload photo"
+          {photoUrl && !revealed && (
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: 'rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.02)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Move
+                  size={14}
+                  style={{ color: 'rgba(248,212,193,0.75)' }}
                 />
-                <Upload
-                  size={28}
-                  className="mx-auto mb-3"
-                  style={{ color: '#ff2f8f' }}
-                />
-                <div
-                  className="font-display font-bold"
-                  style={{
-                    fontSize: 18,
-                    color: 'rgba(248,244,239,0.95)',
-                  }}
-                >
-                  {photoUrl ? 'Change photo' : 'Upload Your Photo'}
-                </div>
-                <div
-                  className="font-mono mt-1"
-                  style={{
-                    fontSize: 11,
-                    color: 'rgba(248,244,239,0.55)',
-                  }}
-                >
-                  JPG or PNG · drag & drop or tap to browse
-                </div>
-                <div
-                  className="font-mono mt-4"
+                <span
+                  className="font-mono uppercase tracking-[0.20em] font-bold"
                   style={{
                     fontSize: 10,
-                    color: 'rgba(248,212,193,0.55)',
+                    color: 'rgba(248,212,193,0.75)',
                   }}
                 >
-                  Your photo is used only to generate your card.
-                </div>
+                  Position & zoom
+                </span>
               </div>
-
-              {/* Position controls */}
-              {photoUrl && (
+              <label className="block mb-3">
                 <div
-                  className="rounded-2xl border p-4"
-                  style={{
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    background: 'rgba(255,255,255,0.02)',
-                  }}
+                  className="font-mono uppercase tracking-[0.14em] font-bold"
+                  style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <Move
-                      size={14}
-                      style={{ color: 'rgba(248,212,193,0.75)' }}
-                    />
-                    <span
-                      className="font-mono uppercase tracking-[0.20em] font-bold"
-                      style={{
-                        fontSize: 10,
-                        color: 'rgba(248,212,193,0.75)',
-                      }}
-                    >
-                      Position & zoom
-                    </span>
-                  </div>
-                  <label className="block mb-3">
-                    <div
-                      className="font-mono uppercase tracking-[0.14em] font-bold"
-                      style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
-                    >
-                      Zoom
-                    </div>
-                    <input
-                      type="range"
-                      min={0.6}
-                      max={2.4}
-                      step={0.02}
-                      value={scale}
-                      onChange={(e) => setScale(Number(e.target.value))}
-                      className="w-full mt-1"
-                      style={{ accentColor: '#ff2f8f' }}
-                    />
-                  </label>
-                  <button
-                    onClick={() => {
-                      setOffset({ x: 0, y: 0 });
-                      setScale(1);
-                    }}
-                    className="font-mono uppercase tracking-[0.14em] font-bold rounded-full px-3 py-1.5"
-                    style={{
-                      fontSize: 10,
-                      color: 'rgba(248,212,193,0.85)',
-                      border: '1px solid rgba(248,212,193,0.30)',
-                    }}
-                  >
-                    Reset position
-                  </button>
+                  Zoom
                 </div>
-              )}
-
-              {/* Aspect ratio + actions */}
-              <div
-                className="rounded-2xl border p-4 space-y-3"
+                <input
+                  type="range"
+                  min={0.6}
+                  max={2.4}
+                  step={0.02}
+                  value={scale}
+                  onChange={(e) => setScale(Number(e.target.value))}
+                  className="w-full mt-1"
+                  style={{ accentColor: '#ff2f8f' }}
+                />
+              </label>
+              <button
+                onClick={() => {
+                  setOffset({ x: 0, y: 0 });
+                  setScale(1);
+                }}
+                className="font-mono uppercase tracking-[0.14em] font-bold rounded-full px-3 py-1.5"
                 style={{
-                  borderColor: 'rgba(255,255,255,0.08)',
-                  background: 'rgba(255,255,255,0.02)',
+                  fontSize: 10,
+                  color: 'rgba(248,212,193,0.85)',
+                  border: '1px solid rgba(248,212,193,0.30)',
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="font-mono uppercase tracking-[0.20em] font-bold"
-                    style={{
-                      fontSize: 10,
-                      color: 'rgba(248,212,193,0.75)',
-                    }}
-                  >
-                    Card size
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['portrait', 'square'] as const).map((a) => {
-                    const active = aspect === a;
-                    return (
-                      <button
-                        key={a}
-                        onClick={() => setAspect(a)}
-                        className="rounded-lg px-3 py-2 border text-left transition-colors"
+                Reset position
+              </button>
+            </div>
+          )}
+
+          {!revealed && (
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: 'rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.02)',
+              }}
+            >
+              <div
+                className="font-mono uppercase tracking-[0.20em] font-bold mb-2"
+                style={{ fontSize: 10, color: 'rgba(248,212,193,0.75)' }}
+              >
+                Card size
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(['portrait', 'square'] as const).map((a) => {
+                  const active = aspect === a;
+                  return (
+                    <button
+                      key={a}
+                      onClick={() => setAspect(a)}
+                      className="rounded-lg px-3 py-2 border text-left transition-colors"
+                      style={{
+                        background: active
+                          ? 'rgba(255,47,143,0.14)'
+                          : 'rgba(255,255,255,0.03)',
+                        borderColor: active
+                          ? 'rgba(255,47,143,0.55)'
+                          : 'rgba(255,255,255,0.10)',
+                      }}
+                    >
+                      <div
+                        className="font-display font-bold tracking-tight"
                         style={{
-                          background: active
-                            ? 'rgba(255,47,143,0.14)'
-                            : 'rgba(255,255,255,0.03)',
-                          borderColor: active
-                            ? 'rgba(255,47,143,0.55)'
-                            : 'rgba(255,255,255,0.10)',
+                          fontSize: 13,
+                          color: active ? '#ff2f8f' : 'rgba(248,244,239,0.90)',
                         }}
                       >
-                        <div
-                          className="font-display font-bold tracking-tight"
-                          style={{
-                            fontSize: 13,
-                            color: active
-                              ? '#ff2f8f'
-                              : 'rgba(248,244,239,0.90)',
-                          }}
-                        >
-                          {a === 'portrait' ? 'Portrait' : 'Square'}
-                        </div>
-                        <div
-                          className="font-mono"
-                          style={{
-                            fontSize: 10,
-                            color: 'rgba(255,255,255,0.50)',
-                          }}
-                        >
-                          {a === 'portrait'
-                            ? '1080 × 1350 · WhatsApp'
-                            : '1080 × 1080 · Instagram'}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                        {a === 'portrait' ? 'Portrait' : 'Square'}
+                      </div>
+                      <div
+                        className="font-mono"
+                        style={{ fontSize: 10, color: 'rgba(255,255,255,0.50)' }}
+                      >
+                        {a === 'portrait'
+                          ? '1080 × 1350 · WhatsApp'
+                          : '1080 × 1080 · Instagram'}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
+          )}
 
-              {/* Validation + Generate button */}
-              {validationMsg && (
+          {validationMsg && (
+            <div
+              className="rounded-xl px-3 py-2"
+              style={{
+                background: 'rgba(255,71,120,0.10)',
+                border: '1px solid rgba(255,71,120,0.35)',
+                color: '#ff9bb7',
+                fontSize: 13,
+              }}
+            >
+              {validationMsg}
+            </div>
+          )}
+
+          {/* Primary action: Generate OR Download+Share depending on state */}
+          {!revealed ? (
+            <button
+              onClick={generate}
+              disabled={generating}
+              className="w-full rounded-2xl px-5 py-4 font-mono uppercase tracking-[0.22em] font-bold inline-flex items-center justify-center gap-2 transition-transform"
+              style={{
+                fontSize: 13,
+                color: '#0a0a0d',
+                background:
+                  'linear-gradient(135deg, #ffcbdd 0%, #ff2f8f 50%, #c11f6b 100%)',
+                boxShadow: '0 18px 40px rgba(255,47,143,0.35)',
+                opacity: generating ? 0.7 : 1,
+              }}
+            >
+              <Sparkles size={16} />
+              {generating ? 'Generating…' : 'Generate my card'}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.4 }}
+                className="rounded-2xl border p-4 text-center"
+                style={{
+                  background:
+                    'linear-gradient(135deg, rgba(255,47,143,0.14), rgba(230,178,152,0.06))',
+                  borderColor: 'rgba(255,47,143,0.45)',
+                }}
+              >
                 <div
-                  className="rounded-xl px-3 py-2"
+                  className="font-mono uppercase tracking-[0.28em] font-bold"
+                  style={{ fontSize: 10, color: '#f8d4c1' }}
+                >
+                  Your award
+                </div>
+                <div
+                  className="font-display font-bold tracking-tight mt-2"
                   style={{
-                    background: 'rgba(255,71,120,0.10)',
-                    border: '1px solid rgba(255,71,120,0.35)',
-                    color: '#ff9bb7',
-                    fontSize: 13,
+                    fontSize: 24,
+                    fontStyle: 'italic',
+                    background:
+                      'linear-gradient(180deg, #ffe1e9 0%, #ff2f8f 60%, #c11f6b 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
                   }}
                 >
-                  {validationMsg}
+                  {mother.title}
                 </div>
-              )}
+              </motion.div>
 
               <button
-                onClick={generateAndDownload}
-                disabled={exporting}
-                className="w-full rounded-2xl px-5 py-4 font-mono uppercase tracking-[0.22em] font-bold inline-flex items-center justify-center gap-2 transition-transform"
+                onClick={download}
+                className="w-full rounded-2xl px-5 py-4 font-mono uppercase tracking-[0.22em] font-bold inline-flex items-center justify-center gap-2"
                 style={{
                   fontSize: 13,
                   color: '#0a0a0d',
                   background:
                     'linear-gradient(135deg, #ffcbdd 0%, #ff2f8f 50%, #c11f6b 100%)',
                   boxShadow: '0 18px 40px rgba(255,47,143,0.35)',
-                  opacity: exporting ? 0.7 : 1,
                 }}
               >
-                <Sparkles size={16} />
-                {exporting ? 'Generating…' : 'Generate my card'}
+                <Download size={16} />
+                Download card
               </button>
 
               <button
                 onClick={shareOnWhatsApp}
-                disabled={exporting}
                 className="w-full rounded-2xl px-5 py-3 font-mono uppercase tracking-[0.20em] font-bold inline-flex items-center justify-center gap-2"
                 style={{
                   fontSize: 12,
@@ -562,100 +548,162 @@ export function MothersPageView({ initialMother }: Props) {
                 <Share2 size={14} />
                 Share on WhatsApp
               </button>
-            </div>
 
-            {/* Right — live preview */}
-            <div>
-              <div
-                className="rounded-2xl border p-3"
+              <button
+                onClick={() => {
+                  setRevealed(false);
+                  setGeneratedDataUrl(null);
+                }}
+                className="w-full rounded-2xl px-5 py-2.5 font-mono uppercase tracking-[0.18em] font-bold"
                 style={{
-                  background:
-                    'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
-                  borderColor: 'rgba(255,255,255,0.08)',
+                  fontSize: 10,
+                  color: 'rgba(248,244,239,0.60)',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.08)',
                 }}
               >
-                <div className="flex items-center gap-2 mb-3 px-1">
-                  <Download
-                    size={14}
-                    style={{ color: 'rgba(248,212,193,0.75)' }}
-                  />
-                  <span
-                    className="font-mono uppercase tracking-[0.20em] font-bold"
-                    style={{
-                      fontSize: 10,
-                      color: 'rgba(248,212,193,0.75)',
-                    }}
-                  >
-                    Live preview
-                  </span>
-                </div>
-                <div
-                  ref={previewWrapRef}
-                  className="relative mx-auto"
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  onPointerCancel={onPointerUp}
-                  style={{
-                    height: previewSize.w * (cardHeight / cardWidth),
-                    touchAction: 'none',
-                    cursor: photoUrl ? 'move' : 'default',
-                    background: '#0a0a0d',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      transform: `scale(${previewScale})`,
-                      transformOrigin: 'top left',
-                    }}
-                  >
-                    <AppreciationCard
-                      ref={cardRef}
-                      mother={
-                        selectedMother ?? {
-                          slug: 'placeholder',
-                          name: 'Your Name',
-                          title: 'Your Award',
-                          category: 'all_rounder',
-                          message:
-                            'Select your name above to preview your card.',
-                        }
-                      }
-                      photoUrl={photoUrl}
-                      photoOffsetX={offset.x}
-                      photoOffsetY={offset.y}
-                      photoScale={scale}
-                      aspect={aspect}
-                    />
-                  </div>
-                </div>
-                <p
-                  className="font-mono mt-3 text-center"
-                  style={{
-                    fontSize: 10,
-                    color: 'rgba(255,255,255,0.45)',
-                  }}
-                >
-                  Drag inside the photo to reposition · pixel-perfect export
-                </p>
+                Change photo or size
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Right panel: live preview ──────────────────── */}
+        <div>
+          <div
+            className="rounded-2xl border p-3"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+              borderColor: 'rgba(255,255,255,0.08)',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <Download
+                size={14}
+                style={{ color: 'rgba(248,212,193,0.75)' }}
+              />
+              <span
+                className="font-mono uppercase tracking-[0.20em] font-bold"
+                style={{ fontSize: 10, color: 'rgba(248,212,193,0.75)' }}
+              >
+                Live preview
+              </span>
+            </div>
+            <div
+              ref={previewWrapRef}
+              className="relative mx-auto"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              style={{
+                height: (previewWrapRef.current?.clientWidth ?? 320) * (cardHeight / cardWidth),
+                touchAction: 'none',
+                cursor: photoUrl && !revealed ? 'move' : 'default',
+                background: '#0a0a0d',
+                borderRadius: 12,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: 'top left',
+                }}
+              >
+                <AppreciationCard
+                  ref={cardRef}
+                  mother={mother}
+                  photoUrl={photoUrl}
+                  photoOffsetX={offset.x}
+                  photoOffsetY={offset.y}
+                  photoScale={scale}
+                  aspect={aspect}
+                  revealed={revealed}
+                />
               </div>
             </div>
+            <p
+              className="font-mono mt-3 text-center"
+              style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}
+            >
+              {revealed
+                ? 'Card exported at full 1080p — perfect for WhatsApp and printing.'
+                : photoUrl
+                  ? 'Drag inside the photo to reposition · then tap Generate'
+                  : 'Upload your photo to see the preview come alive.'}
+            </p>
           </div>
-        </section>
-
-        <AppreciationWallSection />
-        <GroupMessageSection />
-        <CTASection />
+        </div>
       </div>
-    </main>
+    </section>
+  );
+}
+
+// ─── Landing "check WhatsApp for your link" notice ───────────────
+
+function PersonalLinkNotice() {
+  return (
+    <section className="mt-16">
+      <div
+        className="rounded-3xl border p-6 md:p-8 text-center"
+        style={{
+          background: `
+            radial-gradient(ellipse at 50% 0%, rgba(255,47,143,0.12) 0%, transparent 60%),
+            linear-gradient(180deg, #14090f 0%, #0a0a0d 100%)
+          `,
+          borderColor: 'rgba(255,47,143,0.30)',
+        }}
+      >
+        <div
+          className="inline-flex items-center gap-1.5 font-mono uppercase tracking-[0.28em] font-bold"
+          style={{ fontSize: 10, color: '#f8d4c1' }}
+        >
+          <Lock size={11} />
+          Personal cards only
+        </div>
+        <h3
+          className="font-display font-bold tracking-tight mt-4"
+          style={{
+            fontSize: 'clamp(24px, 4vw, 32px)',
+            lineHeight: 1.15,
+            color: 'rgba(248,244,239,0.98)',
+          }}
+        >
+          Your appreciation card is waiting on WhatsApp
+        </h3>
+        <p
+          className="mt-4 max-w-xl mx-auto leading-relaxed"
+          style={{ fontSize: 15, color: 'rgba(248,244,239,0.75)' }}
+        >
+          Trainer Siva Reddy has sent each of you a personal link on
+          the Team PURE X group. Tap your link to unlock your name,
+          upload your photo, and reveal your award.
+        </p>
+        <a
+          href="https://wa.me/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-6 rounded-full px-5 py-3 font-mono uppercase tracking-[0.22em] font-bold"
+          style={{
+            fontSize: 11,
+            color: '#0a0a0d',
+            background:
+              'linear-gradient(135deg, #ffcbdd 0%, #ff2f8f 50%, #c11f6b 100%)',
+          }}
+        >
+          <MessageCircle size={14} />
+          Open WhatsApp
+        </a>
+      </div>
+    </section>
   );
 }
 
 // ─── Section: Hero ──────────────────────────────────────────────
 
-function HeroSection() {
+function HeroSection({ mother }: { mother: PureXMother | null }) {
   return (
     <section className="relative pt-4 pb-2">
       <motion.div
@@ -669,7 +717,9 @@ function HeroSection() {
           style={{ fontSize: 11, color: '#f8d4c1' }}
         >
           <Heart size={12} />
-          Team PURE X · Presented by Trainer Siva Reddy
+          {mother
+            ? `A card for ${mother.name}`
+            : 'Team PURE X · Presented by Trainer Siva Reddy'}
         </div>
         <h1
           className="font-display font-bold tracking-tight mt-6"
@@ -691,9 +741,9 @@ function HeroSection() {
           className="mt-5 max-w-2xl mx-auto leading-relaxed"
           style={{ fontSize: 16, color: 'rgba(248,244,239,0.75)' }}
         >
-          Started on Mother&apos;s Day · 60 Days Completed on July 10.
-          A celebration of mothers who chose strength, consistency,
-          confidence, and self-care.
+          {mother
+            ? `Welcome, ${mother.name}. Upload your photo below and reveal your appreciation card — a small thank-you for 60 days of strength, discipline, and grace.`
+            : "Started on Mother's Day · 60 Days Completed on July 10. A celebration of mothers who chose strength, consistency, confidence, and self-care."}
         </p>
         <div
           className="inline-flex items-center flex-wrap justify-center gap-x-4 gap-y-2 mt-6 font-mono uppercase tracking-[0.22em] font-bold"
@@ -1042,5 +1092,6 @@ function SectionHeader({
     </div>
   );
 }
-// Ensure AnimatePresence is referenced so tree-shaking keeps it.
+
+// Ensure AnimatePresence stays referenced for future reveal transitions
 void AnimatePresence;
