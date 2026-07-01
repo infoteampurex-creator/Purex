@@ -60,29 +60,33 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
     ref
   ) {
     const [templateFailed, setTemplateFailed] = useState(false);
-    const W = 1080;
-    const H = aspect === 'portrait' ? 1620 : 1080;
+    // Card dimensions match the native size of the reference PNG so
+    // there's no scaling / cropping. Portrait = 1122x1402.
+    const W = aspect === 'portrait' ? 1122 : 1080;
+    const H = aspect === 'portrait' ? 1402 : 1080;
     const nameToShow = (displayName?.trim() || mother.name).trim();
     const templateSrc =
       aspect === 'portrait'
         ? '/purex-mothers/card-template-portrait.png'
         : '/purex-mothers/card-template-square.png';
 
-    // Overlay coordinates tuned to the reference PNG.
+    // Overlay coordinates tuned to the reference PNG at native 1122x1402.
+    // Center x = 561. Positions match where the placeholders sit on
+    // the reference art.
     const L =
       aspect === 'portrait'
         ? {
-            photoCx: 540,
-            photoCy: 745,
-            photoR: 225,
-            nameTop: 990,
-            nameFont: 128,
-            titleTop: 1135,
+            photoCx: 561,
+            photoCy: 645,
+            photoR: 195,
+            nameTop: 855,
+            nameFont: 132,
+            titleTop: 998,
             titleFont: 22,
-            titleLeft: 240,
-            titleRight: 240,
-            msgTop: 1200,
-            msgFont: 20,
+            titleLeft: 250,
+            titleRight: 250,
+            msgTop: 1060,
+            msgFont: 19,
             msgLeft: 240,
             msgRight: 240,
           }
