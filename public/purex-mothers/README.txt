@@ -1,17 +1,22 @@
-PURE X Mothers card templates
-─────────────────────────────
+PURE X Mothers card template
+────────────────────────────
 
-Save your reference PNG as:
+Save your reference PNG into THIS folder with EXACTLY this filename:
 
-  1. card-template-portrait.png    (required)  — 1080 × 1620 pixels
-  2. card-template-square.png      (optional)  — 1080 × 1080 pixels
+  card-template-portrait.png    (1080 × 1620 pixels — required)
+  card-template-square.png      (1080 × 1080 pixels — optional)
 
-Where each dynamic element lands on the portrait template:
-  • Photo circle center: (540, 700), radius 210
-  • Mother's name centered horizontally, baseline ~y=1000
-  • Award title centered, ~y=1080
-  • Appreciation message centered, ~y=1150
+The card component overlays only these dynamic bits on top of the
+template art:
 
-If the placeholders on your reference are in slightly different spots,
-tell me and I'll retune the coordinates in AppreciationCard.tsx (the
-LAYOUT constant at the top).
+  • Photo circle centred at (540, 745), radius 225
+  • Mother's name centred horizontally, top ≈ y=990 (script font)
+  • Award title centred, top ≈ y=1135
+  • Appreciation message centred, top ≈ y=1200
+
+If your reference art has the placeholders at slightly different
+positions, tell me and I'll retune the LAYOUT constant at the top
+of components/purex-mothers/AppreciationCard.tsx.
+
+Until the PNG is dropped here, the card renders a friendly
+"template PNG needed" placeholder — nothing breaks.
