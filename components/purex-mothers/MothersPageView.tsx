@@ -40,11 +40,22 @@ interface Props {
 
 type Aspect = 'portrait' | 'square';
 
+// ─── Palette ─────────────────────────────────────────────────
+// Page skeleton uses the PureX gold aesthetic (matches the rest of
+// the site — mother-strong, dashboard hero, etc). Pink/rose-gold is
+// reserved for the CELEBRATION moments: the card itself, the photo
+// upload/generate step, the reveal card. That contrast is what makes
+// the emotional payoff land.
+const GOLD_LIGHT = '#fbe6a3';
+const GOLD = '#ffd24d';
+const GOLD_DEEP = '#b88d2c';
+const ROSE = '#e8b298';
+
 export function MothersPageView({ initialMother }: Props) {
   return (
     <main
       className="relative min-h-screen"
-      style={{ background: '#0a0a0d', color: '#f8f4ef' }}
+      style={{ background: '#0a0c09', color: '#f5f5f0' }}
     >
       <BackgroundAtmosphere />
 
@@ -75,9 +86,9 @@ function BackgroundAtmosphere() {
       className="absolute inset-0 pointer-events-none"
       style={{
         background: `
-          radial-gradient(ellipse at 20% 0%, rgba(255,47,143,0.12) 0%, transparent 55%),
-          radial-gradient(ellipse at 80% 60%, rgba(230,178,152,0.10) 0%, transparent 55%),
-          radial-gradient(ellipse at 50% 100%, rgba(255,215,0,0.05) 0%, transparent 55%)
+          radial-gradient(ellipse at 20% 0%, rgba(255,210,77,0.10) 0%, transparent 55%),
+          radial-gradient(ellipse at 80% 40%, rgba(255,184,120,0.08) 0%, transparent 55%),
+          radial-gradient(ellipse at 50% 100%, rgba(184,141,44,0.06) 0%, transparent 55%)
         `,
       }}
     />
@@ -501,7 +512,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
               >
                 <div
                   className="font-mono uppercase tracking-[0.28em] font-bold"
-                  style={{ fontSize: 10, color: '#f8d4c1' }}
+                  style={{ fontSize: 10, color: GOLD_LIGHT }}
                 >
                   Your award
                 </div>
@@ -666,8 +677,8 @@ function MemberPickerSection() {
             className="text-left rounded-2xl border px-4 py-4 transition-all relative overflow-hidden group"
             style={{
               background:
-                'linear-gradient(135deg, rgba(255,47,143,0.06), rgba(230,178,152,0.03))',
-              borderColor: 'rgba(255,47,143,0.28)',
+                'linear-gradient(135deg, rgba(255,210,77,0.06), rgba(184,141,44,0.03))',
+              borderColor: 'rgba(255,210,77,0.28)',
             }}
           >
             <div
@@ -675,17 +686,17 @@ function MemberPickerSection() {
               className="absolute -top-6 -right-6 w-16 h-16 rounded-full opacity-30 pointer-events-none"
               style={{
                 background:
-                  'radial-gradient(circle, rgba(255,47,143,0.45), transparent 70%)',
+                  'radial-gradient(circle, rgba(255,210,77,0.45), transparent 70%)',
               }}
             />
             <div className="flex items-center gap-2">
               <UserCircle
                 size={16}
-                style={{ color: '#ff2f8f' }}
+                style={{ color: GOLD }}
               />
               <div
                 className="font-mono uppercase tracking-[0.20em] font-bold"
-                style={{ fontSize: 9, color: 'rgba(248,212,193,0.85)' }}
+                style={{ fontSize: 9, color: GOLD_LIGHT }}
               >
                 PURE X Mother
               </div>
@@ -694,7 +705,7 @@ function MemberPickerSection() {
               className="font-display font-bold tracking-tight mt-2"
               style={{
                 fontSize: 26,
-                color: 'rgba(248,244,239,0.98)',
+                color: 'rgba(245,245,240,0.98)',
                 fontStyle: 'italic',
               }}
             >
@@ -703,7 +714,7 @@ function MemberPickerSection() {
             <div className="mt-3 flex items-center justify-between">
               <div
                 className="font-mono uppercase tracking-[0.18em] font-bold"
-                style={{ fontSize: 10, color: '#ff9bb7' }}
+                style={{ fontSize: 10, color: GOLD_LIGHT }}
               >
                 Open my card
               </div>
@@ -711,7 +722,7 @@ function MemberPickerSection() {
                 size={14}
                 strokeWidth={2.5}
                 className="transition-transform group-hover:translate-x-1"
-                style={{ color: '#ff2f8f' }}
+                style={{ color: GOLD }}
               />
             </div>
           </motion.button>
@@ -719,7 +730,7 @@ function MemberPickerSection() {
       </div>
       <p
         className="text-center mt-6 font-mono uppercase tracking-[0.20em] font-bold"
-        style={{ fontSize: 10, color: 'rgba(248,212,193,0.55)' }}
+        style={{ fontSize: 10, color: 'rgba(251,230,163,0.55)' }}
       >
         Your award title is a surprise · revealed when you tap Generate
       </p>
@@ -740,20 +751,20 @@ function HeroSection({ mother }: { mother: PureXMother | null }) {
       >
         <div
           className="inline-flex items-center gap-1.5 font-mono uppercase tracking-[0.28em] font-bold"
-          style={{ fontSize: 11, color: '#f8d4c1' }}
+          style={{ fontSize: 11, color: GOLD }}
         >
-          <Heart size={12} />
+          <span className="w-4 h-px" style={{ background: GOLD }} />
           {mother
             ? `A card for ${mother.name}`
             : 'Team PURE X · Presented by Trainer Siva Reddy'}
+          <span className="w-4 h-px" style={{ background: GOLD }} />
         </div>
         <h1
           className="font-display font-bold tracking-tight mt-6"
           style={{
             fontSize: 'clamp(38px, 7vw, 68px)',
             lineHeight: 1.02,
-            background:
-              'linear-gradient(180deg, #ffe1e9 0%, #ff2f8f 55%, #c11f6b 100%)',
+            background: `linear-gradient(180deg, ${GOLD_LIGHT} 0%, ${GOLD} 55%, ${GOLD_DEEP} 100%)`,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -765,7 +776,7 @@ function HeroSection({ mother }: { mother: PureXMother | null }) {
         </h1>
         <p
           className="mt-5 max-w-2xl mx-auto leading-relaxed"
-          style={{ fontSize: 16, color: 'rgba(248,244,239,0.75)' }}
+          style={{ fontSize: 16, color: 'rgba(245,245,240,0.75)' }}
         >
           {mother
             ? `Welcome, ${mother.name}. Upload your photo below and reveal your appreciation card — a small thank-you for 60 days of strength, discipline, and grace.`
@@ -773,7 +784,7 @@ function HeroSection({ mother }: { mother: PureXMother | null }) {
         </p>
         <div
           className="inline-flex items-center flex-wrap justify-center gap-x-4 gap-y-2 mt-6 font-mono uppercase tracking-[0.22em] font-bold"
-          style={{ fontSize: 10.5, color: '#f8d4c1' }}
+          style={{ fontSize: 10.5, color: GOLD_LIGHT }}
         >
           <span className="inline-flex items-center gap-1.5">
             <Dumbbell size={12} /> Strength Training
@@ -796,12 +807,12 @@ function HeroSection({ mother }: { mother: PureXMother | null }) {
 
 function StatsSection() {
   const items = [
-    { icon: Calendar, label: '60 Days', sub: 'Completed', color: '#ff2f8f' },
-    { icon: Heart, label: 'May 10', sub: "Mother's Day start", color: '#e8b298' },
-    { icon: Dumbbell, label: 'Strength', sub: 'Training focus', color: '#f8d4c1' },
-    { icon: Apple, label: 'Discipline', sub: 'Diet routine', color: '#ffd700' },
-    { icon: Footprints, label: '10K / Day', sub: 'Step goal', color: '#ff9bb7' },
-    { icon: Crown, label: 'Siva Reddy', sub: 'Trainer', color: '#c68960' },
+    { icon: Calendar, label: '60 Days', sub: 'Completed', color: GOLD },
+    { icon: Heart, label: 'May 10', sub: "Mother's Day start", color: GOLD_LIGHT },
+    { icon: Dumbbell, label: 'Strength', sub: 'Training focus', color: GOLD_LIGHT },
+    { icon: Apple, label: 'Discipline', sub: 'Diet routine', color: GOLD },
+    { icon: Footprints, label: '10K / Day', sub: 'Step goal', color: ROSE },
+    { icon: Crown, label: 'Siva Reddy', sub: 'Trainer', color: GOLD_DEEP },
   ];
   const collectiveM = (PUREX_MOTHERS_META.collectiveSteps / 1_000_000).toFixed(1);
   return (
@@ -809,10 +820,10 @@ function StatsSection() {
       <div
         className="rounded-3xl border overflow-hidden p-5"
         style={{
-          borderColor: 'rgba(255,47,143,0.22)',
+          borderColor: 'rgba(255,210,77,0.22)',
           background: `
-            radial-gradient(ellipse at 50% 0%, rgba(255,47,143,0.10) 0%, transparent 60%),
-            linear-gradient(180deg, #14090f 0%, #0a0a0d 100%)
+            radial-gradient(ellipse at 50% 0%, rgba(255,210,77,0.08) 0%, transparent 60%),
+            linear-gradient(180deg, #14110d 0%, #0a0c09 100%)
           `,
         }}
       >
@@ -828,7 +839,7 @@ function StatsSection() {
                 />
                 <div
                   className="font-display font-bold tracking-tight"
-                  style={{ fontSize: 15, color: 'rgba(248,244,239,0.95)' }}
+                  style={{ fontSize: 15, color: 'rgba(245,245,240,0.95)' }}
                 >
                   {it.label}
                 </div>
@@ -851,7 +862,7 @@ function StatsSection() {
         >
           <div
             className="font-mono uppercase tracking-[0.28em] font-bold"
-            style={{ fontSize: 10, color: '#f8d4c1' }}
+            style={{ fontSize: 10, color: GOLD_LIGHT }}
           >
             Together we walked
           </div>
@@ -859,8 +870,7 @@ function StatsSection() {
             className="font-display font-bold tracking-tight mt-1"
             style={{
               fontSize: 40,
-              background:
-                'linear-gradient(180deg, #ffe1e9 0%, #ff2f8f 60%, #c11f6b 100%)',
+              background: `linear-gradient(180deg, ${GOLD_LIGHT} 0%, ${GOLD} 60%, ${GOLD_DEEP} 100%)`,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -951,15 +961,15 @@ function GroupMessageSection() {
         className="rounded-3xl border p-6 md:p-10"
         style={{
           background: `
-            radial-gradient(ellipse at 100% 100%, rgba(255,47,143,0.08) 0%, transparent 60%),
-            linear-gradient(180deg, #16090f 0%, #0a0a0d 100%)
+            radial-gradient(ellipse at 100% 100%, rgba(255,210,77,0.08) 0%, transparent 60%),
+            linear-gradient(180deg, #14110d 0%, #0a0c09 100%)
           `,
           borderColor: 'rgba(230,178,152,0.28)',
         }}
       >
         <div
           className="font-mono uppercase tracking-[0.28em] font-bold text-center"
-          style={{ fontSize: 10, color: '#f8d4c1' }}
+          style={{ fontSize: 10, color: GOLD_LIGHT }}
         >
           A note from your team
         </div>
@@ -1006,7 +1016,7 @@ function GroupMessageSection() {
           </div>
           <div
             className="font-display font-bold tracking-tight mt-2"
-            style={{ fontSize: 20, color: '#ff2f8f' }}
+            style={{ fontSize: 20, color: GOLD }}
           >
             Team PURE X
           </div>
@@ -1035,10 +1045,10 @@ function CTASection() {
         className="rounded-3xl border p-8 md:p-12 text-center"
         style={{
           background: `
-            radial-gradient(ellipse at 50% 0%, rgba(255,47,143,0.14) 0%, transparent 60%),
-            linear-gradient(180deg, #14090f 0%, #0a0a0d 100%)
+            radial-gradient(ellipse at 50% 0%, rgba(255,210,77,0.14) 0%, transparent 60%),
+            linear-gradient(180deg, #14110d 0%, #0a0c09 100%)
           `,
-          borderColor: 'rgba(255,47,143,0.35)',
+          borderColor: 'rgba(255,210,77,0.35)',
         }}
       >
         <h3
@@ -1046,14 +1056,14 @@ function CTASection() {
           style={{
             fontSize: 'clamp(24px, 4vw, 36px)',
             lineHeight: 1.1,
-            color: 'rgba(248,244,239,0.98)',
+            color: 'rgba(245,245,240,0.98)',
           }}
         >
           Join the next PURE X Mothers journey
         </h3>
         <p
           className="mt-4 max-w-2xl mx-auto"
-          style={{ fontSize: 15, color: 'rgba(248,244,239,0.75)' }}
+          style={{ fontSize: 15, color: 'rgba(245,245,240,0.75)' }}
         >
           Train stronger, eat better, walk daily, and rebuild confidence
           with a supportive fitness community. Registration for the next
@@ -1064,10 +1074,9 @@ function CTASection() {
           className="inline-flex items-center gap-2 mt-8 rounded-full px-6 py-3.5 font-mono uppercase tracking-[0.22em] font-bold"
           style={{
             fontSize: 12,
-            color: '#0a0a0d',
-            background:
-              'linear-gradient(135deg, #ffcbdd 0%, #ff2f8f 50%, #c11f6b 100%)',
-            boxShadow: '0 18px 40px rgba(255,47,143,0.35)',
+            color: '#0a0c09',
+            background: `linear-gradient(135deg, ${GOLD_LIGHT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
+            boxShadow: '0 18px 40px rgba(255,210,77,0.30)',
           }}
         >
           Join the next batch
@@ -1093,7 +1102,7 @@ function SectionHeader({
     <div className="text-center">
       <div
         className="font-mono uppercase tracking-[0.28em] font-bold"
-        style={{ fontSize: 10, color: '#f8d4c1' }}
+        style={{ fontSize: 10, color: GOLD_LIGHT }}
       >
         {kicker}
       </div>
