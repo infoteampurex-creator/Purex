@@ -90,10 +90,10 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             titleFont: 19,
             titleLeft: 280,
             titleRight: 280,
-            msgTop: 1112,
-            msgFont: 16,
-            msgLeft: 260,
-            msgRight: 260,
+            msgTop: 1118,
+            msgFont: 18,
+            msgLeft: 220,
+            msgRight: 220,
           }
         : {
             photoCx: 540,
@@ -245,28 +245,48 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               {revealed ? mother.title : '✦ ✦ ✦'}
             </div>
 
-            {/* Appreciation message */}
+            {/* Appreciation message — includes a soft dark backdrop
+                so the dashed placeholder lines on the template don't
+                bleed through behind the text (they were reading as
+                "two titles"). */}
             {aspect === 'portrait' && L.msgTop > 0 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: L.msgTop,
-                  left: L.msgLeft,
-                  right: L.msgRight,
-                  textAlign: 'center',
-                  fontFamily: F_SERIF,
-                  fontSize: L.msgFont,
-                  lineHeight: 1.4,
-                  color: '#f8ecd2',
-                  fontStyle: 'italic',
-                  fontWeight: 400,
-                  opacity: revealed ? 0.9 : 0.4,
-                }}
-              >
-                {revealed
-                  ? mother.message
-                  : 'Tap Generate to reveal your award ✨'}
-              </div>
+              <>
+                {/* Radial dark fade — hides placeholder, blends at edges */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: L.msgTop - 12,
+                    left: L.msgLeft - 20,
+                    right: L.msgRight - 20,
+                    height: L.msgFont * 3,
+                    background:
+                      'radial-gradient(ellipse at center, #000 0%, #000 60%, rgba(0,0,0,0.85) 80%, transparent 100%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: L.msgTop,
+                    left: L.msgLeft,
+                    right: L.msgRight,
+                    textAlign: 'center',
+                    fontFamily: F_SERIF,
+                    fontSize: L.msgFont,
+                    lineHeight: 1.45,
+                    color: '#faeed4',
+                    fontStyle: 'italic',
+                    fontWeight: 600,
+                    letterSpacing: '0.01em',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                    opacity: revealed ? 1 : 0.5,
+                  }}
+                >
+                  {revealed
+                    ? mother.message
+                    : 'Tap Generate to reveal your award ✨'}
+                </div>
+              </>
             )}
           </>
         )}
