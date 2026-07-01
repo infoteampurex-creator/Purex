@@ -66,44 +66,42 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
     const P = aspect === 'portrait';
     const L = P
       ? {
-          logoTop: 50,
-          brandTop: 100,
-          titleTop: 132,
-          subtitleTop: 220,
-          badgeTop: 258,
-          featuresTop: 310,
-          photoTop: 372,
-          photoSize: 336,
+          logoTop: 60,
+          titleTop: 165,
+          subtitleTop: 250,
+          badgeTop: 288,
+          featuresTop: 336,
+          photoTop: 394,
+          photoSize: 330,
           sealX: W - 268,
-          sealY: 620,
-          presentedTop: 780,
-          nameTop: 820,
-          nameFont: 130,
-          awardTitleTop: 970,
-          messageTop: 1055,
+          sealY: 636,
+          presentedTop: 792,
+          nameTop: 828,
+          nameFont: 128,
+          awardTitleTop: 976,
+          messageTop: 1058,
           statsTop: 1130,
-          teamTop: 1234,
-          trainerTop: 1276,
-          footerTop: 1320,
+          teamTop: 1230,
+          trainerTop: 1282,
+          footerTop: 1325,
         }
       : {
-          logoTop: 32,
-          brandTop: 74,
-          titleTop: 100,
-          subtitleTop: 180,
-          badgeTop: 216,
-          featuresTop: 262,
-          photoTop: 316,
-          photoSize: 258,
+          logoTop: 38,
+          titleTop: 128,
+          subtitleTop: 200,
+          badgeTop: 232,
+          featuresTop: 275,
+          photoTop: 322,
+          photoSize: 254,
           sealX: W - 232,
-          sealY: 480,
-          presentedTop: 596,
-          nameTop: 630,
+          sealY: 484,
+          presentedTop: 600,
+          nameTop: 634,
           nameFont: 100,
-          awardTitleTop: 748,
+          awardTitleTop: 750,
           messageTop: 0,
-          statsTop: 830,
-          teamTop: 928,
+          statsTop: 828,
+          teamTop: 918,
           trainerTop: 968,
           footerTop: 1010,
         };
@@ -164,7 +162,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
         <CornerFlourish x={W - 26} y={H - 26} rot={180} />
         <CornerFlourish x={26} y={H - 26} rot={-90} />
 
-        {/* ─── TOP: PX logo mark + TEAM PURE X ─────────────── */}
+        {/* ─── TOP: Team PURE X wordmark ─────────────── */}
         <div
           style={{
             position: 'absolute',
@@ -173,24 +171,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             transform: 'translateX(-50%)',
           }}
         >
-          <PXLogo />
-        </div>
-        <div
-          style={{
-            position: 'absolute',
-            top: L.brandTop,
-            left: 0,
-            right: 0,
-            textAlign: 'center',
-            fontFamily: F_MONO,
-            fontSize: 15,
-            letterSpacing: '0.60em',
-            color: G_BRIGHT,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-          }}
-        >
-          Team PURE X
+          <TeamPureXLogo size="lg" />
         </div>
 
         {/* ─── "PURE X Mothers" ─── */}
@@ -464,36 +445,16 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           <StatBox icon="shoe" label="Daily Goal" value="10K Steps" />
         </div>
 
-        {/* ─── TEAM PURE X wordmark ─── */}
+        {/* ─── TEAM PURE X wordmark (bottom, small variant) ─── */}
         <div
           style={{
             position: 'absolute',
             top: L.teamTop,
-            left: 0,
-            right: 0,
-            textAlign: 'center',
+            left: '50%',
+            transform: 'translateX(-50%)',
           }}
         >
-          <div
-            style={{
-              fontFamily: F_ROMAN,
-              fontSize: 30,
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              background: `linear-gradient(180deg, ${G_LIGHT} 0%, ${G_BRIGHT} 55%, ${G_DEEP} 100%)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              textTransform: 'uppercase',
-              lineHeight: 1,
-            }}
-          >
-            Team{' '}
-            <span style={{ color: CREAM, WebkitTextFillColor: CREAM }}>
-              PURE
-            </span>{' '}
-            X
-          </div>
+          <TeamPureXLogo size="sm" />
         </div>
 
         {/* ─── Trainer nameplate ─── */}
@@ -537,35 +498,44 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
 // Sub-components
 // ═══════════════════════════════════════════════════════════════
 
-/** Team PureX "PX" monogram — bold letterform, filled not stroked. */
-function PXLogo() {
+/** Official Team PURE X wordmark — TEAM on top, PURE X below with the
+ *  signature lime-green X. Uses Inter Tight (the app's display font)
+ *  so it matches the brand exactly. */
+function TeamPureXLogo({ size = 'lg' }: { size?: 'lg' | 'sm' }) {
+  const teamSize = size === 'lg' ? 22 : 16;
+  const pureSize = size === 'lg' ? 48 : 36;
   return (
-    <svg width="86" height="50" viewBox="0 0 86 50" fill="none">
-      <defs>
-        <linearGradient id="pxGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={G_LIGHT} />
-          <stop offset="50%" stopColor={G_BRIGHT} />
-          <stop offset="100%" stopColor={G_DEEP} />
-        </linearGradient>
-      </defs>
-      {/* P letterform — solid filled path */}
-      <path
-        d="M 6 4 L 6 46 L 15 46 L 15 30 L 24 30 Q 39 30 39 17 Q 39 4 24 4 Z
-           M 15 12 L 22 12 Q 30 12 30 17 Q 30 22 22 22 L 15 22 Z"
-        fill="url(#pxGrad)"
-        fillRule="evenodd"
-      />
-      {/* X letterform — two bold diagonal bars */}
-      <path
-        d="M 44 4 L 53 4 L 62 20 L 71 4 L 80 4 L 66 25 L 80 46 L 71 46 L 62 30 L 53 46 L 44 46 L 58 25 Z"
-        fill="url(#pxGrad)"
-      />
-      {/* Small star accent above the X */}
-      <path
-        d="M 78 3 L 79.6 5.5 L 82.5 6 L 80.5 8 L 81 11 L 78 9.5 L 75 11 L 75.5 8 L 73.5 6 L 76.4 5.5 Z"
-        fill={G_LIGHT}
-      />
-    </svg>
+    <div
+      style={{
+        fontFamily: "var(--font-display), 'Inter Tight', 'Inter', sans-serif",
+        textAlign: 'center',
+        lineHeight: 0.92,
+        color: CREAM,
+      }}
+    >
+      <div
+        style={{
+          fontSize: teamSize,
+          fontWeight: 800,
+          letterSpacing: '0.30em',
+          color: '#ffffff',
+          textIndent: '0.30em', // compensate the trailing tracking so it visually centers
+        }}
+      >
+        TEAM
+      </div>
+      <div
+        style={{
+          fontSize: pureSize,
+          fontWeight: 800,
+          letterSpacing: '0.02em',
+          color: '#ffffff',
+          marginTop: 4,
+        }}
+      >
+        PURE <span style={{ color: '#c6ff3d' }}>X</span>
+      </div>
+    </div>
   );
 }
 
