@@ -10,6 +10,7 @@ import {
 } from '@/lib/data/body-measurements';
 import { deriveBodyProportions } from '@/lib/data/body-proportions';
 import { getMyHealthReports } from '@/lib/actions/health-reports';
+import { getLabCatalog } from '@/lib/data/lab-catalog';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import type { MoodState } from '@/lib/data/mood';
 import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
@@ -18,11 +19,6 @@ export const metadata = {
   title: 'PureX Health · Body data, reports, conditions',
 };
 export const dynamic = 'force-dynamic';
-// Gemini vision on a multi-page PDF can run 15-30 seconds; default
-// 10s serverless timeout would always race the response. 60s ceiling
-// for Vercel Pro. Applies to all server actions invoked from this
-// page (uploadHealthReport, retryHealthReportExtraction).
-export const maxDuration = 60;
 
 /**
  * Top-level Health page — the user's body-data hub.
@@ -57,6 +53,7 @@ export default async function HealthPage() {
     measurements,
     bodySettings,
     healthReports,
+    labCatalog,
     moodHistoryRows,
     healthConditions,
   ] = await Promise.all([
@@ -64,6 +61,7 @@ export default async function HealthPage() {
     getLatestMeasurements(userId),
     getProfileBodySettings(userId),
     getMyHealthReports(),
+    getLabCatalog(),
     // 7-day mood history — small enough query to inline here.
     (async () => {
       const sb = await createSupabaseClient();
@@ -130,6 +128,7 @@ export default async function HealthPage() {
           bodySettings={bodySettings}
           proportions={proportions}
           healthReports={healthReports}
+          labCatalog={labCatalog}
           moodHistory={moodHistoryRows}
           dailyInputs={inputsResult.inputs}
           healthConditions={healthConditions}

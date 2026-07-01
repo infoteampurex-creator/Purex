@@ -15,8 +15,9 @@ import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import { HealthConditionsEditor } from '@/components/admin/HealthConditionsEditor';
 import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
-import { HealthReportReview } from '@/components/admin/HealthReportReview';
+import { HealthReportsSection } from '@/components/client/health/HealthReportsSection';
 import { getReportsForClient } from '@/lib/actions/health-reports';
+import { getLabCatalog } from '@/lib/data/lab-catalog';
 import { AdminHealthyStreakPanel } from '@/components/admin/AdminHealthyStreakPanel';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import { WeeklyScheduleEditor } from '@/components/admin/WeeklyScheduleEditor';
@@ -105,6 +106,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     streakHistory,
     healthConditions,
     clientReports,
+    labCatalog,
     weeklyPlan,
     mealPlan,
     upcomingWorkouts,
@@ -120,6 +122,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getStreakHistory(client.id, 30),
     getHealthConditionsForClient(client.id),
     getReportsForClient(client.id),
+    getLabCatalog(),
     getWeeklyPlanForClient(client.id),
     getMealPlanForClient(client.id),
     getUpcomingMaterializedWorkouts(client.id, 14),
@@ -345,10 +348,14 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         />
       </div>
 
-      {/* Lab report review — coach adds notes to client uploads.
-          Notes appear on the client's Health tab. */}
+      {/* Lab report entry — coach enters values on behalf of client;
+          same modal as client self-entry, with targetClientId set. */}
       <div className="mt-6">
-        <HealthReportReview reports={clientReports} />
+        <HealthReportsSection
+          reports={clientReports}
+          catalog={labCatalog}
+          targetClientId={client.id}
+        />
       </div>
     </>
   );
