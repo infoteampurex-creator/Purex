@@ -114,7 +114,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   const dragging = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
 
   const cardWidth = 1080;
-  const cardHeight = aspect === 'portrait' ? 1350 : 1080;
+  const cardHeight = aspect === 'portrait' ? 1620 : 1080;
 
   // Auto-scale the on-screen preview to the container width
   const previewWrapRef = useRef<HTMLDivElement | null>(null);
@@ -513,7 +513,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
                         style={{ fontSize: 10, color: 'rgba(255,255,255,0.50)' }}
                       >
                         {a === 'portrait'
-                          ? '1080 × 1350 · WhatsApp'
+                          ? '1080 × 1620 · WhatsApp'
                           : '1080 × 1080 · Instagram'}
                       </div>
                     </button>
