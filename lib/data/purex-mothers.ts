@@ -21,74 +21,74 @@ export const PUREX_MOTHERS: PureXMother[] = [
   {
     slug: 'vani',
     name: 'Vani',
-    title: 'Consistency Entertainment Star',
+    title: 'Heart of the Squad',
     category: 'consistency',
     message:
-      'For bringing discipline, positive energy, and entertainment throughout the PURE X Mothers journey.',
+      'For lifting the group with positive energy every single day of the 60-day journey.',
   },
   {
     slug: 'swarna',
     name: 'Swarna',
-    title: 'All Rounder',
+    title: 'Complete Athlete',
     category: 'all_rounder',
     message:
-      'For showing balanced effort in training, diet, steps, and daily discipline.',
+      'For balanced effort across training, diet, steps, and daily discipline — nothing missed.',
   },
   {
     slug: 'akhila',
     name: 'Akhila',
-    title: 'All Rounder',
+    title: 'Balanced Champion',
     category: 'all_rounder',
     message:
-      'For maintaining strong dedication across every part of the 60-day journey.',
+      'For showing that balance is a win — steady dedication across every part of the 60 days.',
   },
   {
     slug: 'sirisha',
     name: 'Sirisha',
-    title: 'Plank Champion',
+    title: 'Core of Steel',
     category: 'plank',
     message:
-      'For showing strong core strength, patience, and determination through plank challenges.',
+      'For unbreakable core strength and quiet determination through every plank challenge.',
   },
   {
     slug: 'nilima',
     name: 'Nilima',
-    title: 'Consistency All Rounder Queen',
+    title: 'The Powerhouse',
     category: 'queen',
     message:
-      'For outstanding consistency, energy, and all-round performance throughout the journey.',
+      'For extraordinary consistency and all-round performance — the one everyone else drew energy from.',
   },
   {
     slug: 'sunitha',
     name: 'Sunitha',
-    title: 'Wall Sit Champion',
+    title: 'Iron Legs',
     category: 'wall_sit',
     message:
-      'For showing powerful lower-body endurance and mental strength in wall sit challenges.',
+      'For lower-body endurance and mental strength that never faltered in the wall sit challenges.',
   },
   {
     slug: 'pranitha',
     name: 'Pranitha',
-    title: 'All Rounder',
+    title: 'Total Force',
     category: 'all_rounder',
     message:
-      'For strong participation, discipline, and dedication across the complete program.',
+      'For strength across every pillar — training, diet, steps, discipline — nothing halfway.',
   },
   {
     slug: 'manga',
     name: 'Manga',
-    title: 'Wall Sit Champion',
+    title: 'Steel Stance',
     category: 'wall_sit',
     message:
-      'For excellent stamina, patience, and commitment in the wall sit challenge.',
+      'For the immovable hold — stamina, patience, and commitment that stayed unshaken through every wall sit.',
   },
   {
     slug: 'lakshmi-durga',
     name: 'Lakshmi Durga',
-    title: 'Wall Sit Consistency Star',
+    title: 'The Pillar',
     category: 'wall_sit',
     message:
-      'For showing strong consistency and endurance throughout the 60-day journey.',
+      'For being an unmoved foundation of strength and consistency across the entire 60-day journey.',
   },
 ];
 
