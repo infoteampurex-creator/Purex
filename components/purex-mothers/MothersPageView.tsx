@@ -106,6 +106,9 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
+  // Editable full name — mother can add surname or refine spelling.
+  // Defaults to her slug-derived name, but she owns the field.
+  const [displayName, setDisplayName] = useState(mother.name);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
   const dragging = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
@@ -301,6 +304,54 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 mt-8">
         {/* ── Left panel: upload + generate ─────────────── */}
         <div className="space-y-4">
+          {/* Full name input — allows surname / spelling tweaks */}
+          <div
+            className="rounded-2xl border p-4"
+            style={{
+              borderColor: 'rgba(232,184,84,0.35)',
+              background:
+                'radial-gradient(ellipse at 50% 0%, rgba(232,184,84,0.06), transparent 70%), rgba(255,255,255,0.02)',
+            }}
+          >
+            <div
+              className="font-mono uppercase tracking-[0.22em] font-bold mb-2"
+              style={{ fontSize: 10, color: '#f5d78e' }}
+            >
+              Your name as it should appear on the card
+            </div>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                // Editing the name after reveal invalidates the export
+                if (revealed) {
+                  setRevealed(false);
+                  setGeneratedDataUrl(null);
+                }
+              }}
+              maxLength={40}
+              placeholder="e.g. Vani Sharma"
+              className="w-full rounded-lg border px-3 py-2.5 font-display font-bold"
+              style={{
+                fontSize: 20,
+                color: 'rgba(245,245,240,0.98)',
+                fontStyle: 'italic',
+                background: 'rgba(255,255,255,0.04)',
+                borderColor: 'rgba(255,255,255,0.10)',
+              }}
+            />
+            <div
+              className="font-mono mt-2"
+              style={{
+                fontSize: 10,
+                color: 'rgba(245,215,142,0.55)',
+              }}
+            >
+              Add your surname if you&apos;d like — up to 40 characters.
+            </div>
+          </div>
+
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={onDrop}
@@ -627,6 +678,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
                 <AppreciationCard
                   ref={cardRef}
                   mother={mother}
+                  displayName={displayName}
                   photoUrl={photoUrl}
                   photoOffsetX={offset.x}
                   photoOffsetY={offset.y}
