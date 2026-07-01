@@ -17,9 +17,10 @@ import {
   Heart,
   Move,
   ChevronRight,
-  Lock,
-  MessageCircle,
+  UserCircle,
+  ArrowRight,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import * as htmlToImage from 'html-to-image';
 import confetti from 'canvas-confetti';
 import {
@@ -54,7 +55,7 @@ export function MothersPageView({ initialMother }: Props) {
         {initialMother ? (
           <PersonalGenerator mother={initialMother} />
         ) : (
-          <PersonalLinkNotice />
+          <MemberPickerSection />
         )}
 
         <AppreciationWallSection />
@@ -641,62 +642,87 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   );
 }
 
-// ─── Landing "check WhatsApp for your link" notice ───────────────
+// ─── Member picker (shown when no mother is preselected) ────────
 
-function PersonalLinkNotice() {
+function MemberPickerSection() {
+  const router = useRouter();
   return (
-    <section className="mt-16">
-      <div
-        className="rounded-3xl border p-6 md:p-8 text-center"
-        style={{
-          background: `
-            radial-gradient(ellipse at 50% 0%, rgba(255,47,143,0.12) 0%, transparent 60%),
-            linear-gradient(180deg, #14090f 0%, #0a0a0d 100%)
-          `,
-          borderColor: 'rgba(255,47,143,0.30)',
-        }}
-      >
-        <div
-          className="inline-flex items-center gap-1.5 font-mono uppercase tracking-[0.28em] font-bold"
-          style={{ fontSize: 10, color: '#f8d4c1' }}
-        >
-          <Lock size={11} />
-          Personal cards only
-        </div>
-        <h3
-          className="font-display font-bold tracking-tight mt-4"
-          style={{
-            fontSize: 'clamp(24px, 4vw, 32px)',
-            lineHeight: 1.15,
-            color: 'rgba(248,244,239,0.98)',
-          }}
-        >
-          Your appreciation card is waiting on WhatsApp
-        </h3>
-        <p
-          className="mt-4 max-w-xl mx-auto leading-relaxed"
-          style={{ fontSize: 15, color: 'rgba(248,244,239,0.75)' }}
-        >
-          Trainer Siva Reddy has sent each of you a personal link on
-          the Team PURE X group. Tap your link to unlock your name,
-          upload your photo, and reveal your award.
-        </p>
-        <a
-          href="https://wa.me/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mt-6 rounded-full px-5 py-3 font-mono uppercase tracking-[0.22em] font-bold"
-          style={{
-            fontSize: 11,
-            color: '#0a0a0d',
-            background:
-              'linear-gradient(135deg, #ffcbdd 0%, #ff2f8f 50%, #c11f6b 100%)',
-          }}
-        >
-          <MessageCircle size={14} />
-          Open WhatsApp
-        </a>
+    <section id="pick-name" className="mt-16 scroll-mt-6">
+      <SectionHeader
+        kicker="Step 1 · Tap your name"
+        title="Choose your name to open your card"
+        subtitle="Only the 9 mothers who completed the 60-day challenge appear here. Tap your name to upload your photo and reveal your appreciation card."
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-8">
+        {PUREX_MOTHERS.map((m, i) => (
+          <motion.button
+            key={m.slug}
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.35, delay: i * 0.04 }}
+            whileHover={{ y: -2 }}
+            onClick={() => router.push(`/purex-mothers/${m.slug}`)}
+            className="text-left rounded-2xl border px-4 py-4 transition-all relative overflow-hidden group"
+            style={{
+              background:
+                'linear-gradient(135deg, rgba(255,47,143,0.06), rgba(230,178,152,0.03))',
+              borderColor: 'rgba(255,47,143,0.28)',
+            }}
+          >
+            <div
+              aria-hidden
+              className="absolute -top-6 -right-6 w-16 h-16 rounded-full opacity-30 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle, rgba(255,47,143,0.45), transparent 70%)',
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <UserCircle
+                size={16}
+                style={{ color: '#ff2f8f' }}
+              />
+              <div
+                className="font-mono uppercase tracking-[0.20em] font-bold"
+                style={{ fontSize: 9, color: 'rgba(248,212,193,0.85)' }}
+              >
+                PURE X Mother
+              </div>
+            </div>
+            <div
+              className="font-display font-bold tracking-tight mt-2"
+              style={{
+                fontSize: 26,
+                color: 'rgba(248,244,239,0.98)',
+                fontStyle: 'italic',
+              }}
+            >
+              {m.name}
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <div
+                className="font-mono uppercase tracking-[0.18em] font-bold"
+                style={{ fontSize: 10, color: '#ff9bb7' }}
+              >
+                Open my card
+              </div>
+              <ArrowRight
+                size={14}
+                strokeWidth={2.5}
+                className="transition-transform group-hover:translate-x-1"
+                style={{ color: '#ff2f8f' }}
+              />
+            </div>
+          </motion.button>
+        ))}
       </div>
+      <p
+        className="text-center mt-6 font-mono uppercase tracking-[0.20em] font-bold"
+        style={{ fontSize: 10, color: 'rgba(248,212,193,0.55)' }}
+      >
+        Your award title is a surprise · revealed when you tap Generate
+      </p>
     </section>
   );
 }
