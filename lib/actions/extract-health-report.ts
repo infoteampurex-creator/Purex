@@ -1,6 +1,6 @@
 'use server';
 
-import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -8,10 +8,10 @@ import { extractText, getDocumentProxy } from 'unpdf';
 
 // NOTE on maxDuration: this is a 'use server' file, so config exports
 // like `maxDuration` can't live here. They go on the calling page
-// (app/(client)/client/health/page.tsx, dashboard page) so Gemini
+// (app/(client)/client/health/page.tsx, dashboard page) so the LLM
 // has 60s instead of the default 10s for a multi-page PDF.
 
-// ─── Gemini config ──────────────────────────────────────────────
+// ─── Claude config ──────────────────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `You are a medical lab report analyst.
 
@@ -40,50 +40,74 @@ Rules:
   report_type="other", markers=[], interpretation="Not a lab report".
 - Never refuse — always return the JSON.`;
 
-const responseSchema: Schema = {
-  type: SchemaType.OBJECT,
+// JSON Schema for Claude's structured outputs (output_config.format).
+// Strict: every object needs additionalProperties:false, and every
+// listed property must appear in `required` (Anthropic's structured-
+// outputs validator enforces this — fields are still "fillable with
+// empty string" via the schema description, but the key must appear).
+const responseSchema = {
+  type: 'object',
+  additionalProperties: false,
   properties: {
     report_type: {
-      type: SchemaType.STRING,
+      type: 'string',
       description:
         'Dominant category: blood_sugar | lipids | thyroid | liver | kidney | cbc | iron | vitamins | hormones | urine | inflammation | electrolytes | general | other',
     },
     report_date: {
-      type: SchemaType.STRING,
+      type: 'string',
       description: 'YYYY-MM-DD or empty string when not readable',
     },
     lab_name: {
-      type: SchemaType.STRING,
+      type: 'string',
       description: 'Lab brand name or empty string',
     },
     markers: {
-      type: SchemaType.ARRAY,
+      type: 'array',
       items: {
-        type: SchemaType.OBJECT,
+        type: 'object',
+        additionalProperties: false,
         properties: {
-          name: { type: SchemaType.STRING, description: 'Test name as printed' },
-          value: { type: SchemaType.STRING, description: 'Result value as printed (string to preserve units/qualifiers)' },
-          unit: { type: SchemaType.STRING, description: 'Unit (mg/dL, g/dL, etc.) — empty when absent' },
-          reference_range: { type: SchemaType.STRING, description: 'Lab-provided range — empty when not shown' },
+          name: { type: 'string', description: 'Test name as printed' },
+          value: {
+            type: 'string',
+            description:
+              'Result value as printed (string to preserve units/qualifiers)',
+          },
+          unit: {
+            type: 'string',
+            description: 'Unit (mg/dL, g/dL, etc.) — empty when absent',
+          },
+          reference_range: {
+            type: 'string',
+            description: 'Lab-provided range — empty when not shown',
+          },
           status: {
-            type: SchemaType.STRING,
-            description: 'high | low | normal | unknown',
+            type: 'string',
+            enum: ['high', 'low', 'normal', 'unknown'],
           },
           category: {
-            type: SchemaType.STRING,
+            type: 'string',
             description:
               'blood_sugar | lipids | thyroid | liver | kidney | cbc | iron | vitamins | hormones | urine | inflammation | electrolytes | other',
           },
         },
-        required: ['name', 'value', 'status', 'category'],
+        required: [
+          'name',
+          'value',
+          'unit',
+          'reference_range',
+          'status',
+          'category',
+        ],
       },
     },
     interpretation: {
-      type: SchemaType.STRING,
+      type: 'string',
       description: 'One plain-English sentence summarising the result',
     },
     confidence: {
-      type: SchemaType.NUMBER,
+      type: 'number',
       description: '0..1 overall extraction confidence',
     },
   },
@@ -95,7 +119,7 @@ const responseSchema: Schema = {
     'interpretation',
     'confidence',
   ],
-};
+} as const;
 
 const aiResponseSchema = z.object({
   report_type: z.string(),
@@ -154,13 +178,13 @@ export async function extractHealthReport(
     return { ok: false, status: 'failed', error: 'Invalid report id' };
   }
 
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     logMissingKey(reportId);
     await markStatus(
       reportId,
       'skipped',
-      'AI extraction not configured. Ask admin to set GOOGLE_AI_API_KEY.'
+      'AI extraction not configured. Ask admin to set ANTHROPIC_API_KEY.'
     );
     return {
       ok: false,
@@ -273,13 +297,13 @@ export async function extractHealthReportFromBytes(input: {
     return { ok: false, status: 'failed', error: 'Missing required input' };
   }
 
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     logMissingKey(reportId);
     await markStatus(
       reportId,
       'skipped',
-      'AI extraction not configured. Ask admin to set GOOGLE_AI_API_KEY.'
+      'AI extraction not configured. Ask admin to set ANTHROPIC_API_KEY.'
     );
     return {
       ok: false,
@@ -331,7 +355,7 @@ export async function extractHealthReportFromBytes(input: {
 function logMissingKey(reportId: string) {
   // eslint-disable-next-line no-console
   console.warn(
-    '[extract-health-report] GOOGLE_AI_API_KEY missing — report saved without extraction',
+    '[extract-health-report] ANTHROPIC_API_KEY missing — report saved without extraction',
     { reportId }
   );
 }
@@ -421,58 +445,94 @@ async function runExtractionOnBytes(args: {
     }
   }
 
-  // ─── Stage 2: call Gemini ──────────────────────────────────────
+  // ─── Stage 2: call Claude Haiku 4.5 ────────────────────────────
   //
-  // Two timeouts: text-only stays small (15s — should finish in
-  // ~3s on a 1500-char lab report) and binary gets the full
-  // headroom (50s) since that path is only used for scanned PDFs
-  // or images where Gemini does the visual heavy-lifting itself.
+  // Two timeouts: text-only stays small (15s — Haiku typically
+  // finishes in 2–5s on a 1500-char lab report) and binary gets
+  // the full headroom (50s) for scanned PDFs / images where the
+  // model does the visual heavy-lifting itself.
   //
-  // Single model: gemini-2.5-pro is paid-only on the project's
-  // free-tier key (429 limit=0), gemini-2.0-flash same, 1.5-flash
-  // retired. Cycling them just pollutes UI errors with quota dumps.
+  // Why Haiku 4.5: paid tier, no quota-zero surprises, native PDF
+  // + image support, ~$0.006 per lab report at our token shape.
+  // Structured outputs (output_config.format) constrains the JSON
+  // to our schema server-side, so no flaky regex / fence-stripping.
   const TEXT_TIMEOUT_MS = 15_000;
   const BINARY_TIMEOUT_MS = 50_000;
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = 'gemini-2.5-flash';
+  const anthropic = new Anthropic({ apiKey });
+  const modelName = 'claude-haiku-4-5';
 
   const normalisedMime =
     mimeType.toLowerCase() === 'image/jpg' ? 'image/jpeg' : mimeType;
 
+  type AnthropicImageMedia =
+    | 'image/jpeg'
+    | 'image/png'
+    | 'image/gif'
+    | 'image/webp';
+
   const isTextStage = pdfText !== null;
-  const inputPart = isTextStage
-    ? { text: `Lab report text extracted from PDF:\n\n${pdfText}` }
-    : {
-        inlineData: {
-          data: base64,
-          mimeType: normalisedMime,
-        },
-      };
-  const promptPart = {
-    text: 'Extract every visible test marker from this lab report.',
-  };
-  const timeoutMs = isTextStage ? TEXT_TIMEOUT_MS : BINARY_TIMEOUT_MS;
 
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    systemInstruction: SYSTEM_INSTRUCTION,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema,
-      temperature: 0.1,
-      maxOutputTokens: 8192,
-    },
-  });
-
-  const callGemini = async (
-    part: typeof inputPart,
-    budgetMs: number,
+  const buildContent = (
     stage: 'text' | 'binary'
+  ): Anthropic.Messages.ContentBlockParam[] => {
+    if (stage === 'text' && pdfText !== null) {
+      return [
+        {
+          type: 'text',
+          text: `Lab report text extracted from PDF:\n\n${pdfText}\n\nExtract every visible test marker.`,
+        },
+      ];
+    }
+    if (mimeType.toLowerCase() === 'application/pdf') {
+      return [
+        {
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: base64,
+          },
+        },
+        {
+          type: 'text',
+          text: 'Extract every visible test marker from this lab report.',
+        },
+      ];
+    }
+    return [
+      {
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: normalisedMime as AnthropicImageMedia,
+          data: base64,
+        },
+      },
+      {
+        type: 'text',
+        text: 'Extract every visible test marker from this lab report.',
+      },
+    ];
+  };
+
+  const callClaude = async (
+    stage: 'text' | 'binary',
+    budgetMs: number
   ): Promise<string> => {
     const startedAt = Date.now();
     try {
       const result = await Promise.race([
-        model.generateContent([part, promptPart]),
+        anthropic.messages.create({
+          model: modelName,
+          max_tokens: 4096,
+          system: SYSTEM_INSTRUCTION,
+          messages: [{ role: 'user', content: buildContent(stage) }],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          output_config: {
+            format: { type: 'json_schema', schema: responseSchema },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any,
+        }),
         new Promise<never>((_, reject) =>
           setTimeout(
             () => reject(new Error(`Timeout after ${budgetMs}ms`)),
@@ -487,7 +547,11 @@ async function runExtractionOnBytes(args: {
         }ms`,
         { reportId }
       );
-      return result.response.text();
+      const firstBlock = result.content.find((b) => b.type === 'text');
+      if (!firstBlock || firstBlock.type !== 'text') {
+        throw new Error('No text block in Claude response');
+      }
+      return firstBlock.text;
     } catch (err) {
       const ms = Date.now() - startedAt;
       const msg = err instanceof Error ? err.message : String(err);
@@ -502,12 +566,15 @@ async function runExtractionOnBytes(args: {
 
   let text: string;
   try {
-    text = await callGemini(inputPart, timeoutMs, isTextStage ? 'text' : 'binary');
+    text = await callClaude(
+      isTextStage ? 'text' : 'binary',
+      isTextStage ? TEXT_TIMEOUT_MS : BINARY_TIMEOUT_MS
+    );
   } catch (firstErr) {
     // If the text-stage call failed (timeout, transient error, JSON
     // shape issue), fall back to sending the binary PDF — the bytes
     // are still in memory. This recovers the rare case where a
-    // text-PDF still confuses Gemini and we'd otherwise abandon it.
+    // text-PDF still confuses Claude and we'd otherwise abandon it.
     if (isTextStage) {
       // eslint-disable-next-line no-console
       console.warn(
@@ -515,10 +582,7 @@ async function runExtractionOnBytes(args: {
         { reportId }
       );
       try {
-        const binaryPart = {
-          inlineData: { data: base64, mimeType: normalisedMime },
-        };
-        text = await callGemini(binaryPart, BINARY_TIMEOUT_MS, 'binary');
+        text = await callClaude('binary', BINARY_TIMEOUT_MS);
       } catch (binaryErr) {
         const msg =
           binaryErr instanceof Error ? binaryErr.message : String(binaryErr);
@@ -540,8 +604,9 @@ async function runExtractionOnBytes(args: {
 
   let parsed: ExtractedReportData;
   try {
-    // Gemini sometimes wraps JSON in ```json ... ``` fences even when
-    // responseMimeType is JSON. Strip any fenced wrapper before parsing.
+    // Structured outputs (output_config.format) should give us bare
+    // JSON, but strip any defensive ```json ... ``` wrapper just in
+    // case a future model variant adds one.
     const cleaned = text
       .trim()
       .replace(/^```(?:json)?\s*/i, '')
