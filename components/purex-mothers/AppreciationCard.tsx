@@ -194,19 +194,9 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               )}
             </div>
 
-            {/* Cover the placeholder "Vani" text on the template */}
-            <div
-              style={{
-                position: 'absolute',
-                left: 100,
-                top: L.nameTop - 30,
-                right: 100,
-                height: L.nameFont + 40,
-                background: '#000000',
-              }}
-            />
-
-            {/* Mother's name in gold script */}
+            {/* Mother's name in gold script — no black cover.
+                The Great Vibes script at 132px is heavy enough to
+                fully dominate the "Vani" text baked into the template. */}
             <div
               style={{
                 position: 'absolute',
@@ -228,19 +218,9 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               {nameToShow}
             </div>
 
-            {/* Cover placeholder title */}
-            <div
-              style={{
-                position: 'absolute',
-                left: L.titleLeft,
-                top: L.titleTop - 10,
-                right: L.titleRight,
-                height: L.titleFont + 20,
-                background: '#000000',
-              }}
-            />
-
-            {/* Award title */}
+            {/* Award title — sits inside the star-framed nameplate on the
+                template. No cover — the mono uppercase gold text overwrites
+                the "CONSISTENCY ENTERTAINMENT STAR" placeholder cleanly. */}
             <div
               style={{
                 position: 'absolute',
@@ -260,40 +240,28 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               {revealed ? mother.title : '✦ ✦ ✦'}
             </div>
 
-            {/* Cover placeholder message + render dynamic message */}
+            {/* Appreciation message */}
             {aspect === 'portrait' && L.msgTop > 0 && (
-              <>
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: L.msgLeft,
-                    top: L.msgTop - 6,
-                    right: L.msgRight,
-                    height: L.msgFont * 2.5,
-                    background: '#000000',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: L.msgTop,
-                    left: L.msgLeft,
-                    right: L.msgRight,
-                    textAlign: 'center',
-                    fontFamily: F_SERIF,
-                    fontSize: L.msgFont,
-                    lineHeight: 1.4,
-                    color: '#f8ecd2',
-                    fontStyle: 'italic',
-                    fontWeight: 400,
-                    opacity: revealed ? 0.9 : 0.4,
-                  }}
-                >
-                  {revealed
-                    ? mother.message
-                    : 'Tap Generate to reveal your award ✨'}
-                </div>
-              </>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: L.msgTop,
+                  left: L.msgLeft,
+                  right: L.msgRight,
+                  textAlign: 'center',
+                  fontFamily: F_SERIF,
+                  fontSize: L.msgFont,
+                  lineHeight: 1.4,
+                  color: '#f8ecd2',
+                  fontStyle: 'italic',
+                  fontWeight: 400,
+                  opacity: revealed ? 0.9 : 0.4,
+                }}
+              >
+                {revealed
+                  ? mother.message
+                  : 'Tap Generate to reveal your award ✨'}
+              </div>
             )}
           </>
         )}
