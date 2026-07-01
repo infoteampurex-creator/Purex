@@ -70,23 +70,27 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
         ? '/purex-mothers/card-template-portrait.png'
         : '/purex-mothers/card-template-square.png';
 
-    // Overlay coordinates tuned to the reference PNG at native 1122x1402.
-    // Center x = 561. Positions match where the placeholders sit on
-    // the reference art.
+    // Overlay coordinates tuned to the reference PNG at native
+    // 1122×1402. Center x = 561. Measured by inspecting the actual
+    // template art:
+    //   Photo ring center ~33% down (y≈470), radius ~130
+    //   "Vani" script text ~50% down (top y≈690)
+    //   Star-framed award title ~58% down (top y≈820)
+    //   Message ~62% down (top y≈870)
     const L =
       aspect === 'portrait'
         ? {
             photoCx: 561,
-            photoCy: 645,
-            photoR: 195,
-            nameTop: 855,
-            nameFont: 132,
-            titleTop: 998,
-            titleFont: 22,
-            titleLeft: 250,
-            titleRight: 250,
-            msgTop: 1060,
-            msgFont: 19,
+            photoCy: 470,
+            photoR: 132,
+            nameTop: 690,
+            nameFont: 106,
+            titleTop: 820,
+            titleFont: 20,
+            titleLeft: 260,
+            titleRight: 260,
+            msgTop: 878,
+            msgFont: 18,
             msgLeft: 240,
             msgRight: 240,
           }
