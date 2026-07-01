@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { MothersPageView } from '@/components/purex-mothers/MothersPageView';
+import { mothersFontClasses } from '@/components/purex-mothers/fonts';
 
 export const metadata: Metadata = {
   title: 'PURE X Mothers — 60 Days of Strength · Team PURE X',
@@ -14,5 +15,9 @@ export const metadata: Metadata = {
 };
 
 export default function PureXMothersPage() {
-  return <MothersPageView initialMother={null} />;
+  return (
+    <div className={mothersFontClasses}>
+      <MothersPageView initialMother={null} />
+    </div>
+  );
 }

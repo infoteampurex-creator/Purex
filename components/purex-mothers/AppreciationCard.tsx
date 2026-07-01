@@ -6,43 +6,52 @@ import { PUREX_MOTHERS_META } from '@/lib/data/purex-mothers';
 
 interface Props {
   mother: PureXMother;
-  /** Overrides mother.name — used when the mother has typed her full
-   *  name with surname. Falls back to mother.name when empty. */
   displayName?: string;
   photoUrl: string | null;
   photoOffsetX?: number;
   photoOffsetY?: number;
   photoScale?: number;
-  /** 'portrait' = 1080x1350 (WhatsApp status), 'square' = 1080x1080 (Insta) */
   aspect: 'portrait' | 'square';
-  /** When false, the award title + appreciation message are hidden
-   *  behind a placeholder — the reveal is the payoff. */
   revealed?: boolean;
 }
 
-// ─── Palette ─────────────────────────────────────────────────
-// Royal-invitation palette: deep wine background, ornate gold
-// borders and filigree, pink for the mother's name only (so the
-// eye lands there first).
+// ─── Palette — rose-gold + champagne on wine ─────────────────
+// Replaces the candy-pink of the previous iteration. Rose gold is
+// the shade you'd expect on fine jewellery — warm, feminine, but
+// mature. The name gets a champagne→rose-gold→bronze gradient so
+// it reads as a signature, not a slogan.
 const GOLD_LIGHT = '#f5d78e';
 const GOLD = '#e8b854';
 const GOLD_DEEP = '#a97b25';
 const GOLD_DARK = '#6f4d10';
-const PINK_LIGHT = '#ffcfe0';
-const PINK = '#ff2f8f';
-const PINK_DEEP = '#a01656';
-const CREAM = '#faeed4';
+const ROSE_GOLD_LIGHT = '#f8d6c1'; // champagne
+const ROSE_GOLD = '#e0a68a'; // rose-gold mid
+const ROSE_GOLD_DEEP = '#a56d4d'; // bronze
+const ACCENT_JEWEL = '#c7365f'; // deep ruby, used sparingly
+const CREAM = '#f8ecd2';
+const CREAM_MUTED = 'rgba(248,236,210,0.82)';
+
+// Font stack CSS variables — set via next/font in fonts.ts
+const F_SCRIPT = "var(--font-mothers-script), 'Great Vibes', 'Sacramento', cursive";
+const F_ROMAN = "var(--font-mothers-roman), 'Cinzel', 'Trajan Pro', serif";
+const F_SERIF = "var(--font-mothers-playfair), 'Playfair Display', 'Cormorant Garamond', Georgia, serif";
+const F_MONO = "var(--font-mothers-mono), 'JetBrains Mono', ui-monospace, monospace";
 
 /**
- * PURE X Mothers appreciation card — royal edition.
+ * PURE X Mothers appreciation card — royal proclamation edition.
  *
- * Renders at ACTUAL export dimensions (1080x1350 / 1080x1080).
- * On-screen preview uses CSS transform:scale() so the exported PNG
- * is pixel-identical to what the user sees.
+ * Every position is parameterised by aspect ratio so the two
+ * variants don't collide. Portrait is 1080x1350 (WhatsApp status),
+ * square is 1080x1080 (Instagram post).
  *
- * Design intent: fine-invitation royal. Deep wine background,
- * gilded borders with cornerstones, a laurel-wreath crown at top,
- * a gold ribbon behind the mother's name, filigree separators.
+ * Design direction:
+ * - Deep wine background w/ radial depth (proclamation-feel)
+ * - Cinzel engraved caps for "PURE X Mothers" (feels carved)
+ * - Great Vibes calligraphy script for the mother's name
+ *   (signature-style, in rose-gold champagne gradient)
+ * - Gold ornamental filigree: crown, cornerstones, dividers
+ * - Ruby accent used ONLY as jewel-tone punctuation (crown gem,
+ *   cornerstone anchors) — never as body color
  */
 export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
   function AppreciationCard(
@@ -61,48 +70,49 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
     const W = 1080;
     const H = aspect === 'portrait' ? 1350 : 1080;
 
-    // Effective name (mother.name if the user didn't type one)
     const nameToShow = (displayName?.trim() || mother.name).trim();
 
-    // Portrait vs square layout tuning — every y-position is
-    // parameterised so the two variants don't collide.
+    // Layout coordinates, aspect-tuned. Every element gets an explicit
+    // top so we never have overlap. Careful math below — the ribbon
+    // must sit BELOW the name (previous bug), the footer must fit
+    // ABOVE the border.
     const L =
       aspect === 'portrait'
         ? {
-            crownTop: 70,
-            brandKickerTop: 128,
-            titleTop: 158,
+            crownTop: 62,
+            brandKickerTop: 118,
+            titleTop: 148,
             subtitleTop: 244,
-            badgeTop: 300,
-            photoTop: 372,
+            badgeTop: 292,
+            photoTop: 356,
             photoSize: 380,
-            presentedTop: 810,
-            nameTop: 858,
-            nameFont: 96,
-            ribbonTop: 900,
-            titleAwardTop: 964,
-            titleAwardFont: 30,
-            messageTop: 1070,
-            statsTop: 1170,
-            footerTop: 1240,
+            presentedTop: 780,
+            nameTop: 830,
+            nameFont: 130, // script needs to be BIG
+            ribbonTop: 984,
+            titleAwardTop: 1010,
+            titleAwardFont: 32,
+            messageTop: 1090,
+            statsTop: 1180,
+            footerTop: 1244,
           }
         : {
-            crownTop: 46,
-            brandKickerTop: 96,
-            titleTop: 122,
+            crownTop: 40,
+            brandKickerTop: 90,
+            titleTop: 116,
             subtitleTop: 200,
-            badgeTop: 250,
-            photoTop: 296,
-            photoSize: 300,
-            presentedTop: 638,
-            nameTop: 680,
-            nameFont: 82,
-            ribbonTop: 718,
-            titleAwardTop: 774,
-            titleAwardFont: 26,
+            badgeTop: 244,
+            photoTop: 292,
+            photoSize: 288,
+            presentedTop: 610,
+            nameTop: 650,
+            nameFont: 108,
+            ribbonTop: 774,
+            titleAwardTop: 796,
+            titleAwardFont: 28,
             messageTop: 0, // no room in square
-            statsTop: 850,
-            footerTop: 920,
+            statsTop: 870,
+            footerTop: 936,
           };
 
     return (
@@ -114,13 +124,12 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           height: H,
           position: 'relative',
           overflow: 'hidden',
-          fontFamily:
-            "'Playfair Display', 'Cormorant Garamond', Georgia, serif",
+          fontFamily: F_SERIF,
           color: CREAM,
           background: '#0a0508',
         }}
       >
-        {/* ═══ Layer 1: deep wine background ═══════════════════ */}
+        {/* ═══ Layer 1: deep-wine background depth ══════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -134,7 +143,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           }}
         />
 
-        {/* ═══ Layer 2: subtle gilded shine sweep ══════════════ */}
+        {/* ═══ Layer 2: gilded shine sweep ══════════════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -150,23 +159,23 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           }}
         />
 
-        {/* ═══ Layer 3: ornate filigree dot pattern ════════════ */}
+        {/* ═══ Layer 3: filigree dot pattern ═══════════════════ */}
         <svg
           width={W}
           height={H}
-          style={{ position: 'absolute', inset: 0, opacity: 0.12 }}
+          style={{ position: 'absolute', inset: 0, opacity: 0.10 }}
         >
           <defs>
-            <pattern id="filigree" width="18" height="18" patternUnits="userSpaceOnUse">
-              <circle cx="9" cy="9" r="0.7" fill={GOLD_LIGHT} />
+            <pattern id="filigree" width="20" height="20" patternUnits="userSpaceOnUse">
+              <circle cx="10" cy="10" r="0.7" fill={GOLD_LIGHT} />
               <circle cx="0" cy="0" r="0.4" fill={GOLD_DEEP} />
-              <circle cx="18" cy="18" r="0.4" fill={GOLD_DEEP} />
+              <circle cx="20" cy="20" r="0.4" fill={GOLD_DEEP} />
             </pattern>
           </defs>
           <rect width={W} height={H} fill="url(#filigree)" />
         </svg>
 
-        {/* ═══ Gilded double-line border frame ═════════════════ */}
+        {/* ═══ Gilded double-line border ════════════════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -186,13 +195,13 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           }}
         />
 
-        {/* ═══ Ornate cornerstones (four corners) ══════════════ */}
+        {/* ═══ Cornerstone crests ═══════════════════════════════ */}
         <CornerCrest x={28} y={28} rot={0} />
         <CornerCrest x={W - 28} y={28} rot={90} />
         <CornerCrest x={W - 28} y={H - 28} rot={180} />
         <CornerCrest x={28} y={H - 28} rot={-90} />
 
-        {/* ═══ Crown / laurel wreath at top ═══════════════════ */}
+        {/* ═══ Laurel crown ═════════════════════════════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -204,7 +213,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           <Crown />
         </div>
 
-        {/* ═══ Small brand kicker ═════════════════════════════ */}
+        {/* ═══ Brand kicker ═════════════════════════════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -212,18 +221,18 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             left: 0,
             right: 0,
             textAlign: 'center',
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-            fontSize: 18,
-            letterSpacing: '0.42em',
+            fontFamily: F_MONO,
+            fontSize: 16,
+            letterSpacing: '0.55em',
             color: GOLD_LIGHT,
             fontWeight: 700,
             textTransform: 'uppercase',
           }}
         >
-          {PUREX_MOTHERS_META.brand}
+          Team PURE X
         </div>
 
-        {/* ═══ Main title — "PURE X Mothers" ══════════════════ */}
+        {/* ═══ Main title in engraved Cinzel roman ═════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -231,21 +240,22 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             left: 0,
             right: 0,
             textAlign: 'center',
-            fontSize: 74,
+            fontFamily: F_ROMAN,
+            fontSize: 78,
             fontWeight: 700,
             lineHeight: 1,
-            letterSpacing: '-0.01em',
+            letterSpacing: '0.02em',
             background: `linear-gradient(180deg, ${GOLD_LIGHT} 0%, ${GOLD} 55%, ${GOLD_DEEP} 100%)`,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            fontStyle: 'italic',
+            textTransform: 'uppercase',
           }}
         >
           PURE X Mothers
         </div>
 
-        {/* ═══ Subtitle "60 Days of Strength" ═════════════════ */}
+        {/* ═══ Subtitle with filigree dots ══════════════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -253,43 +263,43 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             left: 0,
             right: 0,
             textAlign: 'center',
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-            fontSize: 18,
-            letterSpacing: '0.30em',
+            fontFamily: F_MONO,
+            fontSize: 17,
+            letterSpacing: '0.36em',
             color: GOLD_LIGHT,
             fontWeight: 700,
             textTransform: 'uppercase',
             opacity: 0.85,
           }}
         >
-          <FiligreeInline />
+          <FiligreeDiamond />
           &nbsp;60 Days of Strength&nbsp;
-          <FiligreeInline />
+          <FiligreeDiamond />
         </div>
 
-        {/* ═══ Appreciation badge ═════════════════════════════ */}
+        {/* ═══ Appreciation ribbon badge ════════════════════════ */}
         <div
           style={{
             position: 'absolute',
             top: L.badgeTop,
             left: '50%',
             transform: 'translateX(-50%)',
-            padding: '10px 30px',
+            padding: '10px 32px',
             borderRadius: 999,
             background: `linear-gradient(90deg, ${GOLD_DEEP} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-            fontSize: 14,
-            letterSpacing: '0.38em',
+            fontFamily: F_MONO,
+            fontSize: 13,
+            letterSpacing: '0.44em',
             color: '#1a0510',
             fontWeight: 700,
             textTransform: 'uppercase',
-            boxShadow: '0 8px 24px rgba(232,184,84,0.25), inset 0 0 12px rgba(255,255,255,0.20)',
+            boxShadow: '0 8px 24px rgba(232,184,84,0.30), inset 0 0 12px rgba(255,255,255,0.24)',
           }}
         >
           ✦ Appreciation Card ✦
         </div>
 
-        {/* ═══ Photo circle with gilded ring ══════════════════ */}
+        {/* ═══ Photo circle w/ gilded conic ring ═══════════════ */}
         <div
           style={{
             position: 'absolute',
@@ -301,7 +311,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             borderRadius: '50%',
             padding: 6,
             background: `conic-gradient(from 220deg, ${GOLD_LIGHT}, ${GOLD}, ${GOLD_DEEP}, ${GOLD_DARK}, ${GOLD_LIGHT})`,
-            boxShadow: `0 20px 60px rgba(160,22,86,0.35), 0 0 0 8px rgba(0,0,0,0.20)`,
+            boxShadow: `0 20px 60px rgba(196,54,95,0.30), 0 0 0 8px rgba(0,0,0,0.20)`,
           }}
         >
           <div
@@ -338,8 +348,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily:
-                    "'JetBrains Mono', ui-monospace, monospace",
+                  fontFamily: F_MONO,
                   fontSize: 14,
                   letterSpacing: '0.32em',
                   color: 'rgba(245,215,142,0.55)',
@@ -352,7 +361,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           </div>
         </div>
 
-        {/* ═══ "Proudly Presented To" ═════════════════════════ */}
+        {/* ═══ "Proudly Presented To" — engraved mono ══════════ */}
         <div
           style={{
             position: 'absolute',
@@ -360,43 +369,46 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             left: 0,
             right: 0,
             textAlign: 'center',
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontFamily: F_MONO,
             fontSize: 13,
-            letterSpacing: '0.44em',
+            letterSpacing: '0.50em',
             color: GOLD,
             fontWeight: 700,
             textTransform: 'uppercase',
           }}
         >
-          <FiligreeInline />
+          <FiligreeDiamond />
           &nbsp;Proudly Presented To&nbsp;
-          <FiligreeInline />
+          <FiligreeDiamond />
         </div>
 
-        {/* ═══ Mother's name (italic display, pink) ═══════════ */}
+        {/* ═══ Mother's name — CALLIGRAPHY SCRIPT ═══════════════ */}
+        {/* Rose-gold champagne gradient, Great Vibes cursive.     */}
+        {/* This is the emotional focal point of the whole card.   */}
         <div
           style={{
             position: 'absolute',
             top: L.nameTop,
-            left: 0,
-            right: 0,
+            left: 40,
+            right: 40,
             textAlign: 'center',
+            fontFamily: F_SCRIPT,
             fontSize: L.nameFont,
-            fontWeight: 700,
+            fontWeight: 400,
             lineHeight: 1,
-            fontStyle: 'italic',
-            letterSpacing: '-0.015em',
-            background: `linear-gradient(180deg, #ffe1ee 0%, ${PINK_LIGHT} 40%, ${PINK} 100%)`,
+            letterSpacing: '0em',
+            background: `linear-gradient(180deg, ${ROSE_GOLD_LIGHT} 0%, ${ROSE_GOLD} 50%, ${ROSE_GOLD_DEEP} 100%)`,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            textShadow: '0 4px 24px rgba(255,47,143,0.15)',
+            textShadow: '0 4px 24px rgba(224,166,138,0.20)',
+            padding: '0 20px',
           }}
         >
           {nameToShow}
         </div>
 
-        {/* ═══ Gold ribbon under name + award title ═══════════ */}
+        {/* ═══ Ornamental ribbon divider — BELOW the name ═══════ */}
         <div
           style={{
             position: 'absolute',
@@ -411,49 +423,42 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
+              gap: 14,
             }}
           >
             <div
               style={{
-                width: 60,
+                width: 80,
                 height: 1,
-                background: `linear-gradient(90deg, transparent, ${GOLD}, ${GOLD})`,
+                background: `linear-gradient(90deg, transparent, ${GOLD})`,
               }}
             />
+            <FiligreeDiamond />
             <div
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: `radial-gradient(circle, ${GOLD_LIGHT}, ${GOLD_DEEP})`,
-                boxShadow: `0 0 12px ${GOLD}`,
-              }}
-            />
-            <div
-              style={{
-                width: 60,
+                width: 80,
                 height: 1,
-                background: `linear-gradient(90deg, ${GOLD}, ${GOLD}, transparent)`,
+                background: `linear-gradient(90deg, ${GOLD}, transparent)`,
               }}
             />
           </div>
         </div>
 
-        {/* ═══ Award title (or placeholder if unrevealed) ═════ */}
+        {/* ═══ Award title in Playfair italic ═══════════════════ */}
         <div
           style={{
             position: 'absolute',
             top: L.titleAwardTop,
-            left: 60,
-            right: 60,
+            left: 80,
+            right: 80,
             textAlign: 'center',
+            fontFamily: F_SERIF,
             fontSize: L.titleAwardFont,
             fontWeight: 600,
             lineHeight: 1.15,
             color: revealed ? CREAM : 'transparent',
             fontStyle: 'italic',
-            letterSpacing: '0.02em',
+            letterSpacing: '0.03em',
           }}
         >
           {revealed ? (
@@ -462,7 +467,6 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             <span
               style={{
                 color: 'rgba(245,215,142,0.55)',
-                fontStyle: 'italic',
                 fontSize: L.titleAwardFont - 4,
                 letterSpacing: '0.30em',
               }}
@@ -472,7 +476,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           )}
         </div>
 
-        {/* ═══ Appreciation message (portrait only — no room in square) */}
+        {/* ═══ Appreciation message (portrait only) ═══════════ */}
         {aspect === 'portrait' && (
           <div
             style={{
@@ -481,10 +485,11 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               left: 100,
               right: 100,
               textAlign: 'center',
+              fontFamily: F_SERIF,
               fontSize: 20,
-              lineHeight: 1.55,
+              lineHeight: 1.5,
               fontStyle: 'italic',
-              color: 'rgba(250,238,212,0.82)',
+              color: CREAM_MUTED,
               fontWeight: 400,
             }}
           >
@@ -494,7 +499,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               <span
                 style={{
                   color: 'rgba(245,215,142,0.55)',
-                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                  fontFamily: F_MONO,
                   fontSize: 13,
                   letterSpacing: '0.28em',
                   textTransform: 'uppercase',
@@ -508,10 +513,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           </div>
         )}
 
-        {/* ═══ Stats row ══════════════════════════════════════ */}
         <StatsRow top={L.statsTop} />
-
-        {/* ═══ Footer ═════════════════════════════════════════ */}
         <Footer top={L.footerTop} />
       </div>
     );
@@ -544,9 +546,9 @@ function StatsRow({ top }: { top: number }) {
         <div key={label} style={{ textAlign: 'center', flex: 1, position: 'relative' }}>
           <div
             style={{
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontFamily: F_MONO,
               fontSize: 10,
-              letterSpacing: '0.28em',
+              letterSpacing: '0.32em',
               color: GOLD_LIGHT,
               textTransform: 'uppercase',
               fontWeight: 700,
@@ -557,6 +559,7 @@ function StatsRow({ top }: { top: number }) {
           </div>
           <div
             style={{
+              fontFamily: F_SERIF,
               fontSize: 22,
               color: CREAM,
               marginTop: 6,
@@ -575,7 +578,7 @@ function StatsRow({ top }: { top: number }) {
                 bottom: 4,
                 width: 1,
                 background: `linear-gradient(180deg, transparent, ${GOLD}, transparent)`,
-                opacity: 0.45,
+                opacity: 0.5,
               }}
             />
           )}
@@ -596,10 +599,9 @@ function Footer({ top }: { top: number }) {
         textAlign: 'center',
       }}
     >
-      {/* Ornamental divider */}
       <div
         style={{
-          margin: '0 auto 14px',
+          margin: '0 auto 12px',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -632,18 +634,19 @@ function Footer({ top }: { top: number }) {
       </div>
       <div
         style={{
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-          fontSize: 14,
-          letterSpacing: '0.36em',
+          fontFamily: F_MONO,
+          fontSize: 13,
+          letterSpacing: '0.42em',
           color: GOLD,
           fontWeight: 700,
           textTransform: 'uppercase',
         }}
       >
-        {PUREX_MOTHERS_META.brand}
+        Team PURE X
       </div>
       <div
         style={{
+          fontFamily: F_SERIF,
           fontSize: 20,
           color: GOLD_LIGHT,
           marginTop: 6,
@@ -654,11 +657,11 @@ function Footer({ top }: { top: number }) {
       </div>
       <div
         style={{
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-          fontSize: 11,
-          letterSpacing: '0.32em',
+          fontFamily: F_MONO,
+          fontSize: 10,
+          letterSpacing: '0.36em',
           color: GOLD_DEEP,
-          marginTop: 14,
+          marginTop: 12,
           fontWeight: 700,
           textTransform: 'uppercase',
         }}
@@ -669,10 +672,10 @@ function Footer({ top }: { top: number }) {
   );
 }
 
-/** A regal laurel-wreath crown SVG rendered above the brand. */
+/** Laurel-wreath crown SVG with a ruby jewel center. */
 function Crown() {
   return (
-    <svg width="88" height="46" viewBox="0 0 88 46" fill="none">
+    <svg width="96" height="52" viewBox="0 0 96 52" fill="none">
       <defs>
         <linearGradient id="crownGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={GOLD_LIGHT} />
@@ -680,61 +683,50 @@ function Crown() {
           <stop offset="100%" stopColor={GOLD_DEEP} />
         </linearGradient>
       </defs>
-      {/* Left laurel arc */}
-      <path
-        d="M4 28 Q 20 6 44 8"
-        stroke="url(#crownGrad)"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      {/* Right laurel arc */}
-      <path
-        d="M84 28 Q 68 6 44 8"
-        stroke="url(#crownGrad)"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      {/* Leaves left */}
-      {[10, 18, 26, 34].map((x, i) => (
+      {/* Laurel arcs */}
+      <path d="M4 32 Q 22 8 48 8" stroke="url(#crownGrad)" strokeWidth="1.5" fill="none" />
+      <path d="M92 32 Q 74 8 48 8" stroke="url(#crownGrad)" strokeWidth="1.5" fill="none" />
+      {/* Left leaves */}
+      {[12, 20, 28, 36].map((x, i) => (
         <ellipse
           key={`ll-${i}`}
           cx={x}
-          cy={22 - i * 3}
-          rx="4"
-          ry="1.6"
-          transform={`rotate(-${35 + i * 8} ${x} ${22 - i * 3})`}
+          cy={26 - i * 3}
+          rx="4.5"
+          ry="1.8"
+          transform={`rotate(-${35 + i * 8} ${x} ${26 - i * 3})`}
           fill="url(#crownGrad)"
           opacity="0.9"
         />
       ))}
-      {/* Leaves right */}
-      {[10, 18, 26, 34].map((x, i) => (
+      {/* Right leaves */}
+      {[12, 20, 28, 36].map((x, i) => (
         <ellipse
           key={`lr-${i}`}
-          cx={88 - x}
-          cy={22 - i * 3}
-          rx="4"
-          ry="1.6"
-          transform={`rotate(${35 + i * 8} ${88 - x} ${22 - i * 3})`}
+          cx={96 - x}
+          cy={26 - i * 3}
+          rx="4.5"
+          ry="1.8"
+          transform={`rotate(${35 + i * 8} ${96 - x} ${26 - i * 3})`}
           fill="url(#crownGrad)"
           opacity="0.9"
         />
       ))}
-      {/* Center crown / gem */}
+      {/* Center crown gem */}
       <path
-        d="M36 12 L44 4 L52 12 L48 22 L40 22 Z"
+        d="M38 14 L48 4 L58 14 L52 26 L44 26 Z"
         fill="url(#crownGrad)"
         stroke={GOLD_DEEP}
         strokeWidth="0.8"
       />
-      <circle cx="44" cy="12" r="2.2" fill={PINK} opacity="0.9" />
-      <circle cx="44" cy="12" r="1" fill={PINK_LIGHT} />
+      <circle cx="48" cy="14" r="3" fill={ACCENT_JEWEL} />
+      <circle cx="48" cy="14" r="1.4" fill={ROSE_GOLD_LIGHT} />
     </svg>
   );
 }
 
-/** A tiny inline diamond used as an ornamental separator. */
-function FiligreeInline() {
+/** Diamond filigree separator (inline). */
+function FiligreeDiamond() {
   return (
     <svg
       width="12"
@@ -748,13 +740,13 @@ function FiligreeInline() {
   );
 }
 
-/** Ornate cornerstone at one of the four card corners. */
+/** Ornate cornerstone crest at one of the four card corners. */
 function CornerCrest({ x, y, rot }: { x: number; y: number; rot: number }) {
   return (
     <svg
-      width="70"
-      height="70"
-      viewBox="0 0 70 70"
+      width="72"
+      height="72"
+      viewBox="0 0 72 72"
       style={{
         position: 'absolute',
         top: y,
@@ -768,37 +760,33 @@ function CornerCrest({ x, y, rot }: { x: number; y: number; rot: number }) {
           <stop offset="100%" stopColor={GOLD_DEEP} />
         </linearGradient>
       </defs>
-      {/* Outer curl */}
       <path
-        d="M4 26 Q 4 4 26 4"
+        d="M6 28 Q 6 6 28 6"
         stroke={`url(#crn-${rot})`}
         strokeWidth="2"
         fill="none"
       />
-      {/* Inner curl */}
       <path
-        d="M10 24 Q 10 10 24 10"
+        d="M12 26 Q 12 12 26 12"
         stroke={GOLD}
         strokeWidth="1"
         fill="none"
         opacity="0.75"
       />
-      {/* Corner flourish */}
       <path
-        d="M4 26 L 4 34 Q 4 40 10 40"
+        d="M6 28 L 6 36 Q 6 42 12 42"
         stroke={`url(#crn-${rot})`}
         strokeWidth="1.5"
         fill="none"
       />
       <path
-        d="M26 4 L 34 4 Q 40 4 40 10"
+        d="M28 6 L 36 6 Q 42 6 42 12"
         stroke={`url(#crn-${rot})`}
         strokeWidth="1.5"
         fill="none"
       />
-      {/* Center anchor gem */}
-      <circle cx="4" cy="4" r="3" fill={`url(#crn-${rot})`} />
-      <circle cx="4" cy="4" r="1.5" fill={PINK} />
+      <circle cx="6" cy="6" r="3.2" fill={`url(#crn-${rot})`} />
+      <circle cx="6" cy="6" r="1.6" fill={ACCENT_JEWEL} />
     </svg>
   );
 }

@@ -224,11 +224,18 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
     }
     setValidationMsg(null);
     setGenerating(true);
-    // Flip revealed BEFORE the export so the exported PNG contains
-    // the title. Give React one frame to paint the reveal.
     setRevealed(true);
+    // Give React a frame to paint the reveal, then wait for Google
+    // Fonts to finish loading — html-to-image renders whatever the
+    // browser has NOW, so a font race would export in fallback.
     await new Promise((r) => requestAnimationFrame(() => r(null)));
-    // Fire confetti alongside the export — feels instant
+    try {
+      if (typeof document !== 'undefined' && document.fonts) {
+        await document.fonts.ready;
+      }
+    } catch {
+      // ignore — best-effort
+    }
     runConfetti();
     try {
       if (!cardRef.current) throw new Error('Card node missing');

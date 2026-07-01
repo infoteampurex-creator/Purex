@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MothersPageView } from '@/components/purex-mothers/MothersPageView';
+import { mothersFontClasses } from '@/components/purex-mothers/fonts';
 import {
   findMotherBySlug,
   PUREX_MOTHERS,
@@ -37,5 +38,9 @@ export default async function PureXMotherPage({ params }: PageProps) {
   const { slug } = await params;
   const mother = findMotherBySlug(slug);
   if (!mother) notFound();
-  return <MothersPageView initialMother={mother} />;
+  return (
+    <div className={mothersFontClasses}>
+      <MothersPageView initialMother={mother} />
+    </div>
+  );
 }
