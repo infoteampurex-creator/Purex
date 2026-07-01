@@ -25,6 +25,7 @@
     "@capacitor/ios": "^7.0.0",
     "@capacitor/splash-screen": "^7.0.0",
     "@capacitor/status-bar": "^7.0.0",
+    "@google/generative-ai": "^0.24.1",
     "@kiwi-health/capacitor-health-connect": "^0.0.40",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
