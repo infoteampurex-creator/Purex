@@ -523,36 +523,34 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
 // Sub-components
 // ═══════════════════════════════════════════════════════════════
 
-/** Team PureX "PX" monogram mark. */
+/** Team PureX "PX" monogram — bold letterform, filled not stroked. */
 function PXLogo() {
   return (
-    <svg width="72" height="46" viewBox="0 0 72 46" fill="none">
+    <svg width="86" height="50" viewBox="0 0 86 50" fill="none">
       <defs>
         <linearGradient id="pxGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={G_LIGHT} />
-          <stop offset="55%" stopColor={G_BRIGHT} />
+          <stop offset="50%" stopColor={G_BRIGHT} />
           <stop offset="100%" stopColor={G_DEEP} />
         </linearGradient>
       </defs>
-      {/* P */}
+      {/* P letterform — solid filled path */}
       <path
-        d="M8 6 L 8 42 M 8 6 L 26 6 Q 38 6 38 18 Q 38 30 26 30 L 8 30"
-        stroke="url(#pxGrad)"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
+        d="M 6 4 L 6 46 L 15 46 L 15 30 L 24 30 Q 39 30 39 17 Q 39 4 24 4 Z
+           M 15 12 L 22 12 Q 30 12 30 17 Q 30 22 22 22 L 15 22 Z"
+        fill="url(#pxGrad)"
+        fillRule="evenodd"
       />
-      {/* X */}
+      {/* X letterform — two bold diagonal bars */}
       <path
-        d="M 42 8 L 66 40 M 66 8 L 42 40"
-        stroke="url(#pxGrad)"
-        strokeWidth="6"
-        strokeLinecap="round"
-        fill="none"
+        d="M 44 4 L 53 4 L 62 20 L 71 4 L 80 4 L 66 25 L 80 46 L 71 46 L 62 30 L 53 46 L 44 46 L 58 25 Z"
+        fill="url(#pxGrad)"
       />
-      {/* small accent dot after X */}
-      <circle cx="70" cy="12" r="2.4" fill={G_BRIGHT} />
+      {/* Small star accent above the X */}
+      <path
+        d="M 78 3 L 79.6 5.5 L 82.5 6 L 80.5 8 L 81 11 L 78 9.5 L 75 11 L 75.5 8 L 73.5 6 L 76.4 5.5 Z"
+        fill={G_LIGHT}
+      />
     </svg>
   );
 }
@@ -848,7 +846,7 @@ function LaurelWreath({ side }: { side: 'left' | 'right' }) {
   );
 }
 
-/** Star-framed nameplate that wraps the award title. */
+/** Star-framed nameplate — multi-cornered ornamental frame. */
 function StarFramedTitle({
   title,
   placeholder,
@@ -856,32 +854,95 @@ function StarFramedTitle({
   title: string;
   placeholder?: boolean;
 }) {
+  // We render the SVG frame at a fixed width and the title text on top.
+  // The frame uses angled corner cuts, top+bottom hairlines outside,
+  // and inset stars — matching the reference decoration.
+  const width = 660;
+  const height = 60;
   return (
     <div
       style={{
-        display: 'inline-flex',
+        position: 'relative',
+        width,
+        height,
+        display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        padding: '10px 26px',
-        borderTop: `1.5px solid ${G}`,
-        borderBottom: `1.5px solid ${G}`,
-        background: 'linear-gradient(180deg, rgba(255,215,74,0.05), rgba(255,215,74,0.02))',
+        justifyContent: 'center',
       }}
     >
-      <StarInline />
-      <span
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ position: 'absolute', inset: 0 }}
+        fill="none"
+      >
+        <defs>
+          <linearGradient id="frmGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={G_BRIGHT} />
+            <stop offset="100%" stopColor={G_DEEP} />
+          </linearGradient>
+        </defs>
+        {/* Outer hairline top + bottom */}
+        <line x1="0" y1="6" x2={width} y2="6" stroke="url(#frmGrad)" strokeWidth="1" opacity="0.7" />
+        <line x1="0" y1={height - 6} x2={width} y2={height - 6} stroke="url(#frmGrad)" strokeWidth="1" opacity="0.7" />
+        {/* Main decorative frame with angled corner cuts */}
+        <path
+          d={`M 12 14
+              L 30 14 L 40 24 L 30 34 L 12 34 L 12 14 Z
+              M ${width - 12} 14
+              L ${width - 30} 14 L ${width - 40} 24 L ${width - 30} 34 L ${width - 12} 34 L ${width - 12} 14 Z`}
+          fill="none"
+          stroke="url(#frmGrad)"
+          strokeWidth="1.4"
+        />
+        {/* Central band — angled corners on both ends */}
+        <path
+          d={`M 40 14 L ${width - 40} 14
+              L ${width - 28} 24 L ${width - 40} 34
+              L 40 34 L 28 24 Z`}
+          fill="rgba(255,215,74,0.04)"
+          stroke="url(#frmGrad)"
+          strokeWidth="1.4"
+        />
+        {/* Corner diamond accents */}
+        {[
+          [12, 14],
+          [12, 34],
+          [width - 12, 14],
+          [width - 12, 34],
+        ].map(([x, y], i) => (
+          <path
+            key={i}
+            d={`M ${x} ${(y as number) - 3} L ${(x as number) + 3} ${y} L ${x} ${(y as number) + 3} L ${(x as number) - 3} ${y} Z`}
+            fill={G_BRIGHT}
+          />
+        ))}
+      </svg>
+      {/* Content on top */}
+      <div
         style={{
-          fontFamily: F_MONO,
-          fontSize: 15,
-          letterSpacing: '0.32em',
-          color: placeholder ? 'rgba(255,215,74,0.55)' : G_LIGHT,
-          fontWeight: 700,
-          textTransform: 'uppercase',
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 14,
         }}
       >
-        {title}
-      </span>
-      <StarInline />
+        <StarInline />
+        <span
+          style={{
+            fontFamily: F_MONO,
+            fontSize: 15,
+            letterSpacing: '0.32em',
+            color: placeholder ? 'rgba(255,215,74,0.55)' : G_LIGHT,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+          }}
+        >
+          {title}
+        </span>
+        <StarInline />
+      </div>
     </div>
   );
 }
@@ -1030,30 +1091,43 @@ function LightRays({ size }: { size: number }) {
   );
 }
 
-/** Trainer nameplate with ornamental border. */
+/** Trainer nameplate — horizontal ribbon banner with subtle angled tails. */
 function TrainerNameplate({ name }: { name: string }) {
   return (
-    <svg width="320" height="42" viewBox="0 0 320 42" fill="none">
+    <svg width="380" height="44" viewBox="0 0 380 44" fill="none">
       <defs>
         <linearGradient id="plateGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={G_BRIGHT} />
           <stop offset="100%" stopColor={G_DEEP} />
         </linearGradient>
       </defs>
-      {/* Frame */}
+      {/* Outer subtle ribbon frame */}
       <path
-        d="M 16 6 L 304 6 L 316 21 L 304 36 L 16 36 L 4 21 Z"
+        d="M 4 22 L 22 8 L 358 8 L 376 22 L 358 36 L 22 36 Z"
         fill="none"
         stroke="url(#plateGrad)"
-        strokeWidth="1.4"
+        strokeWidth="1.3"
+        opacity="0.85"
       />
+      {/* Inner hairline */}
+      <path
+        d="M 12 22 L 26 12 L 354 12 L 368 22 L 354 32 L 26 32 Z"
+        fill="none"
+        stroke={G_DEEP}
+        strokeWidth="0.6"
+        opacity="0.7"
+      />
+      {/* Diamond markers at the two angled ends */}
+      <path d="M 4 22 L 8 20 L 12 22 L 8 24 Z" fill={G_BRIGHT} />
+      <path d="M 376 22 L 372 20 L 368 22 L 372 24 Z" fill={G_BRIGHT} />
+      {/* Text */}
       <text
-        x="160"
-        y="27"
+        x="190"
+        y="28"
         textAnchor="middle"
         fontFamily={F_MONO}
         fontSize="14"
-        letterSpacing="0.34em"
+        letterSpacing="0.36em"
         fill={G_LIGHT}
         fontWeight="700"
         style={{ textTransform: 'uppercase' }}
