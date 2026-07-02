@@ -83,9 +83,9 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
         ? {
             photoCx: 561,
             photoCy: 645,
-            photoR: 178,
-            nameTop: 940,
-            nameFont: 74,
+            photoR: 220,        // was 178 — now fills the gold ring
+            nameTop: 955,       // was 940 — nudged down so ascenders don't clip
+            nameFont: 66,       // was 74 — fits inside the name bar cleanly
             titleTop: 1050,
             titleFont: 19,
             titleLeft: 280,
