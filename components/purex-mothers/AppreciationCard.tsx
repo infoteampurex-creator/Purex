@@ -273,48 +273,30 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               </div>
             </div>
 
-            {/* Appreciation message — includes a soft dark backdrop
-                so the dashed placeholder lines on the template don't
-                bleed through behind the text (they were reading as
-                "two titles"). */}
-            {aspect === 'portrait' && L.msgTop > 0 && (
-              <>
-                {/* Radial dark fade — hides placeholder, blends at edges */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: L.msgTop - 12,
-                    left: L.msgLeft - 20,
-                    right: L.msgRight - 20,
-                    height: L.msgFont * 3,
-                    background:
-                      'radial-gradient(ellipse at center, #000 0%, #000 60%, rgba(0,0,0,0.85) 80%, transparent 100%)',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: L.msgTop,
-                    left: L.msgLeft,
-                    right: L.msgRight,
-                    textAlign: 'center',
-                    fontFamily: F_SERIF,
-                    fontSize: L.msgFont,
-                    lineHeight: 1.45,
-                    color: '#faeed4',
-                    fontStyle: 'italic',
-                    fontWeight: 600,
-                    letterSpacing: '0.01em',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-                    opacity: revealed ? 1 : 0.5,
-                  }}
-                >
-                  {revealed
-                    ? mother.message
-                    : 'Tap Generate to reveal your award ✨'}
-                </div>
-              </>
+            {/* Appreciation message — only rendered when revealed.
+                Sits directly on the template with no black cover; the
+                template's baked-in placeholder message reads as
+                Vani's default, which is fine as a visual anchor
+                before Generate is tapped. */}
+            {aspect === 'portrait' && L.msgTop > 0 && revealed && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: L.msgTop,
+                  left: L.msgLeft,
+                  right: L.msgRight,
+                  textAlign: 'center',
+                  fontFamily: F_SERIF,
+                  fontSize: L.msgFont,
+                  lineHeight: 1.45,
+                  color: '#faeed4',
+                  fontStyle: 'italic',
+                  fontWeight: 600,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                {mother.message}
+              </div>
             )}
           </>
         )}
