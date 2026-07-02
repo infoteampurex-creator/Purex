@@ -81,24 +81,27 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
     const L =
       aspect === 'portrait'
         ? {
-            // New template (mothers.png · Jul 02): no 60-Day seal on
-            // the side; bigger centred photo ring; name bar + title
-            // bar stacked; message baked into template gets covered.
+            // Template positions measured directly from screenshot
+            // where user showed my overlays landing above their target
+            // bars. Title needs to sit inside the star-cornered bar
+            // BELOW the name bar. Message needs to overlap the
+            // baked-in "For bringing discipline…" text so my dynamic
+            // text visually replaces it.
             photoCx: 561,
             photoCy: 690,
             photoR: 215,
             nameTop: 990,
             nameHeight: 60,
             nameFont: 60,
-            titleTop: 1082,
-            titleHeight: 50,
+            titleTop: 1115,       // moved down into the second bar
+            titleHeight: 45,
             titleFont: 18,
             titleLeft: 280,
             titleRight: 280,
-            msgTop: 1160,
-            msgFont: 17,
-            msgLeft: 220,
-            msgRight: 220,
+            msgTop: 1215,         // moved down to overlap the baked-in msg
+            msgFont: 20,          // matches baked-in font size for coverage
+            msgLeft: 200,
+            msgRight: 200,
           }
         : {
             photoCx: 540,
