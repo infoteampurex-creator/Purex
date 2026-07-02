@@ -82,16 +82,17 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
       aspect === 'portrait'
         ? {
             photoCx: 561,
-            photoCy: 645,
-            photoR: 220,        // was 178 — now fills the gold ring
-            nameTop: 955,       // was 940 — nudged down so ascenders don't clip
-            nameFont: 66,       // was 74 — fits inside the name bar cleanly
-            titleTop: 1050,
-            titleFont: 19,
+            photoCy: 655,
+            photoR: 195,        // pixel-measured inner radius of the gold ring
+            nameTop: 940,       // top of the double-line bar
+            nameHeight: 60,     // bar height — text vertically centered in this
+            nameFont: 60,       // fits inside the bar without ascender/descender clip
+            titleTop: 1024,     // inside the star-framed nameplate
+            titleFont: 18,
             titleLeft: 280,
             titleRight: 280,
-            msgTop: 1118,
-            msgFont: 18,
+            msgTop: 1092,       // in the dashed message area
+            msgFont: 17,
             msgLeft: 220,
             msgRight: 220,
           }
@@ -100,6 +101,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             photoCy: 500,
             photoR: 170,
             nameTop: 650,
+            nameHeight: 100,
             nameFont: 108,
             titleTop: 810,
             titleFont: 20,
@@ -199,28 +201,40 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               )}
             </div>
 
-            {/* Mother's name in gold script — no black cover.
-                The Great Vibes script at 132px is heavy enough to
-                fully dominate the "Vani" text baked into the template. */}
+            {/* Mother's name in gold script.
+                Rendered inside a fixed-height container with flex
+                centering so the script text (with its long
+                ascenders/descenders) always sits centred inside the
+                double-line name bar — no top-clip, no bottom-clip. */}
             <div
               style={{
                 position: 'absolute',
                 top: L.nameTop,
                 left: 60,
                 right: 60,
-                textAlign: 'center',
-                fontFamily: F_SCRIPT,
-                fontSize: L.nameFont,
-                fontWeight: 400,
-                lineHeight: 1,
-                background: goldGradient,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                textShadow: '0 4px 24px rgba(255,215,74,0.20)',
+                height: L.nameHeight,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {nameToShow}
+              <div
+                style={{
+                  fontFamily: F_SCRIPT,
+                  fontSize: L.nameFont,
+                  fontWeight: 400,
+                  lineHeight: 1,
+                  textAlign: 'center',
+                  background: goldGradient,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  textShadow: '0 4px 24px rgba(255,215,74,0.20)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {nameToShow}
+              </div>
             </div>
 
             {/* Award title — sits inside the star-framed nameplate on the
