@@ -65,10 +65,15 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
     const W = aspect === 'portrait' ? 1122 : 1080;
     const H = aspect === 'portrait' ? 1402 : 1080;
     const nameToShow = (displayName?.trim() || mother.name).trim();
+    // Cache-bust the template PNG. Since we sometimes edit the same
+    // file (paint over baked-in text, remove decorative bars), we
+    // append a version query so browsers + CDN don't serve stale
+    // cached copies. Bump this any time the template PNG changes.
+    const TEMPLATE_VERSION = 'v5';
     const templateSrc =
       aspect === 'portrait'
-        ? '/purex-mothers/card-template-portrait.png'
-        : '/purex-mothers/card-template-square.png';
+        ? `/purex-mothers/card-template-portrait.png?${TEMPLATE_VERSION}`
+        : `/purex-mothers/card-template-square.png?${TEMPLATE_VERSION}`;
 
     // Overlay coordinates tuned to the NEW reference PNG (mothers-1)
     // at native 1122×1402. Template art now has proper empty
