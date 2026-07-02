@@ -81,17 +81,21 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
     const L =
       aspect === 'portrait'
         ? {
+            // New template (mothers.png · Jul 02): no 60-Day seal on
+            // the side; bigger centred photo ring; name bar + title
+            // bar stacked; message baked into template gets covered.
             photoCx: 561,
-            photoCy: 655,
-            photoR: 195,        // pixel-measured inner radius of the gold ring
-            nameTop: 940,       // top of the double-line bar
-            nameHeight: 60,     // bar height — text vertically centered in this
-            nameFont: 60,       // fits inside the bar without ascender/descender clip
-            titleTop: 1024,     // inside the star-framed nameplate
+            photoCy: 690,
+            photoR: 215,
+            nameTop: 990,
+            nameHeight: 60,
+            nameFont: 60,
+            titleTop: 1082,
+            titleHeight: 50,
             titleFont: 18,
             titleLeft: 280,
             titleRight: 280,
-            msgTop: 1092,       // in the dashed message area
+            msgTop: 1160,
             msgFont: 17,
             msgLeft: 220,
             msgRight: 220,
@@ -104,6 +108,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             nameHeight: 100,
             nameFont: 108,
             titleTop: 810,
+            titleHeight: 40,
             titleFont: 20,
             titleLeft: 180,
             titleRight: 180,
@@ -237,26 +242,35 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
               </div>
             </div>
 
-            {/* Award title — sits inside the star-framed nameplate on the
-                template. No cover — the mono uppercase gold text overwrites
-                the "CONSISTENCY ENTERTAINMENT STAR" placeholder cleanly. */}
+            {/* Award title — sits inside its dedicated bar on the
+                template. Flex-centered so the mono caps sit vertically
+                aligned regardless of font metric. */}
             <div
               style={{
                 position: 'absolute',
                 top: L.titleTop,
                 left: L.titleLeft,
                 right: L.titleRight,
-                textAlign: 'center',
-                fontFamily: F_MONO,
-                fontSize: L.titleFont,
-                fontWeight: 700,
-                letterSpacing: '0.28em',
-                color: revealed ? '#fff2b3' : 'rgba(255,215,74,0.45)',
-                textTransform: 'uppercase',
-                lineHeight: 1,
+                height: L.titleHeight,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {revealed ? mother.title : '✦ ✦ ✦'}
+              <div
+                style={{
+                  fontFamily: F_MONO,
+                  fontSize: L.titleFont,
+                  fontWeight: 700,
+                  letterSpacing: '0.28em',
+                  color: revealed ? '#fff2b3' : 'rgba(255,215,74,0.45)',
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {revealed ? mother.title : '✦ ✦ ✦'}
+              </div>
             </div>
 
             {/* Appreciation message — includes a soft dark backdrop

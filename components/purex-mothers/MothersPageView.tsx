@@ -69,7 +69,12 @@ export function MothersPageView({ initialMother }: Props) {
           <MemberPickerSection />
         )}
 
-        <AppreciationWallSection />
+        {/* Appreciation Wall lists every mother's title + message —
+            only render on the public landing page. Hiding it from
+            personal /purex-mothers/[slug] pages so the mother's own
+            award title stays a surprise until she taps Generate. */}
+        {!initialMother && <AppreciationWallSection />}
+
         <GroupMessageSection />
         <CTASection />
       </div>
