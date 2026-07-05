@@ -16,6 +16,7 @@ const nextConfig = {
     // (search: undefined) means "no query string allowed"; we keep the
     // explicit v=2 entry alongside the wildcard one so both forms work.
     localPatterns: [
+      { pathname: '/brand/**' }, // wordmark, favicon, brand assets
       { pathname: '/experts/**' },
       { pathname: '/trainers/**' },
       { pathname: '/in-action/**' },
