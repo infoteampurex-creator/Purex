@@ -69,7 +69,7 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
     // file (paint over baked-in text, remove decorative bars), we
     // append a version query so browsers + CDN don't serve stale
     // cached copies. Bump this any time the template PNG changes.
-    const TEMPLATE_VERSION = 'v5';
+    const TEMPLATE_VERSION = 'v6';
     const templateSrc =
       aspect === 'portrait'
         ? `/purex-mothers/card-template-portrait.png?${TEMPLATE_VERSION}`
