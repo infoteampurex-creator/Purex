@@ -95,9 +95,9 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             photoCx: 561,
             photoCy: 690,
             photoR: 215,
-            nameTop: 990,
-            nameHeight: 60,
-            nameFont: 60,
+            nameTop: 985,
+            nameHeight: 90,
+            nameFont: 72,
             titleTop: 1115,       // moved down into the second bar
             titleHeight: 45,
             titleFont: 18,
@@ -233,16 +233,20 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
             >
               <div
                 style={{
-                  fontFamily: F_SCRIPT,
+                  // Switched from Great Vibes script to Playfair Display
+                  // bold italic. Great Vibes has long descenders that
+                  // kept getting clipped on the export.
+                  fontFamily: F_SERIF,
                   fontSize: L.nameFont,
-                  fontWeight: 400,
-                  lineHeight: 1,
+                  fontWeight: 700,
+                  fontStyle: 'italic',
+                  lineHeight: 1.15,
+                  letterSpacing: '0.01em',
                   textAlign: 'center',
                   background: goldGradient,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
-                  textShadow: '0 4px 24px rgba(255,215,74,0.20)',
                   whiteSpace: 'nowrap',
                 }}
               >
