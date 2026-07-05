@@ -76,11 +76,12 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      // Hold the splash screen for 2.5s after WebView is ready —
+      // Hold the splash screen for 3.5s after WebView is ready —
       // covers the cold-start network round-trip to teampurex.com so
       // users see the brand mark instead of a blank WebView while the
-      // login page loads.
-      launchShowDuration: 2500,
+      // login page loads + hydrates. 2.5s was cutting it close on
+      // slower phones.
+      launchShowDuration: 3500,
       backgroundColor: '#0a0c09',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,

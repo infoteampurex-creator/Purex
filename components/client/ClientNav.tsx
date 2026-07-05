@@ -46,6 +46,7 @@ export function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className="relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-w-0"
             >
               {active && (
@@ -104,6 +105,7 @@ export function DesktopSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={cn(
                 'flex items-center gap-3 px-3 py-3 rounded-xl transition-all group',
                 active
