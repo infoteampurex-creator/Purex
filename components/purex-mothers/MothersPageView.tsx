@@ -134,6 +134,19 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
     return () => window.removeEventListener('resize', update);
   }, [cardWidth]);
 
+  // Warm up the template PNG on mount so by the time the mother taps
+  // Generate the browser cache already has the 1.6 MB image decoded —
+  // otherwise on slow mobile networks html-to-image would race the
+  // download and export an empty card (Praneetha's issue on 2026-07-15).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const version = 'v7';
+    ['portrait', 'square'].forEach((a) => {
+      const img = new window.Image();
+      img.src = `/purex-mothers/card-template-${a}.png?${version}`;
+    });
+  }, []);
+
   // ─── Photo upload ────────────────────────────────────────────
 
   const handleFile = useCallback((file: File) => {
@@ -202,6 +215,34 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
     }, 250);
   };
 
+  /**
+   * Wait for every <img> inside the card node to be fully decoded
+   * before we hand the node to html-to-image. Discovered on
+   * 2026-07-15: Praneetha's exported PNG came out entirely black
+   * because the 1.6 MB template PNG hadn't finished downloading when
+   * the generator ran — html-to-image captured an empty <img> tag
+   * and produced a card with just the overlays on black.
+   */
+  const waitForImages = async (node: HTMLElement): Promise<void> => {
+    const imgs = Array.from(node.querySelectorAll('img'));
+    await Promise.all(
+      imgs.map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          // 6-second per-image timeout so a single stuck image doesn't
+          // block the whole generate flow forever.
+          const timer = setTimeout(resolve, 6000);
+          const done = () => {
+            clearTimeout(timer);
+            resolve();
+          };
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        });
+      })
+    );
+  };
+
   const generate = async () => {
     if (!photoUrl) {
       setValidationMsg('Please upload your photo to generate the card.');
@@ -221,11 +262,21 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
     } catch {
       // ignore — best-effort
     }
+    // Wait for the template PNG + photo to fully load before capturing.
+    try {
+      if (cardRef.current) await waitForImages(cardRef.current);
+    } catch {
+      // ignore — best-effort
+    }
     runConfetti();
     try {
       if (!cardRef.current) throw new Error('Card node missing');
       const dataUrl = await htmlToImage.toPng(cardRef.current, {
-        cacheBust: true,
+        // cacheBust: true triggers re-fetches with a random query string.
+        // On mobile that can leave a 1.6 MB image in-flight when we
+        // capture. Our /?v7 query is version-based, so we opt out of
+        // the extra bust — waitForImages above guarantees freshness.
+        cacheBust: false,
         pixelRatio: 1,
         width: cardWidth,
         height: cardHeight,
