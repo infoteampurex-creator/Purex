@@ -56,10 +56,13 @@ export function PushNotificationBootstrap() {
     setRequesting(true);
     try {
       const mod = await import('@capacitor/push-notifications');
-      const perm = await mod.PushNotifications.requestPermissions();
-      if (perm.receive === 'granted') {
-        await mod.PushNotifications.register();
-      }
+      // Only request the permission for now. Do NOT call
+      // PushNotifications.register() — that tries to fetch a FCM
+      // token and crashes the app when the Firebase project /
+      // google-services.json isn't wired up (which it isn't yet:
+      // reported 2026-07-16). Once we set up FCM properly we can
+      // re-enable registration behind a config flag.
+      await mod.PushNotifications.requestPermissions();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn('[push] permission request failed', err);
