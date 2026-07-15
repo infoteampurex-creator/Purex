@@ -292,12 +292,79 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
     }
   };
 
-  const download = () => {
+  /**
+   * "Download" is deceptively hard on iPhone. iOS Safari ignores
+   * `<a download>` attributes on data: URLs — instead it opens the
+   * image inline, which mothers report as "download not working".
+   * There is no filesystem API on iOS Safari; the two ways to get
+   * an image into Photos are:
+   *
+   *   1. Trigger the native share sheet with a File — the sheet
+   *      has a "Save to Photos" option.
+   *   2. Open the image in a new tab so the mother can long-press
+   *      → "Save to Photos".
+   *
+   * Strategy below tries each in order:
+   *   - Modern iPhone (Web Share files) → share sheet
+   *   - Desktop / Android Chrome         → real <a download>
+   *   - Older iOS / fallback             → open image tab with a
+   *     small toast telling her to long-press.
+   */
+  const download = async () => {
     if (!generatedDataUrl) return;
-    const link = document.createElement('a');
-    link.download = `team-purex-mothers-${mother.slug}-60-days-card.png`;
-    link.href = generatedDataUrl;
-    link.click();
+    const filename = `team-purex-mothers-${mother.slug}-60-days-card.png`;
+
+    // Detect iOS — includes iPad on iOS 13+ (which reports MacIntel + touch).
+    const ua = navigator.userAgent || '';
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    try {
+      const blob = await (await fetch(generatedDataUrl)).blob();
+      const file = new File([blob], filename, { type: 'image/png' });
+      const nav = navigator as Navigator & {
+        canShare?: (data: ShareData) => boolean;
+      };
+
+      // iPhone / iPad — share sheet is the only reliable path to Photos.
+      if (isIOS && nav.share && nav.canShare?.({ files: [file] })) {
+        await nav.share({ files: [file], title: filename });
+        return;
+      }
+
+      // Desktop / Android — real download works.
+      if (!isIOS) {
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = blobUrl;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        // Delay before revoke so the browser has time to start the download.
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        return;
+      }
+
+      // iOS fallback (no Web Share files support — e.g. older iOS).
+      // Open the image in a new tab so the mother can long-press it.
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      setValidationMsg(
+        'Long-press the image and choose "Save to Photos" to save your card.'
+      );
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[purex-mothers] download failed', err);
+      // Last-ditch: try the original data-URL anchor click.
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = generatedDataUrl;
+      link.click();
+    }
   };
 
   const shareOnWhatsApp = async () => {
