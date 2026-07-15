@@ -6,6 +6,7 @@ import { Home, Dumbbell, Apple, LineChart, HeartPulse, User, LogOut } from 'luci
 import { Logo } from '@/components/shared/Logo';
 import { cn } from '@/lib/cn';
 import { signOut as signOutAction } from '@/lib/actions/auth';
+import { useHaptics } from '@/lib/hooks/useHaptics';
 
 // 6 tabs. Bookings dropped from primary nav (low-frequency action;
 // still reachable via /book and from Profile). Health takes its slot
@@ -26,6 +27,7 @@ const navItems = [
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const haptics = useHaptics();
 
   return (
     <nav
@@ -47,6 +49,9 @@ export function MobileBottomNav() {
               key={item.href}
               href={item.href}
               prefetch={true}
+              onClick={() => {
+                if (!active) haptics.selectionChanged();
+              }}
               className="relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-w-0"
             >
               {active && (

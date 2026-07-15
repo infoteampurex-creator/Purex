@@ -1,4 +1,5 @@
 import { MobileBottomNav, DesktopSidebar } from '@/components/client/ClientNav';
+import { PushNotificationBootstrap } from '@/components/client/PushNotificationBootstrap';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
       </div>
       <MobileBottomNav />
+      {/* First-launch push permission prompt — silent no-op on web. */}
+      <PushNotificationBootstrap />
     </div>
   );
 }
