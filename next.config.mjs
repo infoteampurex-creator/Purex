@@ -47,6 +47,14 @@ const nextConfig = {
         destination: '/transformations#:slug',
         permanent: true,
       },
+      // Neelima's name was originally misspelled 'nilima' in the mothers
+      // roster. Redirect the old slug to the corrected one so any link
+      // already shared with the mothers still opens the right page.
+      {
+        source: '/purex-mothers/nilima',
+        destination: '/purex-mothers/neelima',
+        permanent: true,
+      },
     ];
   },
 };

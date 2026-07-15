@@ -51,8 +51,8 @@ export const PUREX_MOTHERS: PureXMother[] = [
       'For plank after plank, hold after hold — quiet, determined, and unshakable through every core challenge.',
   },
   {
-    slug: 'nilima',
-    name: 'Nilima',
+    slug: 'neelima',
+    name: 'Neelima',
     title: 'Consistency Queen',
     category: 'queen',
     message:
