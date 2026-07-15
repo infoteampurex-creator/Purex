@@ -116,7 +116,6 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   const [displayName, setDisplayName] = useState(mother.name);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
-  const dragging = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
 
   const cardWidth = aspect === 'portrait' ? 1122 : 1080;
   const cardHeight = aspect === 'portrait' ? 1402 : 1080;
@@ -138,12 +137,17 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   // ─── Photo upload ────────────────────────────────────────────
 
   const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setValidationMsg('Please upload an image file (JPG or PNG).');
+    // iPhone-friendly checks. iPhone camera photos can be 15-30 MB.
+    // Accept anything the browser can decode (image/* + HEIC/HEIF).
+    const isImage =
+      file.type.startsWith('image/') ||
+      /\.(heic|heif)$/i.test(file.name);
+    if (!isImage) {
+      setValidationMsg('Please upload a photo (JPG, PNG, or HEIC).');
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setValidationMsg('Photo is too large — please use a file under 8 MB.');
+    if (file.size > 30 * 1024 * 1024) {
+      setValidationMsg('Photo is too large — please use a file under 30 MB.');
       return;
     }
     setValidationMsg(null);
@@ -167,35 +171,11 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
     [handleFile]
   );
 
-  // ─── Drag-to-position on preview ─────────────────────────────
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (!photoUrl) return;
-    dragging.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      ox: offset.x,
-      oy: offset.y,
-    };
-    (e.target as Element).setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const dx = e.clientX - dragging.current.startX;
-    const dy = e.clientY - dragging.current.startY;
-    setOffset({
-      x: dragging.current.ox + dx / previewScale,
-      y: dragging.current.oy + dy / previewScale,
-    });
-  };
-  const onPointerUp = (e: React.PointerEvent) => {
-    dragging.current = null;
-    try {
-      (e.target as Element).releasePointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-  };
+  // Drag-to-position was removed on 2026-07-15 because Android touch
+  // was firing "photo drifts unpredictably" bugs — pointer capture
+  // slipped off inner elements and every touch anywhere on the preview
+  // grabbed the photo instead of scrolling the page. Sliders below
+  // give both iPhone and Android the same predictable positioning UX.
 
   // ─── Generate (reveal + export) ───────────────────────────────
 
@@ -438,6 +418,8 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
                   Position & zoom
                 </span>
               </div>
+              {/* Three sliders control the photo — same UX on every phone,
+                  no drag gestures that fight with page scroll on Android. */}
               <label className="block mb-3">
                 <div
                   className="font-mono uppercase tracking-[0.14em] font-bold"
@@ -456,7 +438,48 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
                   style={{ accentColor: '#ff2f8f' }}
                 />
               </label>
+              <label className="block mb-3">
+                <div
+                  className="font-mono uppercase tracking-[0.14em] font-bold"
+                  style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
+                >
+                  Move left / right
+                </div>
+                <input
+                  type="range"
+                  min={-250}
+                  max={250}
+                  step={2}
+                  value={offset.x}
+                  onChange={(e) =>
+                    setOffset((o) => ({ ...o, x: Number(e.target.value) }))
+                  }
+                  className="w-full mt-1"
+                  style={{ accentColor: '#ff2f8f' }}
+                />
+              </label>
+              <label className="block mb-3">
+                <div
+                  className="font-mono uppercase tracking-[0.14em] font-bold"
+                  style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
+                >
+                  Move up / down
+                </div>
+                <input
+                  type="range"
+                  min={-250}
+                  max={250}
+                  step={2}
+                  value={offset.y}
+                  onChange={(e) =>
+                    setOffset((o) => ({ ...o, y: Number(e.target.value) }))
+                  }
+                  className="w-full mt-1"
+                  style={{ accentColor: '#ff2f8f' }}
+                />
+              </label>
               <button
+                type="button"
                 onClick={() => {
                   setOffset({ x: 0, y: 0 });
                   setScale(1);
@@ -492,6 +515,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
                   const active = aspect === a;
                   return (
                     <button
+                      type="button"
                       key={a}
                       onClick={() => setAspect(a)}
                       className="rounded-lg px-3 py-2 border text-left transition-colors"
@@ -545,6 +569,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
           {/* Primary action: Generate OR Download+Share depending on state */}
           {!revealed ? (
             <button
+              type="button"
               onClick={generate}
               disabled={generating}
               className="w-full rounded-2xl px-5 py-4 font-mono uppercase tracking-[0.22em] font-bold inline-flex items-center justify-center gap-2 transition-transform"
@@ -596,6 +621,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
               </motion.div>
 
               <button
+                type="button"
                 onClick={download}
                 className="w-full rounded-2xl px-5 py-4 font-mono uppercase tracking-[0.22em] font-bold inline-flex items-center justify-center gap-2"
                 style={{
@@ -611,6 +637,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
               </button>
 
               <button
+                type="button"
                 onClick={shareOnWhatsApp}
                 className="w-full rounded-2xl px-5 py-3 font-mono uppercase tracking-[0.20em] font-bold inline-flex items-center justify-center gap-2"
                 style={{
@@ -625,6 +652,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   setRevealed(false);
                   setGeneratedDataUrl(null);
@@ -668,14 +696,8 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
             <div
               ref={previewWrapRef}
               className="relative mx-auto"
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
               style={{
                 height: (previewWrapRef.current?.clientWidth ?? 320) * (cardHeight / cardWidth),
-                touchAction: 'none',
-                cursor: photoUrl && !revealed ? 'move' : 'default',
                 background: '#0a0a0d',
                 borderRadius: 12,
                 overflow: 'hidden',

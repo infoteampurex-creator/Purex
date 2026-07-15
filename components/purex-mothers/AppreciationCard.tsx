@@ -148,7 +148,6 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
           <img
             src={templateSrc}
             alt=""
-            crossOrigin="anonymous"
             onError={() => setTemplateFailed(true)}
             style={{
               position: 'absolute',
@@ -184,7 +183,6 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
                 <img
                   src={photoUrl}
                   alt={nameToShow}
-                  crossOrigin="anonymous"
                   style={{
                     position: 'absolute',
                     width: '100%',
@@ -192,7 +190,9 @@ export const AppreciationCard = forwardRef<HTMLDivElement, Props>(
                     objectFit: 'cover',
                     transform: `translate(${photoOffsetX}px, ${photoOffsetY}px) scale(${photoScale})`,
                     transformOrigin: 'center',
+                    pointerEvents: 'none',
                   }}
+                  draggable={false}
                 />
               ) : (
                 <div
