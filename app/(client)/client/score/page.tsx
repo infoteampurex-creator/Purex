@@ -11,7 +11,7 @@ import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import type { MoodState } from '@/lib/data/mood';
 
 export const metadata: Metadata = {
-  title: 'My PURE X Score · PURE X',
+  title: 'My PureX Score · Team Purex',
 };
 
 export const dynamic = 'force-dynamic';
@@ -84,7 +84,7 @@ export default async function ScorePage() {
                 style={{ color: '#7dd3ff' }}
               >
                 <Activity size={12} strokeWidth={2.5} />
-                The PURE X Score
+                The PureX Score
               </div>
 
               <h1 className="font-display font-semibold text-3xl md:text-5xl tracking-tight leading-[1.1] mb-4">
@@ -174,7 +174,7 @@ export default async function ScorePage() {
             <div>
               <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-3">
                 <span className="w-3 h-px bg-accent" />
-                Today's PURE X Score
+                Today's PureX Score
               </div>
               <div className="flex items-baseline gap-3">
                 <span
@@ -336,7 +336,7 @@ export default async function ScorePage() {
                 How the score is calculated
               </div>
               <p className="text-xs text-text-muted leading-relaxed">
-                The PURE X Score is a weighted average of 5 pillars — Training Load (25%),
+                The PureX Score is a weighted average of 5 pillars — Training Load (25%),
                 Recovery Quality (20%), Mental Resilience (15%), Nutrition (25%), and
                 Medical Markers (15%). Each pillar updates daily from your app logs,
                 wearable data, and coach check-ins. Your coaches see the same score — so
