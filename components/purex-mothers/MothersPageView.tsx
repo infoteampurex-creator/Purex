@@ -330,6 +330,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
 
   return (
     <section id="generator" className="mt-16 scroll-mt-6">
+      <InAppBrowserWarning />
       <SectionHeader
         kicker={revealed ? 'Your card is ready' : 'Almost there'}
         title={
@@ -1221,6 +1222,111 @@ function CTASection() {
         </Link>
       </div>
     </section>
+  );
+}
+
+// ─── In-app browser warning ──────────────────────────────────────
+//
+// WhatsApp / Instagram / Facebook / Messenger in-app browsers block
+// the file picker on Android — the mother sees "Unable to select
+// media due to denied permissions" and can't upload her photo
+// (reported 2026-07-15). The only real fix is to open the link in
+// Chrome or Safari. This banner detects those sandboxed browsers by
+// user-agent and shows tap-clear instructions + a copy-link button.
+
+function InAppBrowserWarning() {
+  const [detected, setDetected] = useState<null | 'whatsapp' | 'instagram' | 'facebook' | 'other'>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const ua = navigator.userAgent || '';
+    if (/WhatsApp/i.test(ua)) setDetected('whatsapp');
+    else if (/Instagram/i.test(ua)) setDetected('instagram');
+    else if (/FBAN|FBAV|Messenger/i.test(ua)) setDetected('facebook');
+    else if (/Line\/|MicroMessenger|Snapchat/i.test(ua)) setDetected('other');
+  }, []);
+
+  if (!detected) return null;
+
+  const appLabel = {
+    whatsapp: 'WhatsApp',
+    instagram: 'Instagram',
+    facebook: 'Facebook / Messenger',
+    other: 'this messaging app',
+  }[detected];
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback for browsers where clipboard.writeText is blocked
+      const ta = document.createElement('textarea');
+      ta.value = window.location.href;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } catch {
+        // ignore — user will have to copy manually
+      }
+      document.body.removeChild(ta);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-2xl border p-4 md:p-5 mb-6"
+      style={{
+        borderColor: 'rgba(255,193,84,0.55)',
+        background:
+          'radial-gradient(ellipse at 20% 0%, rgba(255,193,84,0.16), transparent 65%), linear-gradient(180deg, #1a1408 0%, #0e0b04 100%)',
+      }}
+    >
+      <div
+        className="font-mono uppercase tracking-[0.22em] font-bold mb-2"
+        style={{ fontSize: 10, color: '#ffd24d' }}
+      >
+        Open in Chrome or Safari
+      </div>
+      <p
+        className="mb-3"
+        style={{ fontSize: 14, color: 'rgba(248,244,239,0.90)', lineHeight: 1.55 }}
+      >
+        You&apos;re in {appLabel}&apos;s browser, which blocks photo
+        uploads. To finish your card:
+      </p>
+      <ol
+        className="pl-5 mb-4 space-y-1.5"
+        style={{ fontSize: 13.5, color: 'rgba(248,244,239,0.85)', lineHeight: 1.5, listStyleType: 'decimal' }}
+      >
+        <li>
+          Tap the <b>⋯</b> menu at the top-right (or bottom-right)
+        </li>
+        <li>
+          Choose <b>Open in Chrome</b> (Android) or <b>Open in Safari</b>{' '}
+          (iPhone)
+        </li>
+        <li>Continue from there — your photo upload will work</li>
+      </ol>
+      <button
+        type="button"
+        onClick={copyLink}
+        className="w-full rounded-xl px-4 py-3 font-mono uppercase tracking-[0.18em] font-bold inline-flex items-center justify-center gap-2"
+        style={{
+          fontSize: 11,
+          color: '#0a0c09',
+          background:
+            'linear-gradient(135deg, #ffe7a0 0%, #ffd24d 50%, #b88d2c 100%)',
+        }}
+      >
+        {copied ? 'Link copied — paste in Chrome or Safari' : 'Copy this link'}
+      </button>
+    </div>
   );
 }
 
