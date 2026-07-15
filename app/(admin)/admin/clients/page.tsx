@@ -37,6 +37,22 @@ function formatJoinedDate(raw: string | null | undefined): string {
   });
 }
 
+/**
+ * Title-case a name like "mounica" → "Mounica" or "SUSHMITHA. VADNALA"
+ * → "Sushmitha. Vadnala". Defensive against DB storing signup forms
+ * in whatever case the user typed. Same helper the /clients/[id] page
+ * already has — inlined here to keep the polish PR surgical.
+ */
+function titleCase(name: string | null | undefined): string {
+  if (!name) return '';
+  return name
+    .split(/\s+/)
+    .map((part) =>
+      part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part
+    )
+    .join(' ');
+}
+
 export default async function AdminClientsPage() {
   const [{ clients }, pendingSignups] = await Promise.all([
     getAdminClients(),
@@ -124,7 +140,7 @@ export default async function AdminClientsPage() {
                 <Avatar name={c.fullName} photoUrl={c.avatarUrl} size="sm" />
                 <div className="min-w-0">
                   <div className="font-medium group-hover:text-accent transition-colors">
-                    {c.fullName}
+                    {titleCase(c.fullName)}
                   </div>
                   <div className="text-[10px] text-text-muted font-mono mt-0.5">
                     Joined {formatJoinedDate(c.joinedAt)}
