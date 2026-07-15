@@ -52,7 +52,7 @@ export function Footer() {
 
         <div className="mt-12 md:mt-16 pt-6 border-t border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-dim">
-            © {new Date().getFullYear()} PURE X. All rights reserved.
+            © {new Date().getFullYear()} Team Purex. All rights reserved.
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-dim">
             Train for Life. Not Just Aesthetics.

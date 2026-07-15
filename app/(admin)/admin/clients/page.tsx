@@ -18,6 +18,25 @@ import { STREAK_THRESHOLD } from '@/lib/data/twin';
 
 export const metadata = { title: 'Admin · Clients' };
 
+/**
+ * Format a raw ISO timestamp like "2026-06-12T09:14:48.036882+00:00"
+ * as "12 Jun 2026". The raw ISO with microseconds + timezone was
+ * leaking to the UI, which read as amateur-hour polish in the client
+ * list (reported 2026-07-16). Copy of the same helper in
+ * app/(admin)/admin/clients/[id]/page.tsx — kept inline here to avoid
+ * cross-file churn before demo.
+ */
+function formatJoinedDate(raw: string | null | undefined): string {
+  if (!raw) return '—';
+  const dt = new Date(raw);
+  if (isNaN(dt.getTime())) return raw;
+  return dt.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export default async function AdminClientsPage() {
   const [{ clients }, pendingSignups] = await Promise.all([
     getAdminClients(),
@@ -108,7 +127,7 @@ export default async function AdminClientsPage() {
                     {c.fullName}
                   </div>
                   <div className="text-[10px] text-text-muted font-mono mt-0.5">
-                    Joined {c.joinedAt}
+                    Joined {formatJoinedDate(c.joinedAt)}
                   </div>
                 </div>
               </Link>

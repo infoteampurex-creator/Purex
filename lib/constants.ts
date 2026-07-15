@@ -1,5 +1,8 @@
 export const BRAND = {
-  name: 'PURE X',
+  // Company / app brand mark. All page title templates end with
+  // "· ${BRAND.name}", so changing this cascades across every
+  // <title> — admin pages, marketing pages, auth pages.
+  name: 'Team Purex',
   tagline: 'Train for Life. Not Just Aesthetics.',
   whatsapp: '+447778899345',
   email: 'contact.teampurex@gmail.com', // public-facing email
@@ -7,7 +10,7 @@ export const BRAND = {
   locations: ['India', 'UK'],
 } as const;
 
-export const whatsappLink = (message = 'Hi PURE X, I would like to know more.') =>
+export const whatsappLink = (message = 'Hi Team Purex, I would like to know more.') =>
   `https://wa.me/${BRAND.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
 
 // Fallback data — used before Supabase is wired. Admin panel will replace with DB reads.
