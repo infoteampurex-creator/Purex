@@ -17,6 +17,14 @@ export function generateStaticParams() {
   return PUREX_MOTHERS.map((m) => ({ slug: m.slug }));
 }
 
+/**
+ * Revalidate the static HTML every 5 minutes so CDN never serves a
+ * multi-day-old copy after we push a fix. Discovered on 2026-07-15
+ * that Vercel had cached the /purex-mothers/[slug] pages for 8+ days
+ * (Age header ~728k seconds) — bug fixes weren't reaching mothers.
+ */
+export const revalidate = 300;
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
