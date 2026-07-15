@@ -30,6 +30,7 @@ import {
   type PureXMother,
 } from '@/lib/data/purex-mothers';
 import { AppreciationCard } from './AppreciationCard';
+import { renderMothersCard } from './renderCardCanvas';
 
 interface Props {
   /** Preselected via /purex-mothers/[slug] route. When null, the page
@@ -269,13 +270,39 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
       // ignore — best-effort
     }
     runConfetti();
+
+    // ─── Primary export: Canvas 2D ─────────────────────────────────
+    // html-to-image lifts the DOM node into an SVG foreignObject and
+    // rasterises. That path is fragile on iOS Safari — fonts fall
+    // back, cross-origin images taint, sometimes the output is
+    // entirely blank (Praneetha's case). Canvas 2D paints pixels
+    // directly and is stable everywhere.
+    const templateSrc = `/purex-mothers/card-template-${aspect}.png?v7`;
+    try {
+      const dataUrl = await renderMothersCard({
+        aspect,
+        templateSrc,
+        photoUrl,
+        photoOffsetX: offset.x,
+        photoOffsetY: offset.y,
+        photoScale: scale,
+        name: displayName,
+        title: mother.title,
+        message: mother.message,
+        revealed: true,
+      });
+      setGeneratedDataUrl(dataUrl);
+      setGenerating(false);
+      return;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[purex-mothers] canvas export failed, falling back to html-to-image', err);
+    }
+
+    // ─── Fallback: html-to-image ──────────────────────────────────
     try {
       if (!cardRef.current) throw new Error('Card node missing');
       const dataUrl = await htmlToImage.toPng(cardRef.current, {
-        // cacheBust: true triggers re-fetches with a random query string.
-        // On mobile that can leave a 1.6 MB image in-flight when we
-        // capture. Our /?v7 query is version-based, so we opt out of
-        // the extra bust — waitForImages above guarantees freshness.
         cacheBust: false,
         pixelRatio: 1,
         width: cardWidth,
