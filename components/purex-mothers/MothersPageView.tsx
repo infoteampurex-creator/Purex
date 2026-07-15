@@ -112,6 +112,11 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
+  // iPhone can't reliably trigger "Save to Photos" from a JS button —
+  // navigator.share is patchy, <a download> is ignored on data: URLs.
+  // The bulletproof pattern is to show the finished card full-screen
+  // with clear "long-press → Save to Photos" instructions.
+  const [iosSaveOpen, setIosSaveOpen] = useState(false);
   // Editable full name — mother can add surname or refine spelling.
   // Defaults to her slug-derived name, but she owns the field.
   const [displayName, setDisplayName] = useState(mother.name);
@@ -320,73 +325,51 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   };
 
   /**
-   * "Download" is deceptively hard on iPhone. iOS Safari ignores
-   * `<a download>` attributes on data: URLs — instead it opens the
-   * image inline, which mothers report as "download not working".
-   * There is no filesystem API on iOS Safari; the two ways to get
-   * an image into Photos are:
+   * "Download" on iPhone is a UX problem, not a technical one.
+   * iOS has no direct filesystem write API from web pages. The
+   * user-blessed pattern is to long-press an image → "Save to Photos".
    *
-   *   1. Trigger the native share sheet with a File — the sheet
-   *      has a "Save to Photos" option.
-   *   2. Open the image in a new tab so the mother can long-press
-   *      → "Save to Photos".
+   * We used to try navigator.share first, but multiple mothers
+   * reported it either did nothing or showed a share sheet without
+   * "Save to Photos" (varies by iOS version, WhatsApp browser, etc).
+   * The bulletproof flow is to open a full-screen preview inside the
+   * app with a clear "long-press → Save to Photos" instruction that
+   * every iOS user already knows how to do.
    *
-   * Strategy below tries each in order:
-   *   - Modern iPhone (Web Share files) → share sheet
-   *   - Desktop / Android Chrome         → real <a download>
-   *   - Older iOS / fallback             → open image tab with a
-   *     small toast telling her to long-press.
+   * Flow branches:
+   *   - iPhone / iPad → open the IosSaveOverlay full-screen with
+   *     the finished card + instructions
+   *   - Desktop / Android → real <a download> with a blob URL
    */
   const download = async () => {
     if (!generatedDataUrl) return;
     const filename = `team-purex-mothers-${mother.slug}-60-days-card.png`;
 
-    // Detect iOS — includes iPad on iOS 13+ (which reports MacIntel + touch).
     const ua = navigator.userAgent || '';
     const isIOS =
       /iPad|iPhone|iPod/.test(ua) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+    if (isIOS) {
+      setIosSaveOpen(true);
+      return;
+    }
+
     try {
       const blob = await (await fetch(generatedDataUrl)).blob();
-      const file = new File([blob], filename, { type: 'image/png' });
-      const nav = navigator as Navigator & {
-        canShare?: (data: ShareData) => boolean;
-      };
-
-      // iPhone / iPad — share sheet is the only reliable path to Photos.
-      if (isIOS && nav.share && nav.canShare?.({ files: [file] })) {
-        await nav.share({ files: [file], title: filename });
-        return;
-      }
-
-      // Desktop / Android — real download works.
-      if (!isIOS) {
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = blobUrl;
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        // Delay before revoke so the browser has time to start the download.
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-        return;
-      }
-
-      // iOS fallback (no Web Share files support — e.g. older iOS).
-      // Open the image in a new tab so the mother can long-press it.
       const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-      setValidationMsg(
-        'Long-press the image and choose "Save to Photos" to save your card.'
-      );
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = blobUrl;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[purex-mothers] download failed', err);
-      // Last-ditch: try the original data-URL anchor click.
+      // Last-ditch: anchor click on the data URL.
       const link = document.createElement('a');
       link.download = filename;
       link.href = generatedDataUrl;
@@ -423,6 +406,13 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
   // ─── Render ──────────────────────────────────────────────────
 
   return (
+    <>
+    {iosSaveOpen && generatedDataUrl && (
+      <IosSaveOverlay
+        src={generatedDataUrl}
+        onClose={() => setIosSaveOpen(false)}
+      />
+    )}
     <section id="generator" className="mt-16 scroll-mt-6">
       <InAppBrowserWarning />
       <SectionHeader
@@ -882,6 +872,112 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
         </div>
       </div>
     </section>
+    </>
+  );
+}
+
+// ─── iOS "Save to Photos" overlay ────────────────────────────────
+//
+// iPhone Safari cannot programmatically save an image to Photos from
+// a web page — no filesystem API, and <a download> is ignored on
+// data: URLs. The universally-supported iOS pattern is:
+//   Long-press the image → Save to Photos.
+//
+// This overlay renders the finished card full-screen with prominent
+// instructions so mothers don't have to guess what to do.
+
+function IosSaveOverlay({
+  src,
+  onClose,
+}: {
+  src: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] overflow-y-auto"
+      style={{
+        background: 'rgba(6,8,5,0.96)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="min-h-full flex flex-col items-center justify-start p-4 pb-16 pt-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="self-end rounded-full w-10 h-10 flex items-center justify-center mb-3"
+          style={{
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            color: 'rgba(248,244,239,0.85)',
+          }}
+          aria-label="Close"
+        >
+          ✕
+        </button>
+
+        <div
+          className="rounded-2xl p-4 mb-4 max-w-md text-center"
+          style={{
+            background:
+              'radial-gradient(ellipse at 50% 0%, rgba(255,215,74,0.18), transparent 65%), rgba(20,17,8,0.85)',
+            border: '1px solid rgba(255,215,74,0.45)',
+          }}
+        >
+          <div
+            className="font-mono uppercase tracking-[0.24em] font-bold mb-2"
+            style={{ fontSize: 10, color: '#ffd24d' }}
+          >
+            Save your card
+          </div>
+          <div
+            className="font-display font-semibold mb-1"
+            style={{ fontSize: 18, color: 'rgba(245,245,240,0.98)' }}
+          >
+            Long-press the image below
+          </div>
+          <p
+            className="leading-relaxed"
+            style={{ fontSize: 13.5, color: 'rgba(245,245,240,0.75)' }}
+          >
+            Hold your finger on the card until the iPhone menu appears,
+            then tap <b>Save to Photos</b>.
+          </p>
+        </div>
+
+        {/* Long-press-savable image. Native iOS gesture on any <img>
+            offers "Save to Photos" — no JS needed. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt="Your appreciation card — long-press to save"
+          className="w-full max-w-md rounded-2xl"
+          style={{
+            boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
+            WebkitTouchCallout: 'default',
+            userSelect: 'none',
+          }}
+          draggable={false}
+        />
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 rounded-full px-6 py-3 font-mono uppercase tracking-[0.18em] font-bold"
+          style={{
+            fontSize: 11,
+            color: '#0a0c09',
+            background:
+              'linear-gradient(135deg, #ffe7a0 0%, #ffd24d 50%, #b88d2c 100%)',
+          }}
+        >
+          Done — I saved it
+        </button>
+      </div>
+    </div>
   );
 }
 
