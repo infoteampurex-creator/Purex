@@ -21,74 +21,74 @@ export const PUREX_MOTHERS: PureXMother[] = [
   {
     slug: 'vani',
     name: 'Vani',
-    title: 'Heart of the Squad',
+    title: 'The Radiant Heart',
     category: 'consistency',
     message:
-      'For lifting the group with positive energy every single day of the 60-day journey.',
+      'For lighting up every day of the 60-day journey with warmth, positivity, and encouragement for everyone around you.',
   },
   {
     slug: 'swarna',
     name: 'Swarna',
-    title: 'Complete Athlete',
+    title: 'The Golden Grace',
     category: 'all_rounder',
     message:
-      'For balanced effort across training, diet, steps, and daily discipline — nothing missed.',
+      'For living every part of this journey with grace — training, food, steps, and daily rhythm all in harmony.',
   },
   {
     slug: 'akhila',
     name: 'Akhila',
-    title: 'Balanced Champion',
+    title: 'The Wholehearted One',
     category: 'all_rounder',
     message:
-      'For showing that balance is a win — steady dedication across every part of the 60 days.',
+      'For giving your whole heart to every part of the 60 days — steady, sincere, and wonderfully consistent.',
   },
   {
     slug: 'sirisha',
     name: 'Sirisha',
-    title: 'Core of Steel',
+    title: 'The Serene Strength',
     category: 'plank',
     message:
-      'For unbreakable core strength and quiet determination through every plank challenge.',
+      'For the quiet, unwavering strength you brought to every plank — grace and determination in equal measure.',
   },
   {
     slug: 'nilima',
     name: 'Nilima',
-    title: 'The Powerhouse',
+    title: 'The Guiding Star',
     category: 'queen',
     message:
-      'For extraordinary consistency and all-round performance — the one everyone else drew energy from.',
+      'For being the steady light everyone leaned into — a presence that made the whole journey brighter and easier for others.',
   },
   {
     slug: 'sunitha',
     name: 'Sunitha',
-    title: 'Iron Legs',
+    title: 'The Steadfast Grace',
     category: 'wall_sit',
     message:
-      'For lower-body endurance and mental strength that never faltered in the wall sit challenges.',
+      'For the gentle endurance and quiet grace that never let go, wall sit after wall sit, day after day.',
   },
   {
     slug: 'pranitha',
     name: 'Pranitha',
-    title: 'Total Force',
+    title: 'The Devoted Soul',
     category: 'all_rounder',
     message:
-      'For strength across every pillar — training, diet, steps, discipline — nothing halfway.',
+      'For pouring your whole self into every part of the journey — training, food, steps, and daily care — with love and devotion.',
   },
   {
     slug: 'manga',
     name: 'Manga',
-    title: 'Steel Stance',
+    title: 'The Unshakable Grace',
     category: 'wall_sit',
     message:
-      'For the immovable hold — stamina, patience, and commitment that stayed unshaken through every wall sit.',
+      'For the immovable calm and rooted patience that carried every wall sit — steady, dignified, and beautifully strong.',
   },
   {
     slug: 'lakshmi-durga',
     name: 'Lakshmi Durga',
-    title: 'The Pillar',
+    title: 'The Sacred Pillar',
     category: 'wall_sit',
     message:
-      'For being an unmoved foundation of strength and consistency across the entire 60-day journey.',
+      'For being the sacred foundation of strength and consistency — a quiet, blessed presence across the entire 60-day journey.',
   },
 ];
 
