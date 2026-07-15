@@ -156,7 +156,7 @@ export function MealSwapSheet({
                 className="text-text-muted mt-5 leading-relaxed"
                 style={{ fontSize: 11.5 }}
               >
-                Suggestions come from PURE X&apos;s curated food library.
+                Suggestions come from our curated food library.
                 Macros are reasonable averages — not lab-grade. If you
                 swap regularly, message your coach so they can update
                 your plan.
