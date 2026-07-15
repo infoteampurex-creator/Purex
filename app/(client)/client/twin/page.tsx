@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
-import { AvatarImage } from '@/components/client/twin/AvatarImage';
+import { TwinAvatarResponsive } from '@/components/client/twin/TwinAvatarResponsive';
 import { TwinStatsPanel } from '@/components/client/twin/TwinStatsPanel';
 import { TwinStatusBadge } from '@/components/client/twin/TwinStatusBadge';
 import { AnimatedNumber } from '@/components/client/twin/AnimatedNumber';
@@ -105,10 +105,16 @@ export default async function TwinPage() {
 
         {/* Main grid: silhouette on left, stats on right */}
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 md:gap-12 items-start">
-          {/* Avatar + vitality */}
-          <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-6 md:p-8">
+          {/* Avatar + vitality.
+              Mobile padding (p-4) is tighter than desktop (md:p-8) so
+              the 260px avatar sits centred inside the card on a 375px
+              iPhone (previously the 320px avatar overflowed the 255px
+              card content area and shifted right — reported 2026-07-15).
+              The <TwinAvatarResponsive> below picks 260 on mobile and
+              320 on md+ so the desktop layout is unchanged. */}
+          <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-4 md:p-8 overflow-hidden">
             <div className="flex flex-col items-center">
-              <AvatarImage src={avatarSrc} width={320} accent="#c6ff3d" />
+              <TwinAvatarResponsive src={avatarSrc} />
               <div className="mt-6 text-center">
                 <AnimatedNumber value={overall} fontSize={72} />
                 <div className="font-mono uppercase tracking-[0.22em] text-text-muted font-bold mt-1" style={{ fontSize: 11 }}>
