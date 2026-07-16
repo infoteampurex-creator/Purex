@@ -222,7 +222,7 @@ export async function analyzeMealPhoto(
       analysis: analysis.data,
     };
   } catch (err) {
-    console.error('[PURE X] analyzeMealPhoto failed:', err);
+    console.error('[Team Purex] analyzeMealPhoto failed:', err);
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Unknown error',

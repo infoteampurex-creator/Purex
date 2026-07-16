@@ -21,7 +21,7 @@ export type SendEmailResult =
 function readConfig(): { apiKey: string | null; fromAddress: string } {
   const apiKey = process.env.RESEND_API_KEY?.trim() || null;
   const fromAddress =
-    process.env.EMAIL_FROM?.trim() || 'PURE X <hello@teampurex.com>';
+    process.env.EMAIL_FROM?.trim() || 'Team Purex <hello@teampurex.com>';
   return { apiKey, fromAddress };
 }
 
@@ -38,7 +38,7 @@ export async function sendEmail(input: {
 
   if (!apiKey) {
     console.warn(
-      '[PURE X] Resend not configured — RESEND_API_KEY missing. Skipping email send for:',
+      '[Team Purex] Resend not configured — RESEND_API_KEY missing. Skipping email send for:',
       input.subject
     );
     return {
@@ -60,7 +60,7 @@ export async function sendEmail(input: {
     });
 
     if (error || !data) {
-      console.error('[PURE X] Resend send failed:', error);
+      console.error('[Team Purex] Resend send failed:', error);
       return {
         ok: false,
         error: error?.message ?? 'Resend rejected the send (no error returned).',
@@ -69,7 +69,7 @@ export async function sendEmail(input: {
 
     return { ok: true, id: data.id };
   } catch (err) {
-    console.error('[PURE X] Resend threw:', err);
+    console.error('[Team Purex] Resend threw:', err);
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Unknown error',

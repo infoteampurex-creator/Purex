@@ -1,5 +1,5 @@
 /**
- * TEAM PURE X — Client Consent & Privacy Agreement.
+ * TEAM Team Purex — Client Consent & Privacy Agreement.
  *
  * Versioned in code so legal changes are reviewable through git
  * history. When you change any text below, bump CURRENT_CONSENT_VERSION
@@ -30,8 +30,8 @@ export const CONSENT_DOCUMENT: ConsentSection[] = [
   {
     title: '1. Declaration',
     paragraphs: [
-      'I voluntarily choose to participate in the TEAM PURE X fitness and nutrition coaching program. I understand that the program is designed to provide general fitness guidance, exercise programming, nutrition coaching, lifestyle recommendations, and accountability support.',
-      'I acknowledge that TEAM PURE X does not provide medical diagnosis, treatment, or cure for any disease or medical condition.',
+      'I voluntarily choose to participate in the TEAM Team Purex fitness and nutrition coaching program. I understand that the program is designed to provide general fitness guidance, exercise programming, nutrition coaching, lifestyle recommendations, and accountability support.',
+      'I acknowledge that TEAM Team Purex does not provide medical diagnosis, treatment, or cure for any disease or medical condition.',
     ],
   },
   {
@@ -40,7 +40,7 @@ export const CONSENT_DOCUMENT: ConsentSection[] = [
     bullets: [
       'I have disclosed all known medical conditions, injuries, surgeries, medications, allergies, and health concerns relevant to my participation.',
       'I understand that I should consult my physician before starting any exercise or nutrition program if I have any existing medical condition or concerns.',
-      'I agree to immediately inform TEAM PURE X if my health status changes during the coaching program.',
+      'I agree to immediately inform TEAM Team Purex if my health status changes during the coaching program.',
     ],
   },
   {
@@ -67,7 +67,7 @@ export const CONSENT_DOCUMENT: ConsentSection[] = [
   },
   {
     title: '5. Data Collection & Privacy',
-    paragraphs: ['I consent to TEAM PURE X collecting information such as:'],
+    paragraphs: ['I consent to TEAM Team Purex collecting information such as:'],
     bullets: [
       'Name and contact details',
       'Age, gender, height and weight',
@@ -96,7 +96,7 @@ export const CONSENT_DOCUMENT: ConsentSection[] = [
   {
     title: 'Sharing & security',
     paragraphs: [
-      'TEAM PURE X will not sell, rent, or commercially share my personal data with third parties without my permission except where required by applicable law.',
+      'TEAM Team Purex will not sell, rent, or commercially share my personal data with third parties without my permission except where required by applicable law.',
       'Reasonable security measures will be taken to protect my information.',
     ],
   },
@@ -104,14 +104,14 @@ export const CONSENT_DOCUMENT: ConsentSection[] = [
     title: '6. Progress Photos',
     paragraphs: [
       'I understand that progress photos are optional.',
-      'If I separately provide permission, TEAM PURE X may use my transformation photos or testimonials for educational or promotional purposes.',
+      'If I separately provide permission, TEAM Team Purex may use my transformation photos or testimonials for educational or promotional purposes.',
       'I may withdraw this permission at any time by written request.',
     ],
   },
   {
     title: '7. Communication Consent',
     paragraphs: [
-      'I consent to receiving communication from TEAM PURE X through the channels I tick below — WhatsApp, Email, Phone calls, and Mobile application notifications — for coaching, reminders, progress tracking, and support.',
+      'I consent to receiving communication from TEAM Team Purex through the channels I tick below — WhatsApp, Email, Phone calls, and Mobile application notifications — for coaching, reminders, progress tracking, and support.',
     ],
   },
   {
@@ -128,7 +128,7 @@ export const CONSENT_DOCUMENT: ConsentSection[] = [
   {
     title: '9. Limitation of Liability',
     paragraphs: [
-      'To the fullest extent permitted by law, TEAM PURE X and its coaches shall not be liable for injuries, illness, losses, or damages arising from participation in the program except where caused by proven negligence.',
+      'To the fullest extent permitted by law, TEAM Team Purex and its coaches shall not be liable for injuries, illness, losses, or damages arising from participation in the program except where caused by proven negligence.',
       'Participation is entirely voluntary.',
     ],
   },
@@ -152,7 +152,7 @@ export const CONSENT_BOXES: ConsentBox[] = [
   {
     key: 'agreed_to_data_collection',
     label:
-      'I consent to TEAM PURE X collecting and using my data for coaching, as described in Section 5.',
+      'I consent to TEAM Team Purex collecting and using my data for coaching, as described in Section 5.',
     required: true,
     help: 'You can withdraw consent later from your Account settings.',
   },
@@ -165,7 +165,7 @@ export const CONSENT_BOXES: ConsentBox[] = [
   {
     key: 'agreed_to_marketing_use',
     label:
-      'I separately permit TEAM PURE X to use my transformation photos or testimonials for educational or promotional purposes (optional).',
+      'I separately permit TEAM Team Purex to use my transformation photos or testimonials for educational or promotional purposes (optional).',
     required: false,
     help: 'Revocable at any time. Section 6.',
   },

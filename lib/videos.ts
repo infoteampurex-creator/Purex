@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
- * PURE X — Video Configuration
+ * Team Purex — Video Configuration
  * ═══════════════════════════════════════════════════════════════════════
  *
  * One central place to configure all ambient video across the site.

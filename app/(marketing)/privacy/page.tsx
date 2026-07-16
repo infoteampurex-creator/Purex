@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy · PURE X',
+  title: 'Privacy Policy · Team Purex',
   description:
-    'How PURE X collects, uses, and protects your personal and health information.',
+    'How Team Purex collects, uses, and protects your personal and health information.',
 };
 
 export default function PrivacyPage() {
@@ -45,14 +45,14 @@ export default function PrivacyPage() {
         <div className="container-safe max-w-3xl">
           <div className="prose-custom space-y-10 text-[15px] leading-[1.75] text-text-muted">
             <Intro>
-              PURE X ("we", "our", "us") respects your privacy. This policy explains what
+              Team Purex ("we", "our", "us") respects your privacy. This policy explains what
               information we collect, how we use it, and the controls you have. It applies
               to our website, mobile app, client platform, and any coaching services you
               receive through us.
             </Intro>
 
             <Section title="1. Information We Collect">
-              <p>When you interact with PURE X, we may collect:</p>
+              <p>When you interact with Team Purex, we may collect:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>
                   <strong className="text-text">Account information</strong> — name, email,
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
 
             <Section title="3. Who Sees Your Data">
               <p>
-                Your personal and health information is only visible to the PURE X coaches
+                Your personal and health information is only visible to the Team Purex coaches
                 and specialists directly supporting your programme — plus the platform
                 administrators responsible for system operations.
               </p>
@@ -156,7 +156,7 @@ export default function PrivacyPage() {
 
             <Section title="7. Children">
               <p>
-                PURE X services are for adults (18+) unless a parent or legal guardian
+                Team Purex services are for adults (18+) unless a parent or legal guardian
                 explicitly enrols a minor with medical clearance. We do not knowingly
                 collect data from anyone under 18 without guardian consent.
               </p>

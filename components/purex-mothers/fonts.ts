@@ -12,7 +12,7 @@ import {
  *
  * - Playfair Display: body serif (award title, appreciation line)
  * - Great Vibes: calligraphy script for the mother's name
- * - Cinzel: engraved roman caps for "PURE X Mothers" heading
+ * - Cinzel: engraved roman caps for "Team Purex Mothers" heading
  * - JetBrains Mono: uppercase mono labels (existing brand)
  */
 export const playfair = Playfair_Display({

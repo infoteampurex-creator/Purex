@@ -30,7 +30,7 @@ interface HeroPhotoCarouselProps {
  */
 export function HeroPhotoCarousel({
   photos,
-  alt = 'PURE X coaching session',
+  alt = 'Team Purex coaching session',
   objectPosition = 'center 15%',
   durationMs = 5000,
   fadeMs = 1200,

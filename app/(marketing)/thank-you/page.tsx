@@ -44,8 +44,8 @@ export default async function ThankYouPage({ searchParams }: ThankYouPageProps) 
           <a
             href={whatsappLink(
               ref
-                ? `Hi PURE X, I just submitted booking ${ref}. Wanted to check...`
-                : 'Hi PURE X, I just submitted a booking.'
+                ? `Hi Team Purex, I just submitted booking ${ref}. Wanted to check...`
+                : 'Hi Team Purex, I just submitted a booking.'
             )}
             target="_blank"
             rel="noopener noreferrer"

@@ -7,7 +7,7 @@ import { ConsentSigningForm } from '@/components/client/ConsentSigningForm';
 import { getActiveConsent } from '@/lib/data/consent-server';
 
 export const metadata = {
-  title: 'Consent · TEAM PURE X',
+  title: 'Consent · TEAM Team Purex',
   robots: { index: false, follow: false },
 };
 export const dynamic = 'force-dynamic';

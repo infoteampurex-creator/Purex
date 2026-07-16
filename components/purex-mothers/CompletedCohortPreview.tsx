@@ -6,7 +6,7 @@ import {
 } from '@/lib/data/purex-mothers';
 
 /**
- * Preview panel for the completed May-10 PURE X Mothers cohort.
+ * Preview panel for the completed May-10 Team Purex Mothers cohort.
  *
  * Renders on /mother-strong as a hero-adjacent section — celebrates
  * the 9 finishers, links to /purex-mothers where each mother can

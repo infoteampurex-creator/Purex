@@ -31,9 +31,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const mother = findMotherBySlug(slug);
   if (!mother) {
-    return { title: 'PURE X Mothers — 60 Days of Strength' };
+    return { title: 'Team Purex Mothers — 60 Days of Strength' };
   }
-  const title = `${mother.name} · ${mother.title} — PURE X Mothers`;
+  const title = `${mother.name} · ${mother.title} — Team Purex Mothers`;
   const description = `${mother.name} completed 60 Days of Strength with ${PUREX_MOTHERS_META.brand}. Trainer: ${PUREX_MOTHERS_META.trainerName}.`;
   return {
     title,

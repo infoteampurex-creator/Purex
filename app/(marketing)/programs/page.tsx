@@ -5,7 +5,7 @@ import { ProgramsGrid } from '@/components/marketing/sections/ProgramsGrid';
 import { getMergedPrograms } from '@/lib/data/pricing-merged';
 
 export const metadata: Metadata = {
-  title: 'Programs & Pricing · PURE X',
+  title: 'Programs & Pricing · Team Purex',
   description:
     'Four programmes to match your level — Foundation, Core, Elite, and our signature Pure Enduro race-prep programme. Start with clarity, progress through consistency, finish as an athlete.',
 };

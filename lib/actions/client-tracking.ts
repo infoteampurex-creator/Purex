@@ -76,7 +76,7 @@ export async function upsertDailyLog(input: DailyLogInput): Promise<ActionState>
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] upsertDailyLog failed:', error);
+      console.error('[Team Purex] upsertDailyLog failed:', error);
       return { ok: false, error: error.message };
     }
 
@@ -136,7 +136,7 @@ export async function addTask(
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] addTask failed:', error);
+      console.error('[Team Purex] addTask failed:', error);
       return { ok: false, error: error.message };
     }
 
@@ -171,7 +171,7 @@ export async function toggleTask(
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] toggleTask failed:', error);
+      console.error('[Team Purex] toggleTask failed:', error);
       return { ok: false, error: error.message };
     }
 
@@ -200,7 +200,7 @@ export async function deleteTask(taskId: string): Promise<ActionState> {
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] deleteTask failed:', error);
+      console.error('[Team Purex] deleteTask failed:', error);
       return { ok: false, error: error.message };
     }
 
@@ -237,7 +237,7 @@ export async function toggleWorkout(
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] toggleWorkout failed:', error);
+      console.error('[Team Purex] toggleWorkout failed:', error);
       return { ok: false, error: error.message };
     }
 
