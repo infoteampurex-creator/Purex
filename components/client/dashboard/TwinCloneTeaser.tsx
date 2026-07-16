@@ -5,7 +5,24 @@ import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Telescope } from 'lucide-react';
 import { AvatarImage } from '@/components/client/twin/AvatarImage';
 import { TwinStatusBadge } from '@/components/client/twin/TwinStatusBadge';
+import {
+  VitalsStrip,
+  type VitalsSnapshot,
+} from '@/components/client/twin/VitalsStrip';
 import type { TwinVisualState } from '@/lib/data/twin';
+
+// Sample vitals for fresh accounts. Realistic resting values for a
+// mid-30s adult in decent condition — the "you could look like this"
+// baseline, not aspirational. Labelled with the Sample chip so it's
+// not misleading. Replaced with live values once Health Connect /
+// wearable sync lands.
+const SAMPLE_VITALS: VitalsSnapshot = {
+  heartRateBpm: 62,
+  hrvMs: 68,
+  spo2Pct: 98,
+  skinTempC: 36.5,
+  isPreview: true,
+};
 
 interface Props {
   /** Path to the avatar PNG/WebP — comes from avatarFor() on the server. */
@@ -131,6 +148,13 @@ export function TwinCloneTeaser({
         >
           {'“' + message + '”'}
         </p>
+      </div>
+
+      {/* Vitals strip — the "medical monitor" moment. Sample vitals
+          for fresh accounts (clearly labelled). Once wearable sync
+          lands, the live HR / HRV / SpO2 / skin-temp flow in here. */}
+      <div className="px-4 pt-3">
+        <VitalsStrip vitals={SAMPLE_VITALS} />
       </div>
 
       {/* Bottom CTAs */}
