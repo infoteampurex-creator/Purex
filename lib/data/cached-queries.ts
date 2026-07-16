@@ -54,7 +54,7 @@ export const getCachedActiveExerciseLibrary = unstable_cache(
       .limit(200);
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] cached exercise library read failed:', error);
+      console.error('[Team Purex] cached exercise library read failed:', error);
       return [];
     }
     return (data ?? []) as unknown as ExerciseLibraryEntry[];
@@ -79,7 +79,7 @@ export const getCachedWorkoutTemplates = unstable_cache(
       .order('updated_at', { ascending: false });
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] cached workout templates read failed:', error);
+      console.error('[Team Purex] cached workout templates read failed:', error);
       return [];
     }
     // Tag every DB-sourced row so consumers (admin list, picker

@@ -51,7 +51,7 @@ interface AmbientVideoProps {
 }
 
 /**
- * Premium ambient looping video component for PURE X.
+ * Premium ambient looping video component for Team Purex.
  *
  * Design choices:
  * - autoplay + muted + playsinline + loop (browser autoplay policy compliance)

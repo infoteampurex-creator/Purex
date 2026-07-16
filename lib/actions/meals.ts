@@ -78,7 +78,7 @@ export async function addMeal(input: AddMealInput): Promise<AddMealResult> {
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] addMeal failed:', error);
+      console.error('[Team Purex] addMeal failed:', error);
       return { ok: false, error: error.message };
     }
 

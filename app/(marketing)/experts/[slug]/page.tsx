@@ -16,9 +16,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const expert = FALLBACK_EXPERTS.find((e) => e.slug === slug);
-  if (!expert) return { title: 'Expert not found · PURE X' };
+  if (!expert) return { title: 'Expert not found · Team Purex' };
   return {
-    title: `${expert.name} · ${expert.title} · PURE X`,
+    title: `${expert.name} · ${expert.title} · Team Purex`,
     description: expert.bioShort,
   };
 }
@@ -28,8 +28,47 @@ export default async function ExpertProfilePage({ params }: PageProps) {
   const expert = FALLBACK_EXPERTS.find((e) => e.slug === slug);
   if (!expert) notFound();
 
+  // Per-expert Person JSON-LD — makes each coach show up as a rich
+  // result in Google + AI search: "Who is Siva Reddy at Team Purex?"
+  // returns a grounded answer with photo, bio, credentials, and
+  // employer link. Also strengthens the Organization graph.
+  const personLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': `https://www.teampurex.com/experts/${expert.slug}#person`,
+    name: expert.name,
+    jobTitle: expert.title,
+    description: expert.bioShort,
+    image: expert.photoUrl
+      ? `https://www.teampurex.com${expert.photoUrl}`
+      : undefined,
+    url: `https://www.teampurex.com/experts/${expert.slug}`,
+    worksFor: {
+      '@type': 'Organization',
+      '@id': 'https://www.teampurex.com/#organization',
+      name: 'Team Purex',
+    },
+    knowsAbout: expert.specialisms,
+    hasCredential: expert.credentials.map((c) => ({
+      '@type': 'EducationalOccupationalCredential',
+      name: c,
+    })),
+    workLocation: {
+      '@type': 'Place',
+      address: {
+        '@type': 'PostalAddress',
+        addressCountry: expert.location === 'India' ? 'IN' : 'GB',
+      },
+    },
+  };
+
   return (
     <main className="relative bg-bg text-text">
+      {/* Schema.org Person — for Google rich results + AI answers */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd) }}
+      />
       {/* ─── Hero ────────────────────────────────────────── */}
       <section className="relative pt-28 md:pt-32 pb-12 md:pb-16 overflow-hidden">
         <div
@@ -226,7 +265,7 @@ export default async function ExpertProfilePage({ params }: PageProps) {
                 Core responsibilities
               </div>
               <h2 className="font-display font-semibold text-2xl md:text-3xl tracking-tight leading-[1.1]">
-                What {expert.name.split(' ')[0]} does at PURE X.
+                What {expert.name.split(' ')[0]} does at Team Purex.
               </h2>
             </div>
 

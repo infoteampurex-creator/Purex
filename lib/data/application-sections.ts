@@ -1,5 +1,5 @@
 /**
- * PURE X — Detailed Transformation Application form (Form B) config.
+ * Team Purex — Detailed Transformation Application form (Form B) config.
  *
  * Single source of truth for every section + question. The form
  * renderer at /application reads this array and builds the UI
@@ -17,7 +17,7 @@
  * Each section key (snake_case) becomes a top-level field in the
  * `payload` JSONB column.
  *
- * ─── Source: Google Form "TEAM PURE X — Transformation Application
+ * ─── Source: Google Form "TEAM Team Purex — Transformation Application
  *     Form" — 10 sections, 47 questions. Photo uploads (9.1) are
  *     captured as a paste-able shared-folder link until we wire
  *     Supabase Storage uploads in a follow-up.
@@ -158,7 +158,7 @@ export const APPLICATION_SECTIONS: Section[] = [
       {
         key: 'transformation_goals',
         label:
-          '2.1. What transformation are you looking to achieve through TEAM PURE X?',
+          '2.1. What transformation are you looking to achieve through TEAM Team Purex?',
         type: 'multi_select',
         required: true,
         help: 'Tick all that apply.',
@@ -183,7 +183,7 @@ export const APPLICATION_SECTIONS: Section[] = [
       },
       {
         key: 'why_team_pure_x',
-        label: '2.3. Why do you specifically want to work with TEAM PURE X?',
+        label: '2.3. Why do you specifically want to work with TEAM Team Purex?',
         type: 'long_text',
         required: true,
       },
@@ -618,14 +618,14 @@ export const APPLICATION_SECTIONS: Section[] = [
     fields: [
       {
         key: 'anything_else',
-        label: '10.1. Anything else you want TEAM PURE X to know?',
+        label: '10.1. Anything else you want TEAM Team Purex to know?',
         type: 'long_text',
         required: false,
       },
       {
         key: 'agreement',
         label:
-          '10.2. Before joining TEAM PURE X, understand that transformation requires consistency, patience, discipline, and accountability. There are no shortcuts. We provide the system, structure, and support — your responsibility is to execute consistently.',
+          '10.2. Before joining TEAM Team Purex, understand that transformation requires consistency, patience, discipline, and accountability. There are no shortcuts. We provide the system, structure, and support — your responsibility is to execute consistently.',
         type: 'checkbox',
         required: true,
         help: 'Tick to agree.',

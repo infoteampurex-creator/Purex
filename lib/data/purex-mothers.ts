@@ -1,5 +1,5 @@
 /**
- * PURE X Mothers — 60 Days of Strength (Mother's Day 2026 cohort).
+ * Team Purex Mothers — 60 Days of Strength (Mother's Day 2026 cohort).
  *
  * Static roster of the 9 mothers who completed the 60-day challenge.
  * Individual URLs live at /purex-mothers/[slug] so each mother can
@@ -99,7 +99,7 @@ export const PUREX_MOTHERS_META = {
   trainerName: 'Siva Reddy',
   dailyStepGoal: 10000,
   collectiveSteps: 10000 * 60 * PUREX_MOTHERS.length,
-  brand: 'Team PURE X',
+  brand: 'Team Purex',
 } as const;
 
 export function findMotherBySlug(slug: string): PureXMother | null {

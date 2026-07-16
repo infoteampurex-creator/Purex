@@ -379,7 +379,7 @@ function PersonalGenerator({ mother }: { mother: PureXMother }) {
 
   const shareOnWhatsApp = async () => {
     if (!generatedDataUrl) return;
-    const caption = `60 Days of PURE X Mothers Strength ✨\n${mother.name} — ${mother.title}\nTrainer: ${PUREX_MOTHERS_META.trainerName}`;
+    const caption = `60 Days of Team Purex Mothers Strength ✨\n${mother.name} — ${mother.title}\nTrainer: ${PUREX_MOTHERS_META.trainerName}`;
     try {
       const blob = await (await fetch(generatedDataUrl)).blob();
       const file = new File(
@@ -1026,7 +1026,7 @@ function MemberPickerSection() {
                 className="font-mono uppercase tracking-[0.20em] font-bold"
                 style={{ fontSize: 9, color: GOLD_LIGHT }}
               >
-                PURE X Mother
+                Team Purex Mother
               </div>
             </div>
             <div
@@ -1084,7 +1084,7 @@ function HeroSection({ mother }: { mother: PureXMother | null }) {
           <span className="w-4 h-px" style={{ background: GOLD }} />
           {mother
             ? `A card for ${mother.name}`
-            : 'Team PURE X · Presented by Trainer Siva Reddy'}
+            : 'Team Purex · Presented by Trainer Siva Reddy'}
           <span className="w-4 h-px" style={{ background: GOLD }} />
         </div>
         <h1
@@ -1098,7 +1098,7 @@ function HeroSection({ mother }: { mother: PureXMother | null }) {
             backgroundClip: 'text',
           }}
         >
-          PURE X Mothers
+          Team Purex Mothers
           <br />
           60 Days of Strength
         </h1>
@@ -1309,7 +1309,7 @@ function GroupMessageSection() {
             color: 'rgba(248,244,239,0.98)',
           }}
         >
-          To every PURE X Mother
+          To every Team Purex Mother
         </h3>
         <div
           className="mt-6 space-y-4 max-w-2xl mx-auto leading-relaxed"
@@ -1325,7 +1325,7 @@ function GroupMessageSection() {
             consistent, energetic, and unstoppable. Your strength
             training, diet discipline, 10,000 steps, plank challenges,
             wall sits, and daily commitment have inspired everyone at
-            Team PURE X.
+            Team Purex.
           </p>
           <p style={{ color: '#f8d4c1', fontStyle: 'italic' }}>
             This is not just a 60-day completion. This is the beginning
@@ -1346,7 +1346,7 @@ function GroupMessageSection() {
             className="font-display font-bold tracking-tight mt-2"
             style={{ fontSize: 20, color: GOLD }}
           >
-            Team PURE X
+            Team Purex
           </div>
           <div
             className="font-mono mt-1"
@@ -1387,7 +1387,7 @@ function CTASection() {
             color: 'rgba(245,245,240,0.98)',
           }}
         >
-          Join the next PURE X Mothers journey
+          Join the next Team Purex Mothers journey
         </h3>
         <p
           className="mt-4 max-w-2xl mx-auto"

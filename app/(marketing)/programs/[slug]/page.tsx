@@ -41,7 +41,7 @@ const PROGRAM_DETAILS: Record<
     heroTagline:
       'The entry point. A structured first step before you commit to anything bigger.',
     whoFor: [
-      'You\'re curious about PURE X but not ready for a multi-month programme',
+      'You\'re curious about Team Purex but not ready for a multi-month programme',
       'You need a clear plan — not a free YouTube video mix',
       'You want professional guidance at a price that doesn\'t hurt',
     ],
@@ -153,7 +153,7 @@ const PROGRAM_DETAILS: Record<
   },
   'pure-elite': {
     heroTagline:
-      'Premium performance. 1-on-1 coaching, outdoor training, race prep, and the full PURE X inner circle.',
+      'Premium performance. 1-on-1 coaching, outdoor training, race prep, and the full Team Purex inner circle.',
     whoFor: [
       'You\'re training for HYROX, IRONMAN, a marathon, or another event',
       'You want 1-on-1 in-person sessions, not just online plans',
@@ -186,7 +186,7 @@ const PROGRAM_DETAILS: Record<
       },
       {
         icon: Users,
-        label: 'PURE X Club Access',
+        label: 'Team Purex Club Access',
         description:
           'The inner-circle community. Exclusive events, client-only meetups, athlete Q&As with the founders.',
       },
@@ -219,13 +219,13 @@ const PROGRAM_DETAILS: Record<
       'Sunday — Progress review + mental health session',
     ],
     differentiator:
-      'Elite is where the PURE X team works at full intensity. 1-on-1 attention, in-person coaching, and race-specific periodisation.',
+      'Elite is where the Team Purex team works at full intensity. 1-on-1 attention, in-person coaching, and race-specific periodisation.',
     recommendedFor:
       'Athletes with a target event. Serious transformation seekers who can commit to 4+ sessions per week.',
   },
   'enduro': {
     heroTagline:
-      'Built for the long event. Whether HYROX, IRONMAN, or hybrid race ambitions — Enduro is the most demanding programme PURE X offers.',
+      'Built for the long event. Whether HYROX, IRONMAN, or hybrid race ambitions — Enduro is the most demanding programme Team Purex offers.',
     whoFor: [
       'You\'re training for HYROX (any division) and want race-day ready protocols',
       'You\'re prepping for IRONMAN, a marathon, or a long endurance event',
@@ -299,9 +299,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const programs = await getMergedPrograms();
   const program = programs.find((p) => p.slug === slug);
-  if (!program) return { title: 'Plan not found · PURE X' };
+  if (!program) return { title: 'Plan not found · Team Purex' };
   return {
-    title: `${program.name} · ${program.priceDisplay}${program.priceSuffix} · PURE X`,
+    title: `${program.name} · ${program.priceDisplay}${program.priceSuffix} · Team Purex`,
     description: program.description,
   };
 }
@@ -316,8 +316,44 @@ export default async function ProgramDetailPage({ params }: PageProps) {
   const details = PROGRAM_DETAILS[slug];
   const otherPrograms = programs.filter((p) => p.slug !== slug);
 
+  // Per-program Service JSON-LD — makes each programme show up in
+  // Google + AI answer results with rich pricing, description, and
+  // provider linkage back to the Team Purex Organization graph.
+  const serviceLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    '@id': `https://www.teampurex.com/programs/${program.slug}#service`,
+    name: program.name,
+    description: program.description,
+    provider: {
+      '@type': 'Organization',
+      '@id': 'https://www.teampurex.com/#organization',
+      name: 'Team Purex',
+    },
+    serviceType: 'Health and Fitness Coaching',
+    areaServed: [
+      { '@type': 'Country', name: 'India' },
+      { '@type': 'Country', name: 'United Kingdom' },
+    ],
+    offers: {
+      '@type': 'Offer',
+      price: program.priceDisplay,
+      // Prices are localised — INR default because most programs are
+      // India-centric; UK-specific programs would need to override.
+      priceCurrency: 'INR',
+      availability: 'https://schema.org/InStock',
+      url: `https://www.teampurex.com/programs/${program.slug}`,
+    },
+    url: `https://www.teampurex.com/programs/${program.slug}`,
+  };
+
   return (
     <main className="relative bg-bg text-text">
+      {/* Schema.org Service — Google rich results + AI answer engine */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceLd) }}
+      />
       {/* ─── Hero ──────────────────────────────────────────────── */}
       <section className="relative pt-28 md:pt-36 pb-8 md:pb-12 overflow-hidden">
         <div
@@ -388,7 +424,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
                 </Link>
                 <a
                   href={whatsappLink(
-                    `Hi PURE X team, I'm interested in the ${program.name} plan. Can you share more?`
+                    `Hi Team Purex team, I'm interested in the ${program.name} plan. Can you share more?`
                   )}
                   target="_blank"
                   rel="noopener noreferrer"

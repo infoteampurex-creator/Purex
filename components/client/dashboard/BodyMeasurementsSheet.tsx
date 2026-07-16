@@ -212,7 +212,7 @@ export function BodyMeasurementsSheet({
         (!measRes.ok && friendly(measRes.error ?? 'Failed to save measurements')) ||
         'Save failed';
       // eslint-disable-next-line no-console
-      console.error('[PURE X] measurements save failed:', { profileRes, measRes });
+      console.error('[Team Purex] measurements save failed:', { profileRes, measRes });
       setError(msg);
       // Native alert as a belt-and-suspenders fallback — in Capacitor
       // this shows a system dialog that can't be missed or animated

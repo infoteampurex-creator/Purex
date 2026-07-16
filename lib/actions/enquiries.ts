@@ -155,7 +155,7 @@ async function submitEnquiryInner(
   try {
     await sendEmail({
       to: adminInbox,
-      subject: `New PURE X enquiry · ${data.fullName.trim()} · ${goalLabel}`,
+      subject: `New Team Purex enquiry · ${data.fullName.trim()} · ${goalLabel}`,
       html: buildAdminEmailHtml({
         fullName: data.fullName.trim(),
         email: data.email.trim(),

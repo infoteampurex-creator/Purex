@@ -20,7 +20,7 @@ const F_SERIF = "var(--font-mothers-playfair), 'Playfair Display', Georgia, seri
 const F_MONO = "var(--font-mothers-mono), 'JetBrains Mono', ui-monospace, monospace";
 
 /**
- * PURE X Mothers appreciation card.
+ * Team Purex Mothers appreciation card.
  *
  * Rendering strategy: TEMPLATE-IMAGE.
  * The user's designed reference PNG (with all the illustrated

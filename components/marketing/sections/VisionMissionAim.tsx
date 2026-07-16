@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Compass, Target, Flag } from 'lucide-react';
 
 /**
- * Vision · Mission · Aim section — from the PURE X brand document.
+ * Vision · Mission · Aim section — from the Team Purex brand document.
  * Placed after Hero, before other content sections.
  *
  * Three-column card layout: each statement gets its own card with an
@@ -60,7 +60,7 @@ export function VisionMissionAim() {
         >
           <div className="inline-flex items-center gap-2 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.22em] text-accent font-bold mb-4">
             <span className="inline-block w-4 h-px bg-accent" />
-            Why PURE X exists
+            Why Team Purex exists
             <span className="inline-block w-4 h-px bg-accent" />
           </div>
           <h2 className="font-display font-semibold text-3xl sm:text-4xl md:text-5xl tracking-tight leading-[1.15]">

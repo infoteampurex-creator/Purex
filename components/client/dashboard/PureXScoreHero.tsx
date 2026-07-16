@@ -23,7 +23,7 @@ const GOLD = '#ffd24d';
 const GOLD_DEEP = '#b88d2c';
 
 /**
- * PURE X Signature Gold Score Card.
+ * Team Purex Signature Gold Score Card.
  *
  * Composition (back to front):
  *   1. Card surface — deep gradient with radial gold + band tints

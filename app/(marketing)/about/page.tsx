@@ -3,9 +3,9 @@ import { Metadata } from 'next';
 import { ArrowRight, Quote, Medal, Users, Dumbbell, Brain, Heart, Activity } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'About PURE X · The Story',
+  title: 'About Team Purex · The Story',
   description:
-    'Built on real transformation. Designed for life. The story of PURE X — from two personal journeys to a fully integrated health coaching system.',
+    'Built on real transformation. Designed for life. The story of Team Purex — from two personal journeys to a fully integrated health coaching system.',
 };
 
 export default function AboutPage() {
@@ -26,7 +26,7 @@ export default function AboutPage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-accent font-bold mb-6">
               <span className="w-4 h-px bg-accent" />
-              The PURE X Story
+              The Team Purex Story
             </div>
             <h1 className="font-display font-semibold text-4xl md:text-6xl tracking-tight leading-[1.02] mb-6">
               Built on real{' '}
@@ -35,7 +35,7 @@ export default function AboutPage() {
               Designed for life.
             </h1>
             <p className="text-lg md:text-xl text-text-muted leading-relaxed max-w-2xl">
-              PURE X was not created as a fitness brand. It was built as a solution to a
+              Team Purex was not created as a fitness brand. It was built as a solution to a
               real problem — one that was lived, experienced, and solved through discipline,
               resilience, and two journeys that converged into one system.
             </p>
@@ -57,7 +57,7 @@ export default function AboutPage() {
                 A personal transformation.
               </h2>
               <p className="text-text-muted mb-8 leading-relaxed">
-                The beginning of PURE X was Siva Reddy's 40kg transformation — from stressed
+                The beginning of Team Purex was Siva Reddy's 40kg transformation — from stressed
                 corporate engineer to ICN medalist and professional trainer.
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -141,7 +141,7 @@ export default function AboutPage() {
               </p>
               <p>
                 That realization — that the right system makes transformation predictable —
-                led to the creation of PURE X.
+                led to the creation of Team Purex.
               </p>
             </div>
 
@@ -183,7 +183,7 @@ export default function AboutPage() {
               Not just fitness.
             </h2>
             <p className="text-lg text-text-muted leading-relaxed">
-              PURE X brings together doctors, physiotherapists, fitness trainers, nutrition
+              Team Purex brings together doctors, physiotherapists, fitness trainers, nutrition
               experts, and mental health professionals — all working as one unified system.
               Because real transformation requires more than workouts.
             </p>
@@ -230,7 +230,7 @@ export default function AboutPage() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-5">
               <span className="w-3 h-px bg-accent" />
-              The PURE X Philosophy
+              The Team Purex Philosophy
               <span className="w-3 h-px bg-accent" />
             </div>
             <h2 className="font-display font-semibold text-3xl md:text-5xl tracking-tight leading-[1.05] mb-8">
@@ -239,14 +239,14 @@ export default function AboutPage() {
               <span className="text-accent">Not temporary change.</span>
             </h2>
             <p className="text-lg text-text-muted leading-relaxed max-w-2xl mx-auto mb-10">
-              Everything at PURE X is built on one foundation:{' '}
+              Everything at Team Purex is built on one foundation:{' '}
               <strong className="text-text">real transformation</strong>. Not theory. Not
               assumptions. Lived experience — turned into a system that works for anyone
               willing to commit.
             </p>
             <div className="inline-flex items-center gap-3 pt-8 border-t border-border-soft">
               <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-accent font-bold">
-                PURE X
+                Team Purex
               </div>
               <span className="w-1 h-1 rounded-full bg-accent" />
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-text-muted">

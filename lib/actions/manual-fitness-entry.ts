@@ -89,7 +89,7 @@ export async function manualFitnessEntry(
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] manualFitnessEntry failed:', error);
+      console.error('[Team Purex] manualFitnessEntry failed:', error);
       return { ok: false, error: error.message };
     }
 

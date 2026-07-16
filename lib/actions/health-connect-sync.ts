@@ -89,7 +89,7 @@ export async function syncHealthConnectDay(
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] syncHealthConnectDay failed:', error);
+      console.error('[Team Purex] syncHealthConnectDay failed:', error);
       return { ok: false, error: error.message };
     }
 

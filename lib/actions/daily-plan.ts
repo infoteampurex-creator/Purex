@@ -186,7 +186,7 @@ export async function upsertDailyPlan(
       .upsert(dailyLogRow, { onConflict: 'client_id,log_date' });
 
     if (logError) {
-      console.error('[PURE X] upsertDailyPlan: daily_logs failed', logError);
+      console.error('[Team Purex] upsertDailyPlan: daily_logs failed', logError);
       return { ok: false, error: logError.message };
     }
 
@@ -216,7 +216,7 @@ export async function upsertDailyPlan(
         .limit(1);
 
       if (lookupError) {
-        console.error('[PURE X] upsertDailyPlan: workout lookup failed', lookupError);
+        console.error('[Team Purex] upsertDailyPlan: workout lookup failed', lookupError);
         return { ok: false, error: lookupError.message };
       }
 
@@ -240,7 +240,7 @@ export async function upsertDailyPlan(
           .eq('id', existingId);
         if (updateError) {
           console.error(
-            '[PURE X] upsertDailyPlan: workout update failed',
+            '[Team Purex] upsertDailyPlan: workout update failed',
             updateError
           );
           return { ok: false, error: updateError.message };
@@ -254,7 +254,7 @@ export async function upsertDailyPlan(
           .single();
         if (insertError) {
           console.error(
-            '[PURE X] upsertDailyPlan: workout insert failed',
+            '[Team Purex] upsertDailyPlan: workout insert failed',
             insertError
           );
           return { ok: false, error: insertError.message };
@@ -275,7 +275,7 @@ export async function upsertDailyPlan(
 
       if (deleteErr) {
         console.error(
-          '[PURE X] upsertDailyPlan: exercise delete failed',
+          '[Team Purex] upsertDailyPlan: exercise delete failed',
           deleteErr
         );
         return { ok: false, error: deleteErr.message };
@@ -302,7 +302,7 @@ export async function upsertDailyPlan(
 
         if (insertErr) {
           console.error(
-            '[PURE X] upsertDailyPlan: exercise insert failed',
+            '[Team Purex] upsertDailyPlan: exercise insert failed',
             insertErr
           );
           return { ok: false, error: insertErr.message };
@@ -373,7 +373,7 @@ export async function setWorkoutCompletion(
       .single();
 
     if (error) {
-      console.error('[PURE X] setWorkoutCompletion failed', error);
+      console.error('[Team Purex] setWorkoutCompletion failed', error);
       return { ok: false, error: error.message };
     }
 
@@ -540,7 +540,7 @@ export async function logExerciseActuals(
       );
 
     if (error) {
-      console.error('[PURE X] logExerciseActuals failed', error);
+      console.error('[Team Purex] logExerciseActuals failed', error);
       return { ok: false, error: error.message };
     }
 
@@ -598,7 +598,7 @@ export async function deleteDailyPlan(
       .eq('log_date', parsed.data.planDate);
 
     if (clearError) {
-      console.error('[PURE X] deleteDailyPlan: clear targets failed', clearError);
+      console.error('[Team Purex] deleteDailyPlan: clear targets failed', clearError);
       return { ok: false, error: clearError.message };
     }
 
@@ -610,7 +610,7 @@ export async function deleteDailyPlan(
 
     if (workoutError) {
       console.error(
-        '[PURE X] deleteDailyPlan: workout delete failed',
+        '[Team Purex] deleteDailyPlan: workout delete failed',
         workoutError
       );
       return { ok: false, error: workoutError.message };

@@ -3,7 +3,7 @@ import { Sparkles, Clock, MessageCircle, ShieldCheck } from 'lucide-react';
 import { ApplicationForm } from '@/components/marketing/ApplicationForm';
 
 export const metadata: Metadata = {
-  title: 'Transformation Application · TEAM PURE X',
+  title: 'Transformation Application · Team Purex',
   description:
     'Detailed transformation application form for qualified leads. Help us build a plan specifically for you.',
   robots: { index: false, follow: false }, // not for public discovery
@@ -35,7 +35,7 @@ export default async function ApplicationPage({ searchParams }: PageProps) {
         <header className="mb-8">
           <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-accent font-bold mb-5">
             <span className="w-4 h-px bg-accent" />
-            TEAM PURE X
+            Team Purex
             <span className="w-4 h-px bg-accent" />
           </div>
           <h1 className="font-display font-semibold text-4xl md:text-5xl tracking-tight leading-[1.05] mb-4">
