@@ -73,6 +73,31 @@
   }
 }
 
+/* ─── Mobile bottom-nav active-tab ambient motion ─────────────
+   Two soft looping animations behind the active tab so the nav
+   feels alive without any attention-seeking motion. Reduced-
+   motion is respected via the block above. */
+@keyframes nav-glow-pulse {
+  0%, 100% {
+    opacity: 0.85;
+    box-shadow: 0 0 6px rgba(198, 255, 61, 0.5);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(198, 255, 61, 0.85);
+  }
+}
+@keyframes nav-halo-breathe {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
  * PURE X Hero — Ambient Animations
  * These drive the continuous motion on the Siva feature card
