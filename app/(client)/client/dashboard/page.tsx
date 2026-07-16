@@ -199,11 +199,17 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       {/* Greeting (small, identity) */}
       <WelcomeHeader />
 
-      {/* Hero — single colossal score gauge */}
+      {/* Hero — single colossal score gauge. weeklyScores oldest→newest
+          so the sparkline draws left-to-right in chronological order.
+          streakHistory is sorted newest-first by twin-server so we
+          reverse to match. */}
       <div data-onboard="score-hero">
         <PureXScoreHero
           score={pureXScore}
           weeklyDelta={weeklyDelta}
+          weeklyScores={streakHistory
+            .map((h) => h.score)
+            .reverse()}
           showPreview={pureXScoreEmpty}
         />
       </div>

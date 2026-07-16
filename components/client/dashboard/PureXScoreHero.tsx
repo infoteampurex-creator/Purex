@@ -4,11 +4,20 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { PureXScoreBreakdown } from '@/lib/data/purex-score';
 import { pureXScoreBand } from '@/lib/data/purex-score';
+import { Sparkline } from '@/components/client/Sparkline';
+
+// Sample 7-day upward trend for the preview state so the sparkline
+// under the score matches the mocked 74 number's trajectory.
+const PREVIEW_TREND = [58, 62, 60, 66, 71, 69, 74];
 
 interface Props {
   score: PureXScoreBreakdown;
   /** Delta vs 7-day average. Optional — shown as a trend chip. */
   weeklyDelta?: number | null;
+  /** 7 daily scores oldest→newest. Used to draw the trend sparkline
+   *  under the number. Optional — sparkline only renders when we have
+   *  at least 2 real scored days. */
+  weeklyScores?: number[];
   /** Empty-state mode — shows the gauge in a calibrating style instead
    *  of "0 / 100 you're doing terrible". */
   showPreview?: boolean;
@@ -39,10 +48,25 @@ const GOLD_DEEP = '#b88d2c';
  * Performance: shine + wave are pure CSS / SVG keyframe animations,
  * no JS tick. Ring stroke uses framer-motion ONCE on first render.
  */
-export function PureXScoreHero({ score, weeklyDelta, showPreview }: Props) {
+export function PureXScoreHero({
+  score,
+  weeklyDelta,
+  weeklyScores,
+  showPreview,
+}: Props) {
   const total = showPreview ? 0 : score.total;
   const band = pureXScoreBand(total);
   const color = band.color;
+
+  // Derive the sparkline data — real scores when we have >=2 days
+  // with actual data, sample trend for the preview state, nothing
+  // when the account is on day 1.
+  const scoredDays = (weeklyScores ?? []).filter((s) => s > 0);
+  const trendData = showPreview
+    ? PREVIEW_TREND
+    : scoredDays.length >= 2
+    ? scoredDays
+    : null;
 
   // Ring geometry — keep RADIUS in sync with the SVG below.
   const RADIUS = 84;
@@ -235,6 +259,30 @@ export function PureXScoreHero({ score, weeklyDelta, showPreview }: Props) {
             ? "Log a meal, your steps, or last night's sleep — your score builds itself."
             : band.tagline}
         </div>
+
+        {/* ─── 4a. 7-day sparkline ──────────────────────────────────
+             Small trend line under the tagline. Renders only when we
+             have at least 2 scored days (or preview mode). Uses the
+             band colour so it reads as an extension of the ring. */}
+        {trendData && (
+          <div className="relative flex justify-center px-6 mt-3">
+            <div className="flex items-center gap-2">
+              <span
+                className="font-mono uppercase tracking-[0.18em] font-bold"
+                style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}
+              >
+                7-day
+              </span>
+              <Sparkline
+                data={trendData}
+                width={120}
+                height={26}
+                color={color}
+                strokeWidth={1.5}
+              />
+            </div>
+          </div>
+        )}
 
         {/* ─── 5. Dotted-wave bottom edge (Google Fit feel) ──────── */}
         <DottedWave color={GOLD} />
