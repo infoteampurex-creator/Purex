@@ -112,8 +112,22 @@ export function PureXScoreHero({ score, weeklyDelta, showPreview }: Props) {
           >
             PureX Score · Today
           </div>
-          {trend && weeklyDelta != null && (
-            <TrendChip trend={trend} delta={weeklyDelta} />
+          {showPreview ? (
+            <span
+              className="font-mono uppercase tracking-[0.16em] font-bold px-2 py-0.5 rounded-full"
+              style={{
+                fontSize: 9,
+                color: GOLD,
+                background: `${GOLD}18`,
+                border: `1px solid ${GOLD}45`,
+              }}
+            >
+              Preview
+            </span>
+          ) : (
+            trend && weeklyDelta != null && (
+              <TrendChip trend={trend} delta={weeklyDelta} />
+            )
           )}
         </div>
 
@@ -181,41 +195,33 @@ export function PureXScoreHero({ score, weeklyDelta, showPreview }: Props) {
 
           {/* Centre stack */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            {showPreview ? (
-              <div
-                className="font-display font-extrabold leading-none tabular-nums"
-                style={{
-                  fontSize: 60,
-                  color: 'rgba(255,255,255,0.18)',
-                }}
-              >
-                —
-              </div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="font-display font-extrabold leading-none tabular-nums"
-                style={{
-                  fontSize: 76,
-                  background: `linear-gradient(170deg, ${GOLD_LIGHT} 0%, ${color} 55%, ${GOLD} 100%)`,
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  color: 'transparent',
-                  letterSpacing: '-0.04em',
-                  textShadow: `0 0 32px ${color}30`,
-                }}
-              >
-                {total}
-              </motion.div>
-            )}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="font-display font-extrabold leading-none tabular-nums"
+              style={{
+                fontSize: showPreview ? 68 : 76,
+                background: showPreview
+                  ? `linear-gradient(170deg, rgba(255,255,255,0.32) 0%, rgba(255,210,77,0.42) 100%)`
+                  : `linear-gradient(170deg, ${GOLD_LIGHT} 0%, ${color} 55%, ${GOLD} 100%)`,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                color: 'transparent',
+                letterSpacing: '-0.04em',
+                textShadow: showPreview
+                  ? '0 0 24px rgba(255,210,77,0.15)'
+                  : `0 0 32px ${color}30`,
+              }}
+            >
+              {showPreview ? 74 : total}
+            </motion.div>
             <div
               className="font-mono uppercase tracking-[0.22em] font-bold mt-2"
               style={{ fontSize: 10, color: GOLD }}
             >
-              {showPreview ? 'Calibrating' : band.label}
+              {showPreview ? 'Sample · start logging' : band.label}
             </div>
           </div>
         </div>

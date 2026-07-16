@@ -60,6 +60,30 @@ export function NutritionPageView({
     proteinTargetG: nutrition.proteinTargetG || 120,
   };
 
+  // Preview mode — a fresh account with nothing logged today. Show
+  // realistic sample macros with a "Preview" chip so the hero card
+  // doesn't render as a row of zeros (reads as "app broken" to a
+  // demo client). Same pattern as PureXScoreHero + Progress page.
+  const noneLoggedYet =
+    nutrition.caloriesConsumed === 0 &&
+    nutrition.proteinG === 0 &&
+    meals.length === 0;
+  const displayNutrition = noneLoggedYet
+    ? {
+        caloriesConsumed: 1420,
+        proteinG: 82,
+        carbsG: 145,
+        fatsG: 42,
+        fiberG: 18,
+      }
+    : {
+        caloriesConsumed: nutrition.caloriesConsumed,
+        proteinG: nutrition.proteinG,
+        carbsG: nutrition.carbsG,
+        fatsG: nutrition.fatsG,
+        fiberG: nutrition.fiberG,
+      };
+
   const handleDelete = async (id: string) => {
     if (deletingId) return;
     setDeletingId(id);
@@ -101,25 +125,39 @@ export function NutritionPageView({
             <Sparkles size={11} />
             Today
           </div>
-          <span
-            className="font-mono uppercase tracking-[0.16em] font-bold"
-            style={{ fontSize: 9, color: 'rgba(255,255,255,0.50)' }}
-          >
-            {meals.length} {meals.length === 1 ? 'meal' : 'meals'} logged
-          </span>
+          {noneLoggedYet ? (
+            <span
+              className="font-mono uppercase tracking-[0.16em] font-bold px-2 py-0.5 rounded-full"
+              style={{
+                fontSize: 9,
+                color: '#ffd24d',
+                background: 'rgba(255,210,77,0.14)',
+                border: '1px solid rgba(255,210,77,0.40)',
+              }}
+            >
+              Preview
+            </span>
+          ) : (
+            <span
+              className="font-mono uppercase tracking-[0.16em] font-bold"
+              style={{ fontSize: 9, color: 'rgba(255,255,255,0.50)' }}
+            >
+              {meals.length} {meals.length === 1 ? 'meal' : 'meals'} logged
+            </span>
+          )}
         </div>
 
         <div className="px-5 pb-5 grid grid-cols-2 gap-4">
           <MacroDial
             label="Calories"
-            value={nutrition.caloriesConsumed}
+            value={displayNutrition.caloriesConsumed}
             target={todayTotals.caloriesTarget}
             unit="kcal"
             color="#ff8a4d"
           />
           <MacroDial
             label="Protein"
-            value={nutrition.proteinG}
+            value={displayNutrition.proteinG}
             target={todayTotals.proteinTargetG}
             unit="g"
             color="#c6ff3d"
@@ -128,10 +166,27 @@ export function NutritionPageView({
 
         {/* Carbs / fats / fiber compact row */}
         <div className="px-5 pb-5 grid grid-cols-3 gap-2">
-          <SmallMacro label="Carbs" value={nutrition.carbsG} unit="g" color="#ffd24d" />
-          <SmallMacro label="Fats" value={nutrition.fatsG} unit="g" color="#a78bfa" />
-          <SmallMacro label="Fiber" value={nutrition.fiberG} unit="g" color="#7dd3ff" />
+          <SmallMacro label="Carbs" value={displayNutrition.carbsG} unit="g" color="#ffd24d" />
+          <SmallMacro label="Fats" value={displayNutrition.fatsG} unit="g" color="#a78bfa" />
+          <SmallMacro label="Fiber" value={displayNutrition.fiberG} unit="g" color="#7dd3ff" />
         </div>
+
+        {noneLoggedYet && (
+          <div
+            className="mx-5 mb-5 rounded-xl px-3 py-2.5 flex items-center gap-2"
+            style={{
+              background: 'rgba(255,210,77,0.08)',
+              border: '1px solid rgba(255,210,77,0.28)',
+            }}
+          >
+            <Sparkles size={12} style={{ color: '#ffd24d' }} />
+            <span
+              style={{ fontSize: 11.5, color: 'rgba(245,245,240,0.85)' }}
+            >
+              Sample macros. Log your first meal to see today&apos;s real total.
+            </span>
+          </div>
+        )}
       </section>
 
       {/* ─── Action CTAs ─── */}
