@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { fontDisplay, fontBody, fontMono } from '@/lib/fonts';
 import { BRAND } from '@/lib/constants';
+import { NativeSplashDismisser } from '@/components/NativeSplashDismisser';
 import './globals.css';
 
 // Supabase project host — extracted at build time so <link rel="preconnect">
@@ -201,7 +202,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_LD) }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* Native-app splash dismiss — silent no-op on web. Paired with
+            launchAutoHide: false in capacitor.config.ts so the splash
+            stays until React actually hydrates. */}
+        <NativeSplashDismisser />
+        {children}
+      </body>
     </html>
   );
 }

@@ -35,11 +35,17 @@ const config: CapacitorConfig = {
   // `npx cap sync` doesn't error on a fresh clone.
   webDir: 'out',
   server: {
-    // Land the app directly on the sign-in screen — skip the marketing
-    // homepage. Already-authenticated users are bounced by middleware
-    // to /client/dashboard (or /admin/dashboard), so this is the
-    // correct deep-link for both first-time and returning users.
-    url: 'https://www.teampurex.com/login',
+    // Cold-start optimisation: land on /client/dashboard directly.
+    // For an already-authenticated user (99% of returning opens) the
+    // page renders immediately — the previous "start on /login,
+    // middleware redirects to /client/dashboard" flow was costing an
+    // extra full round-trip on every cold-start.
+    //
+    // First-time / signed-out users still see the login screen — the
+    // client-side middleware redirects them from /client/dashboard
+    // to /login. That first-time hop is unavoidable and only happens
+    // once per install.
+    url: 'https://www.teampurex.com/client/dashboard',
     androidScheme: 'https',
     cleartext: false,
   },
@@ -76,12 +82,19 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      // Hold the splash screen for 3.5s after WebView is ready —
-      // covers the cold-start network round-trip to teampurex.com so
-      // users see the brand mark instead of a blank WebView while the
-      // login page loads + hydrates. 2.5s was cutting it close on
-      // slower phones.
-      launchShowDuration: 3500,
+      // Manual splash dismiss: launchAutoHide=false means the splash
+      // stays up until we EXPLICITLY call SplashScreen.hide() from the
+      // web app. The <NativeSplashDismisser> component in the root
+      // layout fires that call the moment the first React tree
+      // hydrates — so on a fast device the splash disappears in ~800
+      // ms instead of the previous fixed 3500 ms wait.
+      //
+      // launchShowDuration=8000 is a safety-net fallback: if the JS
+      // never hydrates for some reason (network stall, JS error),
+      // the splash still dismisses on its own so the user isn't stuck.
+      launchAutoHide: false,
+      launchShowDuration: 8000,
+      launchFadeOutDuration: 250,
       backgroundColor: '#0a0c09',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
