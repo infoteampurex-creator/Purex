@@ -8,6 +8,7 @@ import { TwinCloneTeaser } from '@/components/client/dashboard/TwinCloneTeaser';
 import { DailyDigest } from '@/components/client/dashboard/DailyDigest';
 import { buildDailyDigest } from '@/lib/data/daily-digest';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { OnboardingTour } from '@/components/client/OnboardingTour';
 import { computePureXScore } from '@/lib/data/purex-score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
@@ -185,19 +186,27 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-5 md:space-y-6">
+      {/* First-launch guided tour. Silent no-op if the user already
+          finished or skipped it (localStorage flag). */}
+      <OnboardingTour />
+
       {/* Coach daily digest — the first thing the client sees.
           Warm greeting + observation + one call to action. */}
-      <DailyDigest digest={digest} />
+      <div data-onboard="daily-digest">
+        <DailyDigest digest={digest} />
+      </div>
 
       {/* Greeting (small, identity) */}
       <WelcomeHeader />
 
       {/* Hero — single colossal score gauge */}
-      <PureXScoreHero
-        score={pureXScore}
-        weeklyDelta={weeklyDelta}
-        showPreview={pureXScoreEmpty}
-      />
+      <div data-onboard="score-hero">
+        <PureXScoreHero
+          score={pureXScore}
+          weeklyDelta={weeklyDelta}
+          showPreview={pureXScoreEmpty}
+        />
+      </div>
 
       {/* Health Connect auto-sync banner — app-only (renders null on
           web). When the user hasn't connected yet it surfaces a
@@ -210,24 +219,28 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           (weight / steps / sleep / water / meal) live behind ONE
           tap from here, replacing the old DailyWeightCard +
           AppFitnessTiles + scattered chips. */}
-      <DashboardTodayPanel
-        inputs={twinInputs}
-        nutrition={nutritionSnapshot}
-        todaysMeals={todaysMeals}
-        todaysWeightKg={dailyWeight.todayKg}
-      />
+      <div data-onboard="today-panel">
+        <DashboardTodayPanel
+          inputs={twinInputs}
+          nutrition={nutritionSnapshot}
+          todaysMeals={todaysMeals}
+          todaysWeightKg={dailyWeight.todayKg}
+        />
+      </div>
 
       {/* Twin + Future Clone teaser — brings the gamified avatar
           "feel" back to the dashboard without dragging the full
           200+-line TwinSection into the home view. Tap → drills
           into /client/twin (full immersive page) or /client/future-clone. */}
       {userId && (
-        <TwinCloneTeaser
-          avatarSrc={avatarSrc}
-          state={twinState}
-          overall={twinOverall}
-          message={twinMessage}
-        />
+        <div data-onboard="twin">
+          <TwinCloneTeaser
+            avatarSrc={avatarSrc}
+            state={twinState}
+            overall={twinOverall}
+            message={twinMessage}
+          />
+        </div>
       )}
 
       {/* Today's workout — full plan card. */}
