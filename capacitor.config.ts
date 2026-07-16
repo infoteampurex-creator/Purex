@@ -35,17 +35,18 @@ const config: CapacitorConfig = {
   // `npx cap sync` doesn't error on a fresh clone.
   webDir: 'out',
   server: {
-    // Cold-start optimisation: land on /client/dashboard directly.
-    // For an already-authenticated user (99% of returning opens) the
-    // page renders immediately — the previous "start on /login,
-    // middleware redirects to /client/dashboard" flow was costing an
-    // extra full round-trip on every cold-start.
+    // Land on the sign-in screen. Reverted from /client/dashboard on
+    // 2026-07-16 after users on fresh installs got stuck on the splash
+    // — /client/dashboard forces a middleware redirect to /login for
+    // unauthenticated users which delayed the first paint enough that
+    // the manual-dismiss splash timing got fragile. /login has no
+    // auth check so it renders unconditionally fast.
     //
-    // First-time / signed-out users still see the login screen — the
-    // client-side middleware redirects them from /client/dashboard
-    // to /login. That first-time hop is unavoidable and only happens
-    // once per install.
-    url: 'https://www.teampurex.com/client/dashboard',
+    // Signed-in users still cost one extra hop when middleware
+    // redirects /login → /client/dashboard, but the login page is
+    // static HTML and the hop is ~150 ms — negligible against the
+    // reliability win on first install.
+    url: 'https://www.teampurex.com/login',
     androidScheme: 'https',
     cleartext: false,
   },
@@ -82,18 +83,22 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      // Manual splash dismiss: launchAutoHide=false means the splash
-      // stays up until we EXPLICITLY call SplashScreen.hide() from the
-      // web app. The <NativeSplashDismisser> component in the root
-      // layout fires that call the moment the first React tree
-      // hydrates — so on a fast device the splash disappears in ~800
-      // ms instead of the previous fixed 3500 ms wait.
+      // Reverted 2026-07-16 from "launchAutoHide: false + manual
+      // SplashScreen.hide()" back to auto-hide. The manual-hide
+      // path relied on the JS hydrating successfully; when anything
+      // in the load path stalled (slow 4G, an image request that
+      // never finished, a hydration error), the splash sat forever
+      // and the user reported "not even loading from logo".
       //
-      // launchShowDuration=8000 is a safety-net fallback: if the JS
-      // never hydrates for some reason (network stall, JS error),
-      // the splash still dismisses on its own so the user isn't stuck.
-      launchAutoHide: false,
-      launchShowDuration: 8000,
+      // Auto-hide with a 2500 ms budget is the reliability floor:
+      // the splash comes off after 2.5 s no matter what, even if
+      // JS never runs.  <NativeSplashDismisser /> still fires
+      // SplashScreen.hide() the moment React hydrates — on a fast
+      // connection that dismisses at ~800 ms and the launchShow
+      // Duration becomes an irrelevant ceiling. On a slow one the
+      // 2.5 s guaranteed dismiss keeps the user from getting stuck.
+      launchAutoHide: true,
+      launchShowDuration: 2500,
       launchFadeOutDuration: 250,
       backgroundColor: '#0a0c09',
       androidScaleType: 'CENTER_CROP',
