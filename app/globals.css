@@ -98,6 +98,13 @@
   }
 }
 
+/* Daily-digest bottom-edge wave — subtle breathing highlight so the
+   opening card reads as living UI. */
+@keyframes digest-wave {
+  0%, 100% { opacity: 0.6; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(6%); }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
  * PURE X Hero — Ambient Animations
  * These drive the continuous motion on the Siva feature card

@@ -5,6 +5,9 @@ import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
 import { TwinCloneTeaser } from '@/components/client/dashboard/TwinCloneTeaser';
+import { DailyDigest } from '@/components/client/dashboard/DailyDigest';
+import { buildDailyDigest } from '@/lib/data/daily-digest';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import { computePureXScore } from '@/lib/data/purex-score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
@@ -135,6 +138,41 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   const pureXScore = computePureXScore(twinInputs, currentStreakDays);
   const pureXScoreEmpty = !userId || pureXScore.isEmpty;
 
+  // Coach greeting at the top of the dashboard. Uses the streak,
+  // yesterday's log, and today's workout status to produce a warm,
+  // deterministic sentence. Rule-based so it renders instantly with
+  // the initial SSR — no LLM call in the golden path.
+  let firstName = 'there';
+  let hasAnyData = false;
+  let yesterdayInputs: DailyInputs | null = null;
+  if (userId) {
+    try {
+      const sb = await createSupabaseClient();
+      const { data: profile } = await sb
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .maybeSingle();
+      if (profile?.full_name) firstName = profile.full_name.split(/\s+/)[0];
+    } catch {
+      // ignore — fallback greeting
+    }
+    hasAnyData = !pureXScore.isEmpty || streakHistory.some((h) => h.hasData);
+    // Yesterday's inputs — we already have last 7 days of history for
+    // scores; DailyInputs for yesterday would need a second fetch that
+    // isn't worth the round-trip. Pass null; the digest gracefully
+    // degrades on the streak signal alone.
+    yesterdayInputs = null;
+  }
+  const digest = buildDailyDigest({
+    firstName,
+    todayIso: selectedDate,
+    yesterday: yesterdayInputs,
+    currentStreakDays,
+    todayWorkoutCompleted: twinInputs.workoutCompletedToday,
+    hasAnyData,
+  });
+
   // 7-day delta for the hero trend chip. Average over days that have
   // ANY data (avoids burying a real number under days the client
   // didn't open the app).
@@ -147,6 +185,10 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-5 md:space-y-6">
+      {/* Coach daily digest — the first thing the client sees.
+          Warm greeting + observation + one call to action. */}
+      <DailyDigest digest={digest} />
+
       {/* Greeting (small, identity) */}
       <WelcomeHeader />
 
