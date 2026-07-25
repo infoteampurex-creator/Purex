@@ -190,7 +190,12 @@ export function TransformationTimeline({ data }: Props) {
         <Award size={18} style={{ color: '#ffd24d' }} />
       </div>
 
-      {/* ─── Phase bands ─── */}
+      {/* ─── Phase bands.
+           Fixed min-h so the three cards align at the bottom edge
+           regardless of title / sub wrap. Titles set to whitespace-
+           nowrap with a smaller font so "STRENGTH BUILD" and
+           "FAT-LOSS PUSH" stay on one line inside a 3-col grid on
+           a 375 px viewport (reported 2026-07-16). */}
       <div className="grid grid-cols-3 gap-2 mb-5">
         {phases.map((p) => {
           const inPhase = milestones.filter(
@@ -201,21 +206,26 @@ export function TransformationTimeline({ data }: Props) {
           return (
             <div
               key={p.key}
-              className="rounded-xl border p-3"
+              className="rounded-xl border p-3 flex flex-col"
               style={{
                 background: `${p.color}0A`,
                 borderColor: `${p.color}33`,
+                minHeight: 138,
               }}
             >
               <div
-                className="inline-flex items-center gap-1 font-mono uppercase tracking-[0.14em] font-bold"
-                style={{ fontSize: 9, color: p.color }}
+                className="inline-flex items-center gap-1 font-mono uppercase font-bold"
+                style={{
+                  fontSize: 8.5,
+                  letterSpacing: '0.10em',
+                  color: p.color,
+                }}
               >
                 <PIcon size={11} />
-                {p.title}
+                <span className="whitespace-nowrap">{p.title}</span>
               </div>
               <div
-                className="font-display font-bold tabular-nums leading-none mt-1.5"
+                className="font-display font-bold tabular-nums leading-none mt-2"
                 style={{ fontSize: 18, color: 'rgba(245,245,240,0.95)' }}
               >
                 {unlockedInPhase}
@@ -227,8 +237,8 @@ export function TransformationTimeline({ data }: Props) {
                 </span>
               </div>
               <div
-                className="font-mono mt-0.5 leading-snug"
-                style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)' }}
+                className="font-mono mt-auto pt-2 leading-snug"
+                style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.40)' }}
               >
                 {p.sub}
               </div>
