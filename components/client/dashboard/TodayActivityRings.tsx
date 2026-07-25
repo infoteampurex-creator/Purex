@@ -206,7 +206,11 @@ function pct(value: number, goal: number): number {
 }
 
 function formatSteps(n: number): string {
-  if (n >= 10000) return `${(n / 1000).toFixed(1)}k`;
+  // Always use compact "k" notation for steps so the value fits inside
+  // the 2-column activity ring tile on a 375 px viewport. The previous
+  // logic showed "7,423" for anything under 10 k, which the tile
+  // truncated to "7,…" on mobile (reported 2026-07-16).
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return n.toLocaleString();
 }
 
