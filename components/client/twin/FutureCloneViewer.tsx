@@ -302,7 +302,13 @@ function StageSlider({
         })}
       </div>
 
-      {/* Inline range slider styles — premium thumb */}
+      {/* Inline range slider styles.
+          The native thumb is INVISIBLE — it's still full-size for
+          interaction (drag / tap), but we hide it visually so the
+          stage markers below (which are pixel-aligned to each notch)
+          are the single visible dot. Previously the coloured thumb
+          sat on top of the active stage marker and they overlapped
+          into an ugly blue-over-green pill (reported 2026-07-16). */}
       <style>{`
         .future-clone-slider {
           outline: none;
@@ -310,32 +316,26 @@ function StageSlider({
         .future-clone-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
-          background: ${activeStage.aura};
-          border: 3px solid #0a0c09;
-          box-shadow: 0 0 18px ${activeStage.aura}aa;
+          background: transparent;
+          border: none;
           cursor: grab;
-          transition: transform 0.15s ease;
         }
         .future-clone-slider::-webkit-slider-thumb:active {
           cursor: grabbing;
-          transform: scale(1.15);
         }
         .future-clone-slider::-moz-range-thumb {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
-          background: ${activeStage.aura};
-          border: 3px solid #0a0c09;
-          box-shadow: 0 0 18px ${activeStage.aura}aa;
+          background: transparent;
+          border: none;
           cursor: grab;
-          transition: transform 0.15s ease;
         }
         .future-clone-slider::-moz-range-thumb:active {
           cursor: grabbing;
-          transform: scale(1.15);
         }
         .future-clone-slider::-webkit-slider-runnable-track {
           height: 32px;
@@ -347,7 +347,7 @@ function StageSlider({
         }
         .future-clone-slider:focus-visible::-webkit-slider-thumb {
           outline: 2px solid ${activeStage.aura};
-          outline-offset: 2px;
+          outline-offset: 4px;
         }
       `}</style>
     </div>

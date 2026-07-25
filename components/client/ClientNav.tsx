@@ -88,9 +88,17 @@ export function MobileBottomNav() {
               />
               <span
                 className={cn(
-                  'font-mono text-[9px] uppercase tracking-[0.12em] font-bold transition-colors',
+                  'font-mono uppercase font-bold transition-colors leading-none',
                   active ? 'text-accent' : 'text-text-muted'
                 )}
+                style={{
+                  // Tightened from tracking-[0.12em] text-[9px] because
+                  // "PROFILE" (7 chars) was clipping to "PROFI" inside
+                  // a 62 px flex-1 tab cell on 375 px viewports
+                  // (reported 2026-07-16).
+                  fontSize: 8.5,
+                  letterSpacing: '0.04em',
+                }}
               >
                 {item.label}
               </span>
