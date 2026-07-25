@@ -56,13 +56,27 @@ export function PushNotificationBootstrap() {
     setRequesting(true);
     try {
       const mod = await import('@capacitor/push-notifications');
-      // Only request the permission for now. Do NOT call
-      // PushNotifications.register() — that tries to fetch a FCM
-      // token and crashes the app when the Firebase project /
-      // google-services.json isn't wired up (which it isn't yet:
-      // reported 2026-07-16). Once we set up FCM properly we can
-      // re-enable registration behind a config flag.
-      await mod.PushNotifications.requestPermissions();
+      const perm = await mod.PushNotifications.requestPermissions();
+      // If the user granted the OS-level permission, register with
+      // FCM to get a device token. This is safe now that
+      // google-services.json is in android/app/ (Firebase project
+      // teampurex-70419 added 2026-07-25). Previously register()
+      // crashed the app because FCM couldn't initialise without
+      // the config file (PR #111 disabled the call).
+      if (perm.receive === 'granted') {
+        // Listen for the token so we can log it on the JS console
+        // during the demo (later: POST it to Supabase so we know
+        // which device belongs to which user).
+        mod.PushNotifications.addListener('registration', (token) => {
+          // eslint-disable-next-line no-console
+          console.log('[push] FCM token:', token.value);
+        });
+        mod.PushNotifications.addListener('registrationError', (err) => {
+          // eslint-disable-next-line no-console
+          console.warn('[push] FCM registration error:', err);
+        });
+        await mod.PushNotifications.register();
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn('[push] permission request failed', err);
