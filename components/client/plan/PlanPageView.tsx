@@ -538,14 +538,17 @@ function CalendarHeatGrid({ data }: { data: PlanData }) {
 function EmptyState() {
   // Preview week — 3 strength sessions + 2 conditioning + 2 rest.
   // Realistic mix without over-committing to specific templates.
+  // Category labels are ≤4 chars so they fit inside the 7-col grid on
+  // 375 px viewports without overlapping neighbouring tiles
+  // (STRENGTH → STR, MOBILITY → MOB, etc.)
   const previewWeek = [
-    { day: 'Mon', label: 'Strength', color: '#ff8a4d' },
-    { day: 'Tue', label: 'Cardio', color: '#c6ff3d' },
-    { day: 'Wed', label: 'Strength', color: '#ff8a4d' },
-    { day: 'Thu', label: 'Mobility', color: '#7dd3ff' },
-    { day: 'Fri', label: 'Strength', color: '#ff8a4d' },
-    { day: 'Sat', label: 'Hybrid', color: '#a78bfa' },
-    { day: 'Sun', label: 'Rest', color: 'rgba(255,255,255,0.35)' },
+    { day: 'M', label: 'STR', color: '#ff8a4d' },
+    { day: 'T', label: 'CAR', color: '#c6ff3d' },
+    { day: 'W', label: 'STR', color: '#ff8a4d' },
+    { day: 'T', label: 'MOB', color: '#7dd3ff' },
+    { day: 'F', label: 'STR', color: '#ff8a4d' },
+    { day: 'S', label: 'HYB', color: '#a78bfa' },
+    { day: 'S', label: 'REST', color: 'rgba(255,255,255,0.35)' },
   ];
 
   return (
@@ -626,25 +629,31 @@ function EmptyState() {
         >
           This week
         </div>
-        <div className="grid grid-cols-7 gap-1.5">
-          {previewWeek.map((d) => (
+        <div className="grid grid-cols-7 gap-1">
+          {previewWeek.map((d, i) => (
             <div
-              key={d.day}
-              className="rounded-lg py-2 flex flex-col items-center"
+              key={i}
+              className="rounded-lg py-2 flex flex-col items-center justify-center"
               style={{
                 background: `${d.color}12`,
                 border: `1px solid ${d.color}30`,
+                minHeight: 56,
               }}
             >
               <div
-                className="font-mono uppercase tracking-[0.12em] font-bold"
-                style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
+                className="font-mono font-bold"
+                style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}
               >
                 {d.day}
               </div>
               <div
-                className="font-mono uppercase tracking-[0.10em] font-bold mt-1 text-center"
-                style={{ fontSize: 9, color: d.color, lineHeight: 1.2 }}
+                className="font-mono font-bold mt-1.5 text-center"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: '0.04em',
+                  color: d.color,
+                  lineHeight: 1,
+                }}
               >
                 {d.label}
               </div>

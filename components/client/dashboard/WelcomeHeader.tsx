@@ -1,8 +1,9 @@
-import { Bell } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { GreetingName } from './GreetingName';
+import { LocalDateGreeting } from './LocalDateGreeting';
 
-function greeting() {
+function serverGreeting() {
+  // Fallback greeting for SSR — replaced by the client-side one on
+  // hydrate. Uses UTC-adjacent time so it's a reasonable placeholder.
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
@@ -11,14 +12,19 @@ function greeting() {
 
 /**
  * Welcomes the logged-in user by name (from Supabase profile).
- * Falls back to a neutral "Welcome back" if name isn't available.
+ * Server component: does the profile lookup + emits initial SSR
+ * strings. Handoff to <LocalDateGreeting /> for hydration; that
+ * client component overwrites the date + greeting with the user's
+ * DEVICE local time (fixes the "server said morning, my phone says
+ * evening" bug reported 2026-07-16).
  */
 export async function WelcomeHeader() {
-  const today = new Date().toLocaleDateString('en-GB', {
+  const initialDate = new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'short',
   });
+  const initialGreeting = serverGreeting();
 
   let firstName: string | null = null;
 
@@ -36,12 +42,6 @@ export async function WelcomeHeader() {
           .eq('id', user.id)
           .single();
 
-        // Use the dedicated first_name column when present; otherwise
-        // fall back to the first word of full_name; finally fall back
-        // to the email's local-part.
-        // Pass the raw name to the client renderer — it title-cases
-        // only inside the mobile app. On web we keep the user's
-        // original casing untouched.
         firstName =
           profile?.first_name ||
           (profile?.full_name?.split(' ')[0] ?? null) ||
@@ -54,29 +54,10 @@ export async function WelcomeHeader() {
   }
 
   return (
-    <header className="flex items-start justify-between gap-4 mb-6">
-      <div className="flex-1 min-w-0">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-medium mb-1">
-          {today}
-        </div>
-        <h1 className="font-display font-semibold text-2xl md:text-3xl tracking-tight leading-tight">
-          {firstName ? (
-            <>
-              {greeting()},{' '}
-              <GreetingName raw={firstName} />.
-            </>
-          ) : (
-            <>{greeting()}.</>
-          )}
-        </h1>
-      </div>
-
-      <button
-        className="w-10 h-10 flex items-center justify-center rounded-full border border-border hover:border-accent transition-colors flex-shrink-0"
-        aria-label="Notifications"
-      >
-        <Bell size={16} />
-      </button>
-    </header>
+    <LocalDateGreeting
+      initialDate={initialDate}
+      initialGreeting={initialGreeting}
+      firstName={firstName}
+    />
   );
 }
