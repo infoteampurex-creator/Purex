@@ -128,9 +128,10 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Actions sidebar — sticky on md+. Sales / status / notes
-            actions stay pinned. Destructive delete is intentionally
-            NOT here so it can't get clipped off-screen. */}
+        {/* Actions sidebar — sticky on md+, scrolls internally when
+            its own content exceeds the viewport so the Delete
+            "danger zone" card at the bottom remains reachable
+            without zooming out. */}
         <div
           className="space-y-5 md:sticky md:top-24 self-start md:max-h-[calc(100vh-7rem)] md:overflow-y-auto md:pr-1"
           style={{ scrollbarGutter: 'stable' }}
@@ -140,6 +141,10 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
             specialists={specialists}
           />
           <CopyApplicationLink enquiryId={enquiry.id} email={enquiry.email} />
+          <DeleteEnquiryButton
+            enquiryId={enquiry.id}
+            applicantName={enquiry.fullName}
+          />
         </div>
       </div>
     </>
