@@ -9,6 +9,8 @@ import { DailyDigest } from '@/components/client/dashboard/DailyDigest';
 import { buildDailyDigest } from '@/lib/data/daily-digest';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import { OnboardingTour } from '@/components/client/OnboardingTour';
+import { MoodCheckInCard } from '@/components/client/dashboard/MoodCheckInCard';
+import type { MoodState } from '@/lib/data/mood';
 import { computePureXScore } from '@/lib/data/purex-score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
@@ -143,27 +145,43 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   // yesterday's log, and today's workout status to produce a warm,
   // deterministic sentence. Rule-based so it renders instantly with
   // the initial SSR — no LLM call in the golden path.
+  //
+  // Also fetches today's mood in the same server pass so the mood
+  // check-in card below the digest renders without a second
+  // round-trip (moved from /client/twin to /client/dashboard
+  // 2026-07-25 so mothers can log mood without deep-navigating).
   let firstName = 'there';
   let hasAnyData = false;
-  let yesterdayInputs: DailyInputs | null = null;
+  const yesterdayInputs: DailyInputs | null = null;
+  let todaysMood: MoodState | null = null;
   if (userId) {
     try {
       const sb = await createSupabaseClient();
-      const { data: profile } = await sb
-        .from('profiles')
-        .select('full_name')
-        .eq('id', userId)
-        .maybeSingle();
-      if (profile?.full_name) firstName = profile.full_name.split(/\s+/)[0];
+      const [profileRes, moodRes] = await Promise.all([
+        sb
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .maybeSingle(),
+        sb
+          .from('client_daily_logs')
+          .select('mood_state')
+          .eq('client_id', userId)
+          .eq('log_date', today)
+          .maybeSingle(),
+      ]);
+      if (profileRes.data?.full_name) {
+        firstName = profileRes.data.full_name.split(/\s+/)[0];
+      }
+      todaysMood = (moodRes.data?.mood_state ?? null) as MoodState | null;
     } catch {
-      // ignore — fallback greeting
+      // ignore — fallback greeting, no mood row
     }
     hasAnyData = !pureXScore.isEmpty || streakHistory.some((h) => h.hasData);
     // Yesterday's inputs — we already have last 7 days of history for
     // scores; DailyInputs for yesterday would need a second fetch that
-    // isn't worth the round-trip. Pass null; the digest gracefully
+    // isn't worth the round-trip. Kept null; the digest gracefully
     // degrades on the streak signal alone.
-    yesterdayInputs = null;
   }
   const digest = buildDailyDigest({
     firstName,
@@ -195,6 +213,12 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       <div data-onboard="daily-digest">
         <DailyDigest digest={digest} />
       </div>
+
+      {/* "How is your body today?" mood check-in — 8 chips, one-tap
+          save. Sits right under the coach greeting so it feels like
+          answering the coach's opening. Moved from /client/twin
+          on 2026-07-25 after user reported not finding it. */}
+      {userId && <MoodCheckInCard current={todaysMood} />}
 
       {/* Greeting (small, identity) */}
       <WelcomeHeader />
