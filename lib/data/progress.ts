@@ -78,6 +78,51 @@ export function transformationScore(data: ProgressData): number {
   );
 }
 
+/**
+ * Monthly rollup for the yearly progress view. One tile per calendar
+ * month in the last 12 months; the client renders 12 tiles in a grid.
+ *
+ * "hasData" is true if we have ANY log (daily log, workout, weight, or
+ * meal) for that month — used to grey out empty tiles.
+ */
+export interface MonthlyBucket {
+  /** YYYY-MM */
+  monthKey: string;
+  /** e.g. "Jul" */
+  monthShortLabel: string;
+  /** e.g. "July 2026" for the drill-down header */
+  monthLongLabel: string;
+  /** 0-31 depending on month */
+  daysInMonth: number;
+  /** Days with any log in this month */
+  daysLogged: number;
+  /** Mean steps per LOGGED day (0 if no logs) */
+  avgSteps: number;
+  /** Total workouts completed in the month */
+  workouts: number;
+  /** Meals logged (rows) in the month */
+  meals: number;
+  /** Mean sleep minutes per LOGGED day */
+  avgSleepMinutes: number;
+  /** Latest weight reading in kg, or null */
+  latestWeightKg: number | null;
+  /** Weight change over the month (first-to-last kg), null if <2 pts */
+  weightDeltaKg: number | null;
+  /** Whether we have any signal for this month */
+  hasData: boolean;
+}
+
+export interface YearlyProgress {
+  months: MonthlyBucket[]; // 12 items, oldest first
+  totals: {
+    daysLogged: number;
+    workouts: number;
+    meals: number;
+    stepsSum: number;
+  };
+  isEmpty: boolean;
+}
+
 export interface StrengthPR {
   exerciseName: string;
   targetMuscle: string | null;

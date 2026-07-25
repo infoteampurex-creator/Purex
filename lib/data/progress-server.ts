@@ -3,10 +3,12 @@ import { createClient } from '@/lib/supabase/server';
 import { computeHealthScore } from './twin';
 import type {
   DailyScorePoint,
+  MonthlyBucket,
   ProgressData,
   StrengthPR,
   WeeklyAverages,
   WeightPoint,
+  YearlyProgress,
 } from './progress';
 
 /**
@@ -402,4 +404,214 @@ export async function getStrengthPRs(
     console.error('[progress-server] getStrengthPRs threw', err);
     return [];
   }
+}
+
+/**
+ * Yearly progress rollup — one row per calendar month for the last 12
+ * months. Powers the Year tab on the Progress page (asked for by user
+ * 2026-07-16: "want to see my progress for every month for entire
+ * year — diet, exercise, steps, and other details").
+ *
+ * One pass per table over the 12-month window, bucketed in-memory by
+ * YYYY-MM. Empty-months are returned with hasData=false so the client
+ * can grey them out consistently.
+ */
+export async function getYearlyProgress(
+  clientId: string,
+  endDateIso: string
+): Promise<YearlyProgress> {
+  const emptyResult: YearlyProgress = {
+    months: buildEmptyMonths(endDateIso),
+    totals: { daysLogged: 0, workouts: 0, meals: 0, stepsSum: 0 },
+    isEmpty: true,
+  };
+
+  try {
+    const supabase = await createClient();
+
+    // Start of the month 11 months back = 12-month window ending today.
+    const [endY, endM] = endDateIso.split('-').map(Number);
+    const startDate = new Date(Date.UTC(endY, endM - 1 - 11, 1));
+    const startIso = startDate.toISOString().slice(0, 10);
+
+    const [logsRes, workoutsRes, mealsRes, weightsRes] = await Promise.all([
+      supabase
+        .from('client_daily_logs')
+        .select('log_date, steps, sleep_hours, weight_kg')
+        .eq('client_id', clientId)
+        .gte('log_date', startIso)
+        .lte('log_date', endDateIso),
+      supabase
+        .from('client_workouts')
+        .select('workout_date')
+        .eq('client_id', clientId)
+        .eq('completed', true)
+        .gte('workout_date', startIso)
+        .lte('workout_date', endDateIso),
+      supabase
+        .from('client_meals')
+        .select('log_date')
+        .eq('client_id', clientId)
+        .gte('log_date', startIso)
+        .lte('log_date', endDateIso),
+      supabase
+        .from('client_body_measurements')
+        .select('measured_at, weight_kg')
+        .eq('client_id', clientId)
+        .gte('measured_at', startIso)
+        .lte('measured_at', endDateIso)
+        .order('measured_at', { ascending: true }),
+    ]);
+
+    type LogRow = {
+      log_date: string;
+      steps: number | null;
+      sleep_hours: number | null;
+      weight_kg: number | null;
+    };
+    const logs = (logsRes.data ?? []) as LogRow[];
+    const workouts = (workoutsRes.data ?? []) as { workout_date: string }[];
+    const meals = (mealsRes.data ?? []) as { log_date: string }[];
+    const weights = (weightsRes.data ?? []) as {
+      measured_at: string;
+      weight_kg: number | null;
+    }[];
+
+    // Bucket helper — take a YYYY-MM-DD and return YYYY-MM.
+    const monthOf = (iso: string) => iso.slice(0, 7);
+
+    // Initialise empty buckets so months with no data still render.
+    const buckets = new Map<string, MonthlyBucket>();
+    for (const b of buildEmptyMonths(endDateIso)) buckets.set(b.monthKey, b);
+
+    // Aggregate logs
+    for (const l of logs) {
+      const key = monthOf(l.log_date);
+      const b = buckets.get(key);
+      if (!b) continue;
+      b.daysLogged += 1;
+      if (l.steps != null) {
+        // Rolling mean: b.avgSteps holds sum until we normalise at end
+        b.avgSteps += l.steps;
+      }
+      if (l.sleep_hours != null) {
+        b.avgSleepMinutes += l.sleep_hours * 60;
+      }
+      if (l.weight_kg != null) {
+        b.latestWeightKg = l.weight_kg;
+      }
+      b.hasData = true;
+    }
+
+    // Aggregate workouts
+    for (const w of workouts) {
+      const key = monthOf(w.workout_date);
+      const b = buckets.get(key);
+      if (!b) continue;
+      b.workouts += 1;
+      b.hasData = true;
+    }
+
+    // Aggregate meals
+    for (const m of meals) {
+      const key = monthOf(m.log_date);
+      const b = buckets.get(key);
+      if (!b) continue;
+      b.meals += 1;
+      b.hasData = true;
+    }
+
+    // Weight deltas — earliest measurement per month → latest.
+    const weightPerMonth = new Map<string, number[]>();
+    for (const w of weights) {
+      if (w.weight_kg == null) continue;
+      const key = monthOf(w.measured_at);
+      const arr = weightPerMonth.get(key) ?? [];
+      arr.push(w.weight_kg);
+      weightPerMonth.set(key, arr);
+    }
+    for (const [key, arr] of weightPerMonth) {
+      const b = buckets.get(key);
+      if (!b) continue;
+      if (arr.length >= 1) b.latestWeightKg = arr[arr.length - 1];
+      if (arr.length >= 2) b.weightDeltaKg = arr[arr.length - 1] - arr[0];
+      b.hasData = true;
+    }
+
+    // Normalise avgSteps / avgSleep from sums to means per LOGGED day
+    for (const b of buckets.values()) {
+      if (b.daysLogged > 0) {
+        b.avgSteps = Math.round(b.avgSteps / b.daysLogged);
+        b.avgSleepMinutes = Math.round(b.avgSleepMinutes / b.daysLogged);
+      }
+    }
+
+    // Totals row across the whole year for the header stat strip
+    let stepsSum = 0;
+    let daysLoggedSum = 0;
+    let workoutsSum = 0;
+    let mealsSum = 0;
+    for (const b of buckets.values()) {
+      stepsSum += b.avgSteps * b.daysLogged;
+      daysLoggedSum += b.daysLogged;
+      workoutsSum += b.workouts;
+      mealsSum += b.meals;
+    }
+
+    const monthsOrdered = Array.from(buckets.values()).sort((a, b) =>
+      a.monthKey.localeCompare(b.monthKey)
+    );
+
+    return {
+      months: monthsOrdered,
+      totals: {
+        daysLogged: daysLoggedSum,
+        workouts: workoutsSum,
+        meals: mealsSum,
+        stepsSum,
+      },
+      isEmpty: monthsOrdered.every((m) => !m.hasData),
+    };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[progress-server] getYearlyProgress threw', err);
+    return emptyResult;
+  }
+}
+
+/** Build 12 empty month buckets ending on the endDate's month. */
+function buildEmptyMonths(endDateIso: string): MonthlyBucket[] {
+  const [endY, endM] = endDateIso.split('-').map(Number);
+  const out: MonthlyBucket[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const dt = new Date(Date.UTC(endY, endM - 1 - i, 1));
+    const y = dt.getUTCFullYear();
+    const m = dt.getUTCMonth() + 1;
+    const monthKey = `${y}-${String(m).padStart(2, '0')}`;
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const monthShortLabel = dt.toLocaleString('en-GB', {
+      month: 'short',
+      timeZone: 'UTC',
+    });
+    const monthLongLabel = dt.toLocaleString('en-GB', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+    out.push({
+      monthKey,
+      monthShortLabel,
+      monthLongLabel,
+      daysInMonth,
+      daysLogged: 0,
+      avgSteps: 0,
+      workouts: 0,
+      meals: 0,
+      avgSleepMinutes: 0,
+      latestWeightKg: null,
+      weightDeltaKg: null,
+      hasData: false,
+    });
+  }
+  return out;
 }
