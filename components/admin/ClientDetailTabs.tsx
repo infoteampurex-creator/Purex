@@ -231,31 +231,7 @@ function ProgressTab({
   const yesterday = logs[1];
 
   if (!today) {
-    return (
-      <div className="space-y-4">
-        <EmptyState
-          icon={<Activity />}
-          title="No progress logs yet"
-          description="This client hasn't logged any metrics."
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <button
-            onClick={onEditPlan}
-            className="inline-flex items-center justify-center gap-2 h-11 rounded-full bg-accent text-bg text-sm font-semibold hover:bg-accent-hover transition-colors"
-          >
-            <Plus size={14} />
-            Set today&apos;s plan
-          </button>
-          <button
-            onClick={onLogMetrics}
-            className="inline-flex items-center justify-center gap-2 h-11 rounded-full border border-border text-sm font-semibold hover:border-accent transition-colors"
-          >
-            <Plus size={14} />
-            Log first metrics
-          </button>
-        </div>
-      </div>
-    );
+    return <AdminProgressEmpty onLogMetrics={onLogMetrics} onEditPlan={onEditPlan} />;
   }
 
   const weightDelta = yesterday?.weightKg && today.weightKg
@@ -1445,5 +1421,204 @@ function LogMetricsButton({ onClick }: { onClick: () => void }) {
         Log metrics
       </div>
     </button>
+  );
+}
+
+// ─── Admin-side rich Progress-tab empty state ─────────────────────
+//
+// The old empty state was a single "No progress logs yet" card. When
+// a coach demoed the platform to a new client, that reads as "the
+// system has nothing on you." Mirrors the client-side rich preview
+// pattern (PR #118) — three sample cards with a "Preview" chip so
+// the space feels populated with what it WILL show once the client
+// starts logging.
+function AdminProgressEmpty({
+  onLogMetrics,
+  onEditPlan,
+}: {
+  onLogMetrics: () => void;
+  onEditPlan: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Preview snapshot header */}
+      <div
+        className="relative rounded-2xl border p-4 overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(ellipse at 0% 0%, rgba(198,255,61,0.10), transparent 60%), rgba(255,255,255,0.02)',
+          borderColor: 'rgba(198,255,61,0.28)',
+        }}
+      >
+        <AdminPreviewChip />
+        <div
+          className="font-mono uppercase tracking-[0.20em] font-bold mb-2"
+          style={{ fontSize: 10, color: '#c6ff3d' }}
+        >
+          Today&apos;s Snapshot · Preview
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <AdminPreviewTile label="STEPS" value="8.4k" color="#7dd3ff" />
+          <AdminPreviewTile label="SLEEP" value="7.2h" color="#a78bfa" />
+          <AdminPreviewTile label="WATER" value="1.8L" color="#7dd3ff" />
+          <AdminPreviewTile label="WEIGHT" value="72.4" color="#f8d4c1" />
+        </div>
+      </div>
+
+      {/* Preview 7-day sparkline strip */}
+      <div
+        className="relative rounded-2xl border p-4 overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(ellipse at 100% 0%, rgba(255,138,77,0.10), transparent 60%), rgba(255,255,255,0.02)',
+          borderColor: 'rgba(255,138,77,0.28)',
+        }}
+      >
+        <AdminPreviewChip />
+        <div
+          className="font-mono uppercase tracking-[0.20em] font-bold mb-1"
+          style={{ fontSize: 10, color: '#ff8a4d' }}
+        >
+          7-day Health Score · Preview
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span
+            className="font-display font-bold leading-none tabular-nums"
+            style={{ fontSize: 32, color: '#ff8a4d' }}
+          >
+            74
+          </span>
+          <span
+            className="font-mono uppercase tracking-[0.16em] font-bold"
+            style={{ fontSize: 9, color: 'rgba(255,138,77,0.65)' }}
+          >
+            / 100
+          </span>
+        </div>
+        <svg
+          width="100%"
+          height="32"
+          viewBox="0 0 300 32"
+          className="mt-2 opacity-80"
+          aria-hidden
+        >
+          <defs>
+            <linearGradient id="admin-preview-spark" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ff8a4d" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#ff8a4d" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M 0 22 L 45 26 L 90 20 L 135 24 L 180 16 L 225 18 L 270 12 L 300 8 L 300 32 L 0 32 Z"
+            fill="url(#admin-preview-spark)"
+          />
+          <path
+            d="M 0 22 L 45 26 L 90 20 L 135 24 L 180 16 L 225 18 L 270 12 L 300 8"
+            fill="none"
+            stroke="#ff8a4d"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="300" cy="8" r="3" fill="#ff8a4d" />
+        </svg>
+      </div>
+
+      {/* Real CTAs — the empty message + how to fill it */}
+      <div
+        className="rounded-2xl border p-5 text-center"
+        style={{
+          background: 'rgba(255,255,255,0.02)',
+          borderColor: 'rgba(255,255,255,0.08)',
+        }}
+      >
+        <div
+          className="inline-flex w-12 h-12 items-center justify-center rounded-xl mb-3"
+          style={{
+            background: 'rgba(198,255,61,0.12)',
+            border: '1px solid rgba(198,255,61,0.30)',
+            color: '#c6ff3d',
+          }}
+        >
+          <Activity size={18} />
+        </div>
+        <div className="font-display font-semibold text-base mb-1">
+          This client hasn&apos;t logged yet
+        </div>
+        <p
+          className="max-w-sm mx-auto leading-relaxed mb-4"
+          style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}
+        >
+          The cards above are a preview of what appears when your
+          client starts logging steps, sleep, water, weight, or a
+          workout.
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            onClick={onEditPlan}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-accent text-bg text-xs font-semibold hover:bg-accent-hover transition-colors"
+          >
+            <Plus size={12} />
+            Set today&apos;s plan
+          </button>
+          <button
+            onClick={onLogMetrics}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-full border border-border text-xs font-semibold hover:border-accent transition-colors"
+          >
+            <Plus size={12} />
+            Log first metrics
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminPreviewChip() {
+  return (
+    <div
+      className="absolute top-2 right-2 rounded-full px-2 py-0.5 font-mono uppercase tracking-[0.14em] font-bold"
+      style={{
+        fontSize: 8.5,
+        color: '#ffd24d',
+        background: 'rgba(255,210,77,0.12)',
+        border: '1px solid rgba(255,210,77,0.40)',
+      }}
+    >
+      Preview
+    </div>
+  );
+}
+
+function AdminPreviewTile({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <div
+      className="rounded-xl p-2 flex flex-col items-center"
+      style={{
+        background: `${color}10`,
+        border: `1px solid ${color}25`,
+      }}
+    >
+      <span
+        className="font-display font-bold tabular-nums"
+        style={{ fontSize: 16, color }}
+      >
+        {value}
+      </span>
+      <span
+        className="font-mono uppercase tracking-[0.14em] font-bold mt-0.5"
+        style={{ fontSize: 8, color: 'rgba(255,255,255,0.55)' }}
+      >
+        {label}
+      </span>
+    </div>
   );
 }
