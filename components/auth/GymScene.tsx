@@ -24,7 +24,7 @@ const ROTATE_MS = 5000;
 /**
  * Login left panel composition (desktop only).
  *
- * Top:    Glowing PURE X neon wordmark with subtle pulse
+ * Top:    Glowing Team Purex neon wordmark with subtle pulse
  * Center: Static deadlift silhouette with plate-dot pulse
  * Bottom: Manifesto + 3 pillar chips
  *
@@ -127,7 +127,7 @@ export function GymScene({ activated: _activated }: GymSceneProps = {}) {
       />
 
       {/* ════════════════════════════════════════════════════
-           TOP — PURE X neon wordmark
+           TOP — Team Purex neon wordmark
       ════════════════════════════════════════════════════ */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
@@ -235,7 +235,7 @@ function RotatingTagline() {
   );
 }
 
-// ─── Big neon-style PURE X wordmark ───────────────────────────────
+// ─── Big neon-style Team Purex wordmark ───────────────────────────────
 
 function NeonWordmark() {
   return (

@@ -4,9 +4,9 @@ import { EnquiryForm } from '@/components/marketing/EnquiryForm';
 import { EnquirySidebar } from '@/components/marketing/EnquirySidebar';
 
 export const metadata: Metadata = {
-  title: 'Apply · TEAM PURE X',
+  title: 'Apply · Team Purex',
   description:
-    'Apply to coach with PURE X. Premium hybrid athlete coaching — fat loss, muscle, athletic performance, hybrid fitness. Serious-intent only.',
+    'Apply to coach with Team Purex. Premium hybrid athlete coaching — fat loss, muscle, athletic performance, hybrid fitness. Serious-intent only.',
 };
 
 export default function ApplyPage() {
@@ -27,7 +27,7 @@ export default function ApplyPage() {
         <header className="max-w-3xl">
           <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-accent font-bold mb-5">
             <span className="w-4 h-px bg-accent" />
-            TEAM PURE X
+            Team Purex
             <span className="w-4 h-px bg-accent" />
           </div>
           <h1 className="font-display font-semibold text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.05] mb-5">

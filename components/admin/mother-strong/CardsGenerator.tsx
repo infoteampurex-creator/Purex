@@ -47,7 +47,7 @@ export function CardsGenerator({ participants }: Props) {
         <p className="text-sm text-text-muted leading-relaxed">
           Generate a personalised PNG for each mother: her name, photo,
           total steps walked, days she hit the goal, consistency %, and
-          the PURE X mark. Download it and share via WhatsApp.
+          the Team Purex mark. Download it and share via WhatsApp.
         </p>
       </div>
 

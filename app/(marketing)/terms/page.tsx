@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service · PURE X',
-  description: 'The terms and conditions governing your use of PURE X services.',
+  title: 'Terms of Service · Team Purex',
+  description: 'The terms and conditions governing your use of Team Purex services.',
 };
 
 export default function TermsPage() {
@@ -44,14 +44,14 @@ export default function TermsPage() {
         <div className="container-safe max-w-3xl">
           <div className="prose-custom space-y-10 text-[15px] leading-[1.75] text-text-muted">
             <p className="text-base md:text-lg text-text leading-relaxed">
-              By creating an account or booking a programme with PURE X, you agree to
+              By creating an account or booking a programme with Team Purex, you agree to
               these Terms. Please read them carefully. If you disagree with any part, do
               not use our services.
             </p>
 
             <Section title="1. Who We Are">
               <p>
-                PURE X is an integrated health and fitness coaching platform with teams in
+                Team Purex is an integrated health and fitness coaching platform with teams in
                 India and the United Kingdom. We provide personal
                 training, physiotherapy, medical consultation, mental health support, and
                 nutrition guidance as one coordinated service.
@@ -89,7 +89,7 @@ export default function TermsPage() {
                 relevant health conditions, injuries, medications, and prior surgeries.
               </p>
               <p>
-                PURE X coaches, doctors, and physiotherapists provide guidance based on
+                Team Purex coaches, doctors, and physiotherapists provide guidance based on
                 the information you share. However:
               </p>
               <ul className="list-disc pl-6 space-y-2">
@@ -147,7 +147,7 @@ export default function TermsPage() {
             </Section>
 
             <Section title="7. Code of Conduct">
-              <p>While using PURE X, you agree to:</p>
+              <p>While using Team Purex, you agree to:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Treat all coaches, specialists, and other members with respect.</li>
                 <li>
@@ -171,7 +171,7 @@ export default function TermsPage() {
             <Section title="8. Intellectual Property">
               <p>
                 All training systems, plans, content, videos, brand assets, and software
-                on PURE X are owned by PURE X and its licensors. You receive a personal,
+                on Team Purex are owned by Team Purex and its licensors. You receive a personal,
                 non-transferable, revocable licence to use them solely while you are an
                 active client.
               </p>
@@ -188,7 +188,7 @@ export default function TermsPage() {
 
             <Section title="10. Limitation of Liability">
               <p>
-                To the maximum extent permitted by law, PURE X's total liability to you is
+                To the maximum extent permitted by law, Team Purex's total liability to you is
                 limited to the fees paid by you in the three months preceding the event
                 giving rise to the claim. We are not liable for indirect, incidental, or
                 consequential damages (including injuries sustained while training

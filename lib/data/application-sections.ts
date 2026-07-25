@@ -1,5 +1,5 @@
 /**
- * PURE X — Detailed Transformation Application form (Form B) config.
+ * Team Purex — Detailed Transformation Application form (Form B) config.
  *
  * Single source of truth for every section + question. The form
  * renderer at /application reads this array and builds the UI

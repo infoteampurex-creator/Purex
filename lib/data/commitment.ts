@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-// 100-DAY COMMITMENT — the signature PURE X transformation contract
+// 100-DAY COMMITMENT — the signature Team Purex transformation contract
 // ═══════════════════════════════════════════════════════════════════════
 //
 // Every Pure Core / Elite / Couple client signs a 100-day pact at activation.

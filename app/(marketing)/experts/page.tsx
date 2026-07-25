@@ -3,9 +3,9 @@ import { ExpertsGrid } from '@/components/marketing/sections/ExpertsGrid';
 import { VisionMissionAim } from '@/components/marketing/sections/VisionMissionAim';
 
 export const metadata: Metadata = {
-  title: 'The Team · PURE X',
+  title: 'The Team · Team Purex',
   description:
-    'Meet the five specialists behind PURE X — doctors, physiotherapists, trainers, and mental health consultants working as one unified system across India and UK.',
+    'Meet the five specialists behind Team Purex — doctors, physiotherapists, trainers, and mental health consultants working as one unified system across India and UK.',
 };
 
 export default function ExpertsPage() {
@@ -33,7 +33,7 @@ export default function ExpertsPage() {
             One <span className="text-accent">integrated system</span>.
           </h1>
           <p className="text-lg md:text-xl text-text-muted leading-relaxed max-w-2xl mx-auto">
-            PURE X is not a solo-trainer platform. Every client works with a coordinated
+            Team Purex is not a solo-trainer platform. Every client works with a coordinated
             team of doctors, physiotherapists, coaches, and mental health consultants —
             all reading from the same playbook.
           </p>

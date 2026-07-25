@@ -604,35 +604,198 @@ function StrengthPRRow({ pr }: { pr: StrengthPR }) {
   );
 }
 
+/**
+ * Rich empty state — shows what the Progress page will look like once
+ * the user has logged 7 days of data, WITH a "Preview" chip on every
+ * card so it's honest about being sample data. Whoop / Fitbit both
+ * ship this pattern; a "no data yet" placeholder reads as broken to a
+ * demo client, but a full mocked preview reads as "here's what this
+ * gives me."
+ *
+ * The mocked numbers below are realistic-but-generic (Vitality 74,
+ * seven days trending up, 3 kg weight drop) so the preview looks alive
+ * without making up performance claims.
+ */
 function EmptyState() {
+  // Sample 7-day scores trending up — realistic curve, not too smooth.
+  const sampleScores = [58, 62, 60, 66, 71, 69, 74];
+  const scoreLine = 'M 0 26 L 20 22 L 40 24 L 60 19 L 80 13 L 100 15 L 120 10';
+
   return (
-    <div
-      className="rounded-3xl border p-8 text-center"
-      style={{
-        background: 'rgba(255,255,255,0.02)',
-        borderColor: 'rgba(255,255,255,0.06)',
-      }}
-    >
+    <div className="space-y-4">
+      {/* Preview hero card — mirrors the real Transformation Score
+          card so the space feels populated. */}
       <div
-        className="inline-flex w-14 h-14 items-center justify-center rounded-2xl mb-4"
+        className="relative rounded-3xl border p-5 overflow-hidden"
         style={{
-          background: 'rgba(125,211,255,0.08)',
-          border: '1px solid rgba(125,211,255,0.25)',
-          color: '#7dd3ff',
+          background:
+            'radial-gradient(ellipse at 50% 0%, rgba(198,255,61,0.10) 0%, transparent 55%), linear-gradient(180deg, #11140f 0%, #0a0c09 100%)',
+          borderColor: 'rgba(198,255,61,0.20)',
         }}
       >
-        <Scale size={20} />
+        <PreviewChip />
+        <div
+          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] font-bold mb-3"
+          style={{ color: '#c6ff3d' }}
+        >
+          <Sparkles size={11} />
+          Transformation Score
+        </div>
+        <div className="flex items-baseline gap-3">
+          <span
+            className="font-display font-bold tabular-nums leading-none"
+            style={{ fontSize: 56, color: '#c6ff3d' }}
+          >
+            74
+          </span>
+          <span
+            className="font-mono uppercase tracking-[0.18em] font-bold"
+            style={{ fontSize: 11, color: 'rgba(198,255,61,0.65)' }}
+          >
+            / 100
+          </span>
+        </div>
+        <div
+          className="font-mono uppercase tracking-[0.22em] font-bold mt-1"
+          style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}
+        >
+          Strong · 7-day trend
+        </div>
+        {/* Preview sparkline */}
+        <svg
+          width="100%"
+          height="30"
+          viewBox="0 0 120 30"
+          className="mt-3"
+          aria-hidden
+        >
+          <defs>
+            <linearGradient id="empty-spark" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#c6ff3d" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#c6ff3d" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d={scoreLine + ' L 120 30 L 0 30 Z'}
+            fill="url(#empty-spark)"
+          />
+          <path
+            d={scoreLine}
+            fill="none"
+            stroke="#c6ff3d"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <circle cx="120" cy="10" r="2.5" fill="#c6ff3d" />
+        </svg>
       </div>
-      <h2 className="font-display font-semibold text-xl tracking-tight mb-2">
-        Your transformation begins here
-      </h2>
-      <p
-        className="max-w-md mx-auto leading-relaxed"
-        style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)' }}
+
+      {/* Preview stat pair — consistency rings placeholder */}
+      <div className="grid grid-cols-2 gap-3">
+        <PreviewStatCard
+          label="30-day consistency"
+          value="82%"
+          sub={`${sampleScores.filter((s) => s >= 65).length}/7 days on target`}
+          color="#c6ff3d"
+        />
+        <PreviewStatCard
+          label="Weight change"
+          value="−3.2 kg"
+          sub="past 90 days"
+          color="#7dd3ff"
+        />
+      </div>
+
+      {/* Real CTA underneath */}
+      <div
+        className="rounded-3xl border p-6 text-center"
+        style={{
+          background: 'rgba(255,255,255,0.02)',
+          borderColor: 'rgba(255,255,255,0.08)',
+        }}
       >
-        Log a meal, sleep, steps, or body measurement — anything to start.
-        The Progress page builds itself from your daily logs.
-      </p>
+        <div
+          className="inline-flex w-12 h-12 items-center justify-center rounded-2xl mb-3"
+          style={{
+            background: 'rgba(198,255,61,0.10)',
+            border: '1px solid rgba(198,255,61,0.30)',
+            color: '#c6ff3d',
+          }}
+        >
+          <Scale size={18} />
+        </div>
+        <h2 className="font-display font-semibold text-lg tracking-tight mb-1">
+          This is a preview of your Progress page
+        </h2>
+        <p
+          className="max-w-md mx-auto leading-relaxed"
+          style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)' }}
+        >
+          Log a meal, sleep, steps, or body measurement — anything.
+          After 3 days of logs your real numbers replace the sample
+          above.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Small gold "Preview" chip in the top-right of the mocked cards. */
+function PreviewChip() {
+  return (
+    <div
+      className="absolute top-3 right-3 rounded-full px-2 py-0.5 font-mono uppercase tracking-[0.16em] font-bold"
+      style={{
+        fontSize: 9,
+        color: '#ffd24d',
+        background: 'rgba(255,210,77,0.10)',
+        border: '1px solid rgba(255,210,77,0.35)',
+      }}
+    >
+      Preview
+    </div>
+  );
+}
+
+function PreviewStatCard({
+  label,
+  value,
+  sub,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+}) {
+  return (
+    <div
+      className="relative rounded-2xl border p-4"
+      style={{
+        background: `radial-gradient(ellipse at 50% 0%, ${color}0f 0%, transparent 55%), rgba(255,255,255,0.02)`,
+        borderColor: `${color}30`,
+      }}
+    >
+      <PreviewChip />
+      <div
+        className="font-mono uppercase tracking-[0.18em] font-bold"
+        style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
+      >
+        {label}
+      </div>
+      <div
+        className="font-display font-bold mt-2 tabular-nums"
+        style={{ fontSize: 26, color }}
+      >
+        {value}
+      </div>
+      <div
+        className="font-mono mt-0.5"
+        style={{ fontSize: 10, color: 'rgba(255,255,255,0.50)' }}
+      >
+        {sub}
+      </div>
     </div>
   );
 }

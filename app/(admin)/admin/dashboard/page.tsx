@@ -53,7 +53,7 @@ export default async function AdminDashboardPage() {
       <AdminPageHeader
         eyebrow="Overview"
         title="Welcome back, admin"
-        subtitle="What's happening across PURE X today."
+        subtitle="What's happening across Team Purex today."
       />
 
       {/* STAT CARDS */}

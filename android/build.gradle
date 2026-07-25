@@ -72,6 +72,24 @@ subprojects {
                     }
                 }
         }
+
+        // Also pin Java compile to 17 so it matches the pinned Kotlin
+        // target. AGP under JDK 21 defaults Java compile to 21, which
+        // triggers "Inconsistent JVM-target compatibility detected"
+        // when the Kotlin compile emits 17. Newer capacitor plugins
+        // (haptics, push-notifications) added 2026-07-15 exposed this;
+        // capacitor-filesystem also broke with the same error.
+        //
+        // AGP forbids --release; use sourceCompatibility/targetCompatibility
+        // on the Android extension. Guard on the extension existing so
+        // pure-Java Cordova plugin projects don't blow up.
+        def androidExt = project.extensions.findByName('android')
+        if (androidExt != null) {
+            androidExt.compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
     }
 }
 

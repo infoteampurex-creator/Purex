@@ -1,36 +1,23 @@
+import Image from 'next/image';
 import { cn } from '@/lib/cn';
 
+/**
+ * Team Purex wordmark — official brand PNG.
+ * Uses next/image for automatic optimization. The PNG lives at
+ * /public/brand/logo.png (native 868×670 landscape).
+ *
+ * Set the visual size via `className` (default h-10). Width scales
+ * automatically to preserve the ~1.3:1 aspect ratio.
+ */
 export function Logo({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 140 32"
-      className={cn('h-8 w-auto', className)}
-      fill="none"
-      aria-label="PURE X"
-    >
-      <text
-        x="0"
-        y="24"
-        fontFamily="var(--font-display), sans-serif"
-        fontSize="22"
-        fontWeight="800"
-        letterSpacing="-0.02em"
-        fill="currentColor"
-      >
-        PURE
-      </text>
-      <text
-        x="58"
-        y="24"
-        fontFamily="var(--font-display), sans-serif"
-        fontSize="22"
-        fontWeight="800"
-        letterSpacing="-0.02em"
-        fill="#c6ff3d"
-      >
-        X
-      </text>
-      <circle cx="78" cy="26" r="1.5" fill="#c6ff3d" />
-    </svg>
+    <Image
+      src="/brand/logo.png"
+      alt="Team Purex"
+      width={868}
+      height={670}
+      priority
+      className={cn('h-10 w-auto object-contain', className)}
+    />
   );
 }

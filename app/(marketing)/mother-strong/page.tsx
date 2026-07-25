@@ -10,6 +10,7 @@ import { ms } from '@/lib/i18n/mother-strong';
 import { RegistrationForm } from '@/components/mother-strong/RegistrationForm';
 import { RegistrationSidebar } from '@/components/mother-strong/RegistrationSidebar';
 import { RegistrationClosedPanel } from '@/components/mother-strong/RegistrationClosedPanel';
+import { CompletedCohortPreview } from '@/components/purex-mothers/CompletedCohortPreview';
 import { type PreferredLanguage } from '@/lib/data/mother-strong-types';
 
 export const metadata: Metadata = {
@@ -106,6 +107,11 @@ export default async function MotherStrongLandingPage({
             </div>
           )}
         </header>
+
+        {/* Completed cohort celebration — links to /purex-mothers where
+            each finisher can generate her appreciation card. Sits above
+            the next-cohort form so visitors see the results first. */}
+        <CompletedCohortPreview />
 
         {/* Form (or closed panel) + side panel.
             Desktop: 2-column with the form taking ~60% and the panel ~40%.

@@ -5,7 +5,7 @@ import { getMockClientPact, COMMITMENT_MILESTONES } from '@/lib/data/commitment'
 import { cn } from '@/lib/cn';
 
 export const metadata: Metadata = {
-  title: 'My 100-Day Pact · PURE X',
+  title: 'My 100-Day Pact · Team Purex',
 };
 
 export default function CommitmentPage() {
@@ -303,7 +303,7 @@ export default function CommitmentPage() {
                     {pact.witnessName}
                   </div>
                   <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-accent font-bold mt-1">
-                    Co-Founder &amp; PT Head · PURE X
+                    Co-Founder &amp; PT Head · Team Purex
                   </div>
                 </Link>
               </div>

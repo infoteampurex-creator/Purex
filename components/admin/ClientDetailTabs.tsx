@@ -106,9 +106,14 @@ export function ClientDetailTabs({
 
   return (
     <div>
-      {/* Tab nav */}
-      <div className="border-b border-border mb-6">
-        <div className="flex items-center gap-1 overflow-x-auto -mb-px">
+      {/* Tab nav
+          The 6 tabs (Progress / Tasks / Workouts / Bookings / Photos /
+          Apps) don't fit at once on a 375 px phone — scroll width is
+          ~700 px. Wrapping div is relative + adds a right-edge fade
+          so users see there's more to swipe to; before this fix the
+          tabs just cut off with no visual signal (reported 2026-07-15). */}
+      <div className="relative border-b border-border mb-6">
+        <div className="flex items-center gap-1 overflow-x-auto -mb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((t) => {
             const Icon = t.icon;
             const active = activeTab === t.id;
@@ -139,6 +144,17 @@ export function ClientDetailTabs({
             );
           })}
         </div>
+        {/* Right-edge fade — sits over the scroll box, fades from
+            transparent to the page's bg so the user reads "swipe
+            for more." Pointer-events: none so it doesn't eat taps. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-0 bottom-0 right-0 w-10 md:hidden"
+          style={{
+            background:
+              'linear-gradient(to left, var(--color-bg, #0a0c09) 0%, transparent 100%)',
+          }}
+        />
       </div>
 
       {/* Tab content */}
@@ -998,7 +1014,7 @@ function PhotosTab({
       <div className="rounded-xl bg-bg-card border border-border p-4">
         <p className="text-[11px] text-text-muted leading-relaxed">
           <span className="font-mono text-accent font-bold uppercase tracking-[0.14em]">Photos are private</span>{' '}
-          — stored in Supabase Storage with row-level security. Only the client and PURE X admins can view them.
+          — stored in Supabase Storage with row-level security. Only the client and Team Purex admins can view them.
           URLs are short-lived (1 hour) and regenerated on each page load.
         </p>
       </div>
@@ -1149,7 +1165,7 @@ function AppsTab({
         <div className="flex items-center gap-1 bg-bg-card border border-border rounded-full p-1">
           {[
             { id: 'all' as const, label: 'All' },
-            { id: 'internal' as const, label: 'PURE X' },
+            { id: 'internal' as const, label: 'Team Purex' },
             { id: 'apps' as const, label: 'Apps' },
           ].map((f) => (
             <button
@@ -1168,7 +1184,7 @@ function AppsTab({
         </div>
       </div>
 
-      {/* Internal PURE X actions */}
+      {/* Internal Team Purex actions */}
       {showInternal && (
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -1176,7 +1192,7 @@ function AppsTab({
               <Zap size={12} />
             </div>
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted font-bold">
-              PURE X Actions
+              Team Purex Actions
             </div>
             <div className="h-px flex-1 bg-border-soft" />
           </div>

@@ -18,6 +18,10 @@ export interface MealPlanItem {
   id?: string;                   // present when loaded from DB; absent on draft items
   foodName: string;              // "Oats", "1 Whole Egg + 3 Egg Whites"
   quantity: string | null;       // "60g", "150ml", "275g (cooked)", null
+  /** kcal per portion — drives the per-item label on /client/nutrition
+   *  and the kcal-window for the swap suggestions. Optional so legacy
+   *  rows without the value still load. */
+  calories: number | null;
   itemOrder: number;
   notes?: string | null;
 }

@@ -8,7 +8,7 @@ import { BRAND } from '@/lib/constants';
  *   - Inline styles (Gmail strips <style> blocks).
  *   - Table-based layout (Outlook clings to it).
  *   - Web-safe fonts as fallbacks.
- *   - PURE X "logo" is rendered as styled text rather than an image so
+ *   - Team Purex "logo" is rendered as styled text rather than an image so
  *     it survives ad-blockers, image-disabled inboxes, and dark/light
  *     mode without an external dependency. Once a hosted brand PNG
  *     exists, swap LogoMark() to return <img src="..."/>.
@@ -58,7 +58,7 @@ function shellHtml({
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
   <meta name="supported-color-schemes" content="dark light" />
-  <title>PURE X</title>
+  <title>Team Purex</title>
 </head>
 <body style="margin:0;padding:0;background:${BRAND_INK};color:${BRAND_TEXT};font-family:${FONT_STACK};-webkit-font-smoothing:antialiased;">
   <!-- Preheader (hidden, but shows in inbox previews) -->
@@ -89,12 +89,12 @@ function shellHtml({
           <tr>
             <td style="padding:20px 32px;border-top:1px solid ${BRAND_BORDER};">
               <p style="margin:0;font-size:11px;line-height:1.6;color:${BRAND_MUTED};">
-                You're receiving this because you applied to join PURE X.
+                You're receiving this because you applied to join Team Purex.
                 Reply to this email or WhatsApp us at
                 <a href="https://wa.me/${WHATSAPP_NUMBER}" style="color:${BRAND_GREEN};text-decoration:none;">+${WHATSAPP_NUMBER}</a>.
               </p>
               <p style="margin:8px 0 0 0;font-size:11px;color:${BRAND_MUTED};">
-                © PURE X. ${SITE_URL.replace(/^https?:\/\//, '')}
+                © Team Purex. ${SITE_URL.replace(/^https?:\/\//, '')}
               </p>
             </td>
           </tr>
@@ -159,7 +159,7 @@ export function welcomeEmail({
 }: {
   firstName: string;
 }): { html: string; text: string; subject: string } {
-  const subject = "You're in. Welcome to PURE X.";
+  const subject = "You're in. Welcome to Team Purex.";
   const safeName = escapeHtml(firstName);
   const loginUrl = `${SITE_URL}/login`;
 
@@ -171,7 +171,7 @@ export function welcomeEmail({
     ${paragraph("You're in.")}
 
     ${paragraph(
-      `Your PURE X account is approved and ready. Sign in to your dashboard:`
+      `Your Team Purex account is approved and ready. Sign in to your dashboard:`
     )}
 
     ${primaryButton({ href: loginUrl, label: 'Open dashboard' })}
@@ -194,7 +194,7 @@ export function welcomeEmail({
       `You haven't signed up for a workout app. You've joined a system built to outlast motivation.`
     )}
 
-    <p style="margin:24px 0 0 0;font-size:14px;color:${BRAND_MUTED};">— The PURE X team</p>
+    <p style="margin:24px 0 0 0;font-size:14px;color:${BRAND_MUTED};">— The Team Purex team</p>
   `;
 
   const text = [
@@ -202,7 +202,7 @@ export function welcomeEmail({
     '',
     "You're in.",
     '',
-    'Your PURE X account is approved and ready. Sign in here:',
+    'Your Team Purex account is approved and ready. Sign in here:',
     loginUrl,
     '',
     'What happens next:',
@@ -217,13 +217,13 @@ export function welcomeEmail({
     '',
     "You haven't signed up for a workout app. You've joined a system built to outlast motivation.",
     '',
-    '— The PURE X team',
+    '— The Team Purex team',
   ].join('\n');
 
   return {
     subject,
     html: shellHtml({
-      preheader: `Welcome, ${firstName}. Your PURE X account is approved.`,
+      preheader: `Welcome, ${firstName}. Your Team Purex account is approved.`,
       body,
     }),
     text,
@@ -237,7 +237,7 @@ export function rejectionEmail({
 }: {
   firstName: string;
 }): { html: string; text: string; subject: string } {
-  const subject = 'A note on your PURE X application';
+  const subject = 'A note on your Team Purex application';
   const safeName = escapeHtml(firstName);
 
   const body = `
@@ -245,7 +245,7 @@ export function rejectionEmail({
       Hi ${safeName},
     </h1>
 
-    ${paragraph('Thanks for applying to join PURE X.')}
+    ${paragraph('Thanks for applying to join Team Purex.')}
 
     ${paragraph(
       `After reviewing your application, we don't think we're the right fit for you right now. This is rarely about you — it's usually about timing, capacity, or alignment with the kind of commitment our program requires.`
@@ -262,13 +262,13 @@ export function rejectionEmail({
       "If any of those change, or if you'd like to talk about it, please reply to this email. We re-open applications quarterly and remember every conversation."
     )}
 
-    <p style="margin:24px 0 0 0;font-size:14px;color:${BRAND_MUTED};">Wishing you strength,<br/>— The PURE X team</p>
+    <p style="margin:24px 0 0 0;font-size:14px;color:${BRAND_MUTED};">Wishing you strength,<br/>— The Team Purex team</p>
   `;
 
   const text = [
     `Hi ${firstName},`,
     '',
-    'Thanks for applying to join PURE X.',
+    'Thanks for applying to join Team Purex.',
     '',
     "After reviewing your application, we don't think we're the right fit for you right now. This is rarely about you — it's usually about timing, capacity, or alignment with the kind of commitment our program requires.",
     '',
@@ -280,13 +280,13 @@ export function rejectionEmail({
     "If any of those change, or if you'd like to talk about it, please reply to this email. We re-open applications quarterly and remember every conversation.",
     '',
     'Wishing you strength,',
-    '— The PURE X team',
+    '— The Team Purex team',
   ].join('\n');
 
   return {
     subject,
     html: shellHtml({
-      preheader: `An update on your PURE X application.`,
+      preheader: `An update on your Team Purex application.`,
       body,
     }),
     text,

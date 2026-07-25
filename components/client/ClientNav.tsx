@@ -6,6 +6,7 @@ import { Home, Dumbbell, Apple, LineChart, HeartPulse, User, LogOut } from 'luci
 import { Logo } from '@/components/shared/Logo';
 import { cn } from '@/lib/cn';
 import { signOut as signOutAction } from '@/lib/actions/auth';
+import { useHaptics } from '@/lib/hooks/useHaptics';
 
 // 6 tabs. Bookings dropped from primary nav (low-frequency action;
 // still reachable via /book and from Profile). Health takes its slot
@@ -26,6 +27,7 @@ const navItems = [
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const haptics = useHaptics();
 
   return (
     <nav
@@ -46,20 +48,42 @@ export function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
+              onClick={() => {
+                if (!active) haptics.selectionChanged();
+              }}
               className="relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-w-0"
             >
               {active && (
                 <span
                   className="absolute top-0 w-8 h-0.5 rounded-full bg-accent"
-                  style={{ boxShadow: '0 0 8px rgba(198, 255, 61, 0.6)' }}
+                  style={{
+                    boxShadow: '0 0 8px rgba(198, 255, 61, 0.6)',
+                    animation: 'nav-glow-pulse 3s ease-in-out infinite',
+                  }}
+                />
+              )}
+              {/* Ambient halo behind the active icon — barely visible,
+                  reads as "this one is alive." Slow 4s cycle, no
+                  attention-seeking movement. */}
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute w-11 h-11 rounded-full pointer-events-none"
+                  style={{
+                    top: 4,
+                    background:
+                      'radial-gradient(circle, rgba(198,255,61,0.14) 0%, transparent 65%)',
+                    animation: 'nav-halo-breathe 4s ease-in-out infinite',
+                  }}
                 />
               )}
               <Icon
                 size={20}
                 strokeWidth={active ? 2.3 : 1.8}
                 className={cn(
-                  'transition-colors',
-                  active ? 'text-accent' : 'text-text-muted'
+                  'relative transition-all duration-200',
+                  active ? 'text-accent scale-110' : 'text-text-muted'
                 )}
               />
               <span
@@ -104,6 +128,7 @@ export function DesktopSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={cn(
                 'flex items-center gap-3 px-3 py-3 rounded-xl transition-all group',
                 active

@@ -80,7 +80,7 @@ export async function upsertMyMeasurements(
     );
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] upsertMyMeasurements failed:', error);
+      console.error('[Team Purex] upsertMyMeasurements failed:', error);
       return { ok: false, error: error.message };
     }
 

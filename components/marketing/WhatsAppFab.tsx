@@ -15,7 +15,7 @@ export function WhatsAppFab() {
 
   return (
     <a
-      href={whatsappLink('Hi PURE X, I would like to book a free discovery call.')}
+      href={whatsappLink('Hi Team Purex, I would like to book a free discovery call.')}
       target="_blank"
       rel="noopener noreferrer"
       className={`

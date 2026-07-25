@@ -19,6 +19,13 @@ export interface WorkoutTemplateExercise {
   exerciseOrder: number;
 }
 
+/**
+ * Discriminator for where a template originates. 'db' is the
+ * authoritative store; 'sheet' rows come from the Google Sheets
+ * sync and can't be edited via the admin Templates page.
+ */
+export type WorkoutTemplateSource = 'db' | 'sheet';
+
 export interface WorkoutTemplateSummary {
   id: string;
   name: string;
@@ -29,6 +36,8 @@ export interface WorkoutTemplateSummary {
   isShared: boolean;
   createdBy: string | null;
   updatedAt: string;
+  /** 'db' when sourced from Supabase, 'sheet' when from Google Sheets sync. */
+  source: WorkoutTemplateSource;
 }
 
 export interface WorkoutTemplate {
@@ -47,4 +56,5 @@ export interface WorkoutTemplate {
   createdAt: string;
   updatedAt: string;
   exercises: WorkoutTemplateExercise[];
+  source?: WorkoutTemplateSource;
 }

@@ -42,13 +42,13 @@ export async function getTodaysMeals(
       // Likely cause: 00015_meal_logging migration not applied yet.
       // We swallow + return empty so the dashboard keeps working.
       // eslint-disable-next-line no-console
-      console.error('[PURE X] getTodaysMeals failed:', error.message);
+      console.error('[Team Purex] getTodaysMeals failed:', error.message);
       return [];
     }
     return (data ?? []) as unknown as MealRow[];
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PURE X] getTodaysMeals threw:', err);
+    console.error('[Team Purex] getTodaysMeals threw:', err);
     return [];
   }
 }

@@ -535,7 +535,7 @@ export const INTERNAL_ACTIONS: AdminInternalAction[] = [
     name: 'Share Nutrition Guide',
     icon: '📄',
     category: 'Resource',
-    description: 'PURE X macro guidelines PDF',
+    description: 'Team Purex macro guidelines PDF',
     actionType: 'share_resource',
   },
   {

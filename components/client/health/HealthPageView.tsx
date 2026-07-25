@@ -11,8 +11,7 @@ import {
   HeartPulse,
 } from 'lucide-react';
 import { BodyMeasurementsCard } from '@/components/client/dashboard/BodyMeasurementsCard';
-import { HealthPassportCard } from '@/components/client/dashboard/HealthPassportCard';
-import { ExtractedMarkersCard } from '@/components/client/health/ExtractedMarkersCard';
+import { HealthReportsSection } from '@/components/client/health/HealthReportsSection';
 import {
   MOOD_META,
   type MoodState,
@@ -22,7 +21,10 @@ import type {
   ProfileBodySettings,
 } from '@/lib/data/body-measurements';
 import type { BodyProportions } from '@/lib/data/body-proportions';
-import type { HealthReport } from '@/lib/data/health-reports';
+import type {
+  HealthReportWithReadings,
+  LabPanelWithMarkers,
+} from '@/lib/data/health-reports';
 import type { DailyInputs } from '@/lib/data/twin';
 import {
   COMMON_CONDITIONS,
@@ -34,7 +36,8 @@ interface Props {
   measurements: BodyMeasurements | null;
   bodySettings: ProfileBodySettings;
   proportions: BodyProportions | null;
-  healthReports: HealthReport[];
+  healthReports: HealthReportWithReadings[];
+  labCatalog: LabPanelWithMarkers[];
   moodHistory: Array<{ log_date: string; mood_state: MoodState | null }>;
   dailyInputs: DailyInputs;
   healthConditions: HealthConditionsProfile;
@@ -43,7 +46,7 @@ interface Props {
 /**
  * HealthPageView — body-data hub.
  *
- * Composes existing cards (BodyMeasurementsCard, HealthPassportCard)
+ * Composes existing cards (BodyMeasurementsCard, HealthReportsSection)
  * plus three new mini-sections: DailyVitalsCard, MoodPatternCard,
  * HealthConditionsCard. No new server actions or DB schema for the
  * conditions section in this iteration — it's a placeholder UI that
@@ -55,6 +58,7 @@ export function HealthPageView({
   bodySettings,
   proportions,
   healthReports,
+  labCatalog,
   moodHistory,
   dailyInputs,
   healthConditions,
@@ -71,14 +75,19 @@ export function HealthPageView({
         profileSettings={bodySettings}
       />
 
-      {/* 3a — Extracted lab markers (Gemini vision pulls structured
-              values out of the user's uploaded reports). Renders an
-              empty state when no reports are extracted yet, so this
-              card is always present as a hint. */}
-      <ExtractedMarkersCard reports={healthReports} />
-
-      {/* 3b — Health Passport (raw file list — view / delete / re-extract) */}
-      <HealthPassportCard initialReports={healthReports} />
+      {/* 3 — Health Passport (lab report entry + list + comparisons).
+              Replaces the earlier PDF-upload + AI-extraction flow —
+              admin/client enter marker values directly against a
+              catalog of Indian-lab panels. */}
+      <HealthReportsSection
+        reports={healthReports}
+        catalog={labCatalog}
+        gender={
+          bodySettings.gender === 'male' || bodySettings.gender === 'female'
+            ? bodySettings.gender
+            : null
+        }
+      />
 
       {/* 4 — Mood pattern (last 7 days) */}
       <MoodPatternCard history={moodHistory} />

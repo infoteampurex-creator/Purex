@@ -536,46 +536,163 @@ function CalendarHeatGrid({ data }: { data: PlanData }) {
 }
 
 function EmptyState() {
+  // Preview week — 3 strength sessions + 2 conditioning + 2 rest.
+  // Realistic mix without over-committing to specific templates.
+  const previewWeek = [
+    { day: 'Mon', label: 'Strength', color: '#ff8a4d' },
+    { day: 'Tue', label: 'Cardio', color: '#c6ff3d' },
+    { day: 'Wed', label: 'Strength', color: '#ff8a4d' },
+    { day: 'Thu', label: 'Mobility', color: '#7dd3ff' },
+    { day: 'Fri', label: 'Strength', color: '#ff8a4d' },
+    { day: 'Sat', label: 'Hybrid', color: '#a78bfa' },
+    { day: 'Sun', label: 'Rest', color: 'rgba(255,255,255,0.35)' },
+  ];
+
   return (
-    <div
-      className="rounded-3xl border p-8 text-center"
-      style={{
-        background: 'rgba(255,255,255,0.02)',
-        borderColor: 'rgba(255,255,255,0.06)',
-      }}
-    >
+    <div className="space-y-4">
+      {/* Preview training-load hero */}
       <div
-        className="inline-flex w-14 h-14 items-center justify-center rounded-2xl mb-4"
+        className="relative rounded-3xl border p-5 overflow-hidden"
         style={{
-          background: 'rgba(198, 255, 61, 0.08)',
-          border: '1px solid rgba(198, 255, 61, 0.25)',
-          color: '#c6ff3d',
+          background:
+            'radial-gradient(ellipse at 50% 0%, rgba(255,138,77,0.14) 0%, transparent 60%), linear-gradient(180deg, #14110d 0%, #0a0c09 100%)',
+          borderColor: 'rgba(255,138,77,0.30)',
         }}
       >
-        <Dumbbell size={20} />
+        <div className="absolute top-3 right-3 rounded-full px-2 py-0.5 font-mono uppercase tracking-[0.16em] font-bold"
+          style={{
+            fontSize: 9,
+            color: '#ffd24d',
+            background: 'rgba(255,210,77,0.12)',
+            border: '1px solid rgba(255,210,77,0.40)',
+          }}>
+          Preview
+        </div>
+        <div
+          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] font-bold mb-2"
+          style={{ color: '#ff8a4d' }}
+        >
+          <Sparkles size={11} />
+          Training Load
+        </div>
+        <div className="flex items-baseline gap-3">
+          <span
+            className="font-display font-bold leading-none tabular-nums"
+            style={{ fontSize: 48, color: '#ff8a4d' }}
+          >
+            72
+          </span>
+          <span
+            className="font-mono uppercase tracking-[0.18em] font-bold"
+            style={{ fontSize: 10, color: 'rgba(255,138,77,0.65)' }}
+          >
+            / 100
+          </span>
+        </div>
+        <div
+          className="font-display font-bold mt-1"
+          style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)' }}
+        >
+          Building Momentum
+        </div>
+        <p
+          className="mt-1 leading-snug"
+          style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.60)' }}
+        >
+          4 of 6 workouts complete this week
+        </p>
       </div>
-      <h2 className="font-display font-semibold text-xl tracking-tight mb-2">
-        No training plan yet
-      </h2>
-      <p
-        className="max-w-md mx-auto leading-relaxed mb-4"
-        style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)' }}
-      >
-        Your coach hasn&apos;t assigned workouts in the last 28 days. Open
-        Home to start a self-challenge — once your coach activates a plan
-        it&apos;ll show up here automatically.
-      </p>
-      <Link
-        href="/client/dashboard"
-        className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-mono uppercase tracking-[0.18em] font-bold"
+
+      {/* Preview week strip */}
+      <div
+        className="relative rounded-3xl border p-4"
         style={{
-          fontSize: 11,
-          color: '#0a0c09',
-          background: 'linear-gradient(135deg, #c6ff3d 0%, #ffd24d 100%)',
+          background: 'rgba(255,255,255,0.02)',
+          borderColor: 'rgba(255,255,255,0.06)',
         }}
       >
-        Go to Home <ArrowRight size={12} />
-      </Link>
+        <div className="absolute top-3 right-3 rounded-full px-2 py-0.5 font-mono uppercase tracking-[0.16em] font-bold"
+          style={{
+            fontSize: 9,
+            color: '#ffd24d',
+            background: 'rgba(255,210,77,0.12)',
+            border: '1px solid rgba(255,210,77,0.40)',
+          }}>
+          Preview
+        </div>
+        <div
+          className="font-mono uppercase tracking-[0.18em] font-bold mb-3"
+          style={{ fontSize: 10, color: 'rgba(248,244,239,0.75)' }}
+        >
+          This week
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {previewWeek.map((d) => (
+            <div
+              key={d.day}
+              className="rounded-lg py-2 flex flex-col items-center"
+              style={{
+                background: `${d.color}12`,
+                border: `1px solid ${d.color}30`,
+              }}
+            >
+              <div
+                className="font-mono uppercase tracking-[0.12em] font-bold"
+                style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)' }}
+              >
+                {d.day}
+              </div>
+              <div
+                className="font-mono uppercase tracking-[0.10em] font-bold mt-1 text-center"
+                style={{ fontSize: 9, color: d.color, lineHeight: 1.2 }}
+              >
+                {d.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Real CTA */}
+      <div
+        className="rounded-3xl border p-6 text-center"
+        style={{
+          background: 'rgba(255,255,255,0.02)',
+          borderColor: 'rgba(255,255,255,0.08)',
+        }}
+      >
+        <div
+          className="inline-flex w-12 h-12 items-center justify-center rounded-2xl mb-3"
+          style={{
+            background: 'rgba(198, 255, 61, 0.10)',
+            border: '1px solid rgba(198, 255, 61, 0.30)',
+            color: '#c6ff3d',
+          }}
+        >
+          <Dumbbell size={18} />
+        </div>
+        <h2 className="font-display font-semibold text-lg tracking-tight mb-1">
+          This is a preview of your Plan page
+        </h2>
+        <p
+          className="max-w-md mx-auto leading-relaxed mb-4"
+          style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)' }}
+        >
+          Once your coach assigns your first workout, this whole page
+          fills with your live schedule, streak, and completion grid.
+        </p>
+        <Link
+          href="/client/dashboard"
+          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-mono uppercase tracking-[0.18em] font-bold"
+          style={{
+            fontSize: 11,
+            color: '#0a0c09',
+            background: 'linear-gradient(135deg, #c6ff3d 0%, #ffd24d 100%)',
+          }}
+        >
+          Go to Home <ArrowRight size={12} />
+        </Link>
+      </div>
     </div>
   );
 }

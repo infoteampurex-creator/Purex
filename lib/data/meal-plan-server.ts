@@ -55,7 +55,7 @@ export async function getMealPlanForClient(
     if (mealIds.length > 0) {
       const { data: itemRows } = await supabase
         .from('client_meal_plan_items')
-        .select('id, meal_id, food_name, quantity, item_order, notes')
+        .select('id, meal_id, food_name, quantity, calories, item_order, notes')
         .in('meal_id', mealIds)
         .order('item_order', { ascending: true });
 
@@ -64,6 +64,7 @@ export async function getMealPlanForClient(
         meal_id: string;
         food_name: string;
         quantity: string | null;
+        calories: number | null;
         item_order: number;
         notes: string | null;
       };
@@ -73,6 +74,7 @@ export async function getMealPlanForClient(
           id: r.id,
           foodName: r.food_name,
           quantity: r.quantity,
+          calories: r.calories,
           itemOrder: r.item_order,
           notes: r.notes,
         });

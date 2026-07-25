@@ -1,0 +1,20 @@
+{
+  "name": "Team Purex",
+  "short_name": "Teampurex",
+  "description": "Integrated health coaching — trainer, doctor, physio, athletic coach working from one coordinated plan.",
+  "start_url": "/client/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0c09",
+  "theme_color": "#0a0c09",
+  "icons": [
+    {
+      "src": "/brand/logo.png",
+      "sizes": "868x670",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle"]
+}

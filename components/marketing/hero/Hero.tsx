@@ -68,7 +68,7 @@ export function Hero() {
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
               className="text-base md:text-lg text-text-muted leading-relaxed max-w-[52ch] mb-6 md:mb-8"
             >
-              PURE X is the only coaching platform where your trainer, doctor, physiotherapist, athletic coach, and mental health specialist work from one coordinated plan. No shortcuts. No guesswork. Just measurable, sustainable transformation.
+              Team Purex is the only coaching platform where your trainer, doctor, physiotherapist, athletic coach, and mental health specialist work from one coordinated plan. No shortcuts. No guesswork. Just measurable, sustainable transformation.
             </motion.p>
 
             {/* Credibility badges row */}

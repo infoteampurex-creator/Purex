@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { signIn, type AuthActionState } from '@/lib/actions/auth';
 import { Input, Label, FieldError } from '@/components/ui/Input';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
 const initialState: AuthActionState = { ok: false };
 
@@ -13,6 +14,15 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   const [state, formAction] = useActionState(signIn, initialState);
 
   return (
+    <div className="space-y-4">
+      <GoogleSignInButton redirectTo={redirectTo} />
+      <div className="relative flex items-center gap-3 py-1">
+        <div className="flex-1 h-px bg-border-soft" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-dim font-bold">
+          or with email
+        </span>
+        <div className="flex-1 h-px bg-border-soft" />
+      </div>
     <form action={formAction} className="space-y-4">
       {/* Only send an explicit redirect if the caller requested one
           (e.g. deep-link back to a protected page). Otherwise, let the
@@ -66,6 +76,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
 
       <SubmitButton />
     </form>
+    </div>
   );
 }
 

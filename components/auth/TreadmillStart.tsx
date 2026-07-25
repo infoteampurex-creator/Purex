@@ -24,7 +24,7 @@ export function TreadmillStart({ activated, onActivate }: TreadmillStartProps) {
   const [pressing, setPressing] = useState(false);
   const [bootStep, setBootStep] = useState(0);
 
-  const bootMessages = ['READY', 'BOOT', 'CALIBRATE', 'ONLINE', 'PURE X'];
+  const bootMessages = ['READY', 'BOOT', 'CALIBRATE', 'ONLINE', 'Team Purex'];
 
   useEffect(() => {
     if (!activated) {
@@ -310,7 +310,7 @@ export function TreadmillStart({ activated, onActivate }: TreadmillStartProps) {
                   transition: 'color 0.6s ease',
                 }}
               >
-                PURE X Console
+                Team Purex Console
               </div>
             </div>
           </div>

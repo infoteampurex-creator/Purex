@@ -130,7 +130,7 @@ export function ClientDietEditor({
               ...m,
               items: [
                 ...m.items,
-                { foodName: '', quantity: null, itemOrder: m.items.length },
+                { foodName: '', quantity: null, calories: null, itemOrder: m.items.length },
               ],
             }
           : m
@@ -196,6 +196,7 @@ export function ClientDietEditor({
             .map((it, j) => ({
               foodName: it.foodName.trim(),
               quantity: it.quantity?.trim() || null,
+              calories: it.calories ?? null,
               itemOrder: j,
               notes: null,
             })),
@@ -243,6 +244,7 @@ export function ClientDietEditor({
         items: m.items.map((it, j) => ({
           foodName: it.foodName,
           quantity: it.quantity,
+          calories: it.calories ?? null,
           itemOrder: j,
         })),
       })),
@@ -736,8 +738,40 @@ function MealRow({
                 onUpdateItem(j, { quantity: e.target.value.slice(0, 80) || null })
               }
               placeholder="qty"
-              className="w-24 rounded bg-bg-elevated border border-border-soft px-2 py-1 text-xs font-mono focus:border-accent/50 focus:outline-none"
+              className="w-20 rounded bg-bg-elevated border border-border-soft px-2 py-1 text-xs font-mono focus:border-accent/50 focus:outline-none"
             />
+            {/* kcal per portion — drives /client/nutrition label + swap suggestions */}
+            <div className="relative w-20 flex-shrink-0">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={4000}
+                value={item.calories ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') {
+                    onUpdateItem(j, { calories: null });
+                    return;
+                  }
+                  const n = parseInt(v, 10);
+                  onUpdateItem(j, {
+                    calories: Number.isFinite(n)
+                      ? Math.max(0, Math.min(4000, n))
+                      : null,
+                  });
+                }}
+                placeholder="kcal"
+                className="w-full rounded bg-bg-elevated border border-border-soft pl-2 pr-7 py-1 text-xs font-mono tabular-nums focus:border-accent/50 focus:outline-none"
+              />
+              <span
+                aria-hidden
+                className="absolute right-2 top-1/2 -translate-y-1/2 font-mono uppercase tracking-[0.12em] font-bold pointer-events-none"
+                style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)' }}
+              >
+                kcal
+              </span>
+            </div>
             <button
               type="button"
               onClick={() => onRemoveItem(j)}

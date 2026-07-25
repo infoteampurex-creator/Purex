@@ -28,7 +28,7 @@ export default async function AdminSpecialistsPage() {
       <AdminPageHeader
         eyebrow="Team"
         title="Specialists"
-        subtitle="The PURE X experts. Manage profiles, Calendly URLs, active status, and client loads."
+        subtitle="The Team Purex experts. Manage profiles, Calendly URLs, active status, and client loads."
       />
 
       <div className="grid md:grid-cols-2 gap-4">

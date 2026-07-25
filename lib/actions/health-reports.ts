@@ -3,100 +3,71 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import type { HealthReport } from '@/lib/data/health-reports';
-import { extractHealthReport } from './extract-health-report';
-
-// NOTE on maxDuration: server-action files marked 'use server' can
-// only export async functions, so the timeout config must live on
-// the pages/routes that USE these actions:
-//   - app/(client)/client/health/page.tsx
-//   - app/(client)/client/dashboard/page.tsx
-// Both set `export const maxDuration = 60` so Gemini has room to run
-// (15-30s typical for a multi-page PDF).
+import type {
+  HealthReport,
+  HealthReportWithReadings,
+  MarkerReading,
+} from '@/lib/data/health-reports';
 
 // ─── Validation ─────────────────────────────────────────────────
 
-const ALLOWED_MIME = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/heic',
-  'image/heif',
-  'image/webp',
-]);
-
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB — matches bucket file_size_limit
-
-const uploadInputSchema = z.object({
-  filename: z.string().min(1).max(255),
-  mimeType: z.string(),
-  /** base64-encoded file body. Client encodes before sending to keep this
-   *  a simple JSON action (no multipart parsing). */
-  base64: z.string().min(1),
-  reportLabel: z.string().max(120).optional().nullable(),
-  reportDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .nullable(),
+const readingSchema = z.object({
+  markerId: z.string().uuid(),
+  value: z.number().finite(),
+  notes: z.string().max(200).optional().nullable(),
 });
 
-export type UploadInput = z.infer<typeof uploadInputSchema>;
+const saveReportSchema = z.object({
+  /** Optional — admin/coach uses this to enter on behalf of a client.
+   *  Client action leaves it null; the caller's own id is used. */
+  targetClientId: z.string().uuid().optional().nullable(),
+  reportDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  reportLabel: z.string().max(120).optional().nullable(),
+  readings: z.array(readingSchema).min(1, 'Add at least one marker value'),
+});
 
-export type UploadResult =
-  | { ok: true; report: HealthReport }
+export type SaveReportInput = z.infer<typeof saveReportSchema>;
+
+export type SaveReportResult =
+  | { ok: true; reportId: string }
   | { ok: false; error: string };
 
-// ─── Upload ─────────────────────────────────────────────────────
+// ─── Save a new report ──────────────────────────────────────────
 
 /**
- * Upload a health report (PDF or image) to the private storage bucket
- * and create a row in client_health_reports.
+ * Create a health-report record with all its marker readings in one
+ * transactional-ish call. Both client and admin use this — the admin
+ * passes `targetClientId` to enter on behalf of a client; the client
+ * leaves it empty and the auth'd user id is used.
  *
- * Returns the saved report row so the UI can immediately display it
- * in the list without a refetch.
- *
- * Security:
- *   - Auth required; client_id always derived from session, never trusted
- *     from the client
- *   - File size hard-capped at 10 MB (bucket also enforces, this is a
- *     belt-and-suspenders client-side check)
- *   - MIME type checked against allowlist
- *   - File written to <client_id>/<uuid>.<ext> path so the storage RLS
- *     folder-prefix policy can scope reads to the owner
+ * A report is "one lab visit" — all readings share the same date.
+ * Duplicate marker entries within the same report are rejected by
+ * the UNIQUE (report_id, marker_id) constraint.
  */
-export async function uploadHealthReport(
-  input: UploadInput
-): Promise<UploadResult> {
-  const parsed = uploadInputSchema.safeParse(input);
+export async function saveHealthReport(
+  input: SaveReportInput
+): Promise<SaveReportResult> {
+  const parsed = saveReportSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
-  }
-  const { filename, mimeType, base64, reportLabel, reportDate } = parsed.data;
-
-  if (!ALLOWED_MIME.has(mimeType.toLowerCase())) {
     return {
       ok: false,
-      error: 'Unsupported file type. Upload PDF, JPG, or PNG.',
+      error: parsed.error.issues[0]?.message ?? 'Invalid input',
     };
   }
+  const { targetClientId, reportDate, reportLabel, readings } = parsed.data;
 
-  let buffer: Buffer;
-  try {
-    buffer = Buffer.from(base64, 'base64');
-  } catch {
-    return { ok: false, error: 'File body could not be decoded.' };
-  }
-
-  if (buffer.length === 0) {
-    return { ok: false, error: 'File is empty.' };
-  }
-  if (buffer.length > MAX_BYTES) {
-    return {
-      ok: false,
-      error: `File too large — ${(buffer.length / 1024 / 1024).toFixed(1)} MB. Max is 10 MB.`,
-    };
+  // Reject duplicate marker IDs before hitting the DB (nicer error).
+  const seen = new Set<string>();
+  for (const r of readings) {
+    if (seen.has(r.markerId)) {
+      return {
+        ok: false,
+        error: 'The same marker appears twice in this report.',
+      };
+    }
+    seen.add(r.markerId);
   }
 
   try {
@@ -109,185 +80,83 @@ export async function uploadHealthReport(
       return { ok: false, error: 'You are not signed in.' };
     }
 
-    // Derive extension from MIME (safer than trusting filename suffix)
-    const ext = (() => {
-      switch (mimeType.toLowerCase()) {
-        case 'application/pdf': return 'pdf';
-        case 'image/jpeg':
-        case 'image/jpg':       return 'jpg';
-        case 'image/png':       return 'png';
-        case 'image/webp':      return 'webp';
-        case 'image/heic':      return 'heic';
-        case 'image/heif':      return 'heif';
-        default:                return 'bin';
+    // If targetClientId is set (admin flow), confirm admin role.
+    let clientId = user.id;
+    if (targetClientId && targetClientId !== user.id) {
+      const { data: roleRow } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      const role = roleRow?.role ?? 'user';
+      if (role !== 'admin' && role !== 'super_admin') {
+        return { ok: false, error: 'Only coaches can enter data for other clients.' };
       }
-    })();
-
-    // Path convention: <client_id>/<uuid>.<ext> — matches storage RLS
-    const fileId = crypto.randomUUID();
-    const storagePath = `${user.id}/${fileId}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('health-reports')
-      .upload(storagePath, buffer, {
-        contentType: mimeType,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      return { ok: false, error: `Upload failed: ${uploadError.message}` };
+      clientId = targetClientId;
     }
 
-    // Create the DB row
-    const { data: row, error: insertError } = await supabase
+    // Create the report row.
+    const { data: reportRow, error: insertReportErr } = await supabase
       .from('client_health_reports')
       .insert({
-        client_id: user.id,
-        storage_path: storagePath,
-        original_filename: filename,
-        mime_type: mimeType,
-        file_size_bytes: buffer.length,
+        client_id: clientId,
         report_label: reportLabel ?? null,
-        report_date: reportDate ?? null,
+        report_date: reportDate,
+        entered_by: user.id,
       })
-      .select()
+      .select('id')
       .single();
 
-    if (insertError || !row) {
-      // Best-effort cleanup — orphan in storage otherwise
-      await supabase.storage.from('health-reports').remove([storagePath]);
+    if (insertReportErr || !reportRow) {
       return {
         ok: false,
-        error: `Could not save report record: ${insertError?.message ?? 'unknown error'}`,
+        error: `Could not save report: ${insertReportErr?.message ?? 'unknown error'}`,
       };
     }
 
-    revalidatePath('/client/dashboard');
-    revalidatePath('/client/profile');
+    // Bulk-insert readings.
+    const { error: insertReadingsErr } = await supabase
+      .from('client_health_marker_readings')
+      .insert(
+        readings.map((r) => ({
+          client_id: clientId,
+          report_id: reportRow.id,
+          marker_id: r.markerId,
+          value: r.value,
+          notes: r.notes ?? null,
+          entered_by: user.id,
+        }))
+      );
 
-    // ─── Synchronous AI extraction ──────────────────────────────
-    // We tried fire-and-forget first; Vercel kills background
-    // promises shortly after the request returns, so extractions
-    // sat in 'pending' forever. Awaiting keeps the request alive
-    // until Gemini responds — the user sees a slightly longer
-    // "Uploading…" spinner but the report appears with markers
-    // already populated. Failures are non-fatal: the file + row
-    // exist regardless, and the user can hit Re-extract from the UI.
-    try {
-      await extractHealthReport(row.id);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('[health-reports] inline extraction threw', err);
-      // Swallow — upload itself succeeded.
+    if (insertReadingsErr) {
+      // Roll back the report row so we don't leave an empty shell.
+      await supabase
+        .from('client_health_reports')
+        .delete()
+        .eq('id', reportRow.id);
+      return {
+        ok: false,
+        error: `Could not save readings: ${insertReadingsErr.message}`,
+      };
     }
-
-    // Re-fetch the row so we return the post-extraction state to the
-    // client (markers available immediately on the Health page).
-    const { data: finalRow } = await supabase
-      .from('client_health_reports')
-      .select('*')
-      .eq('id', row.id)
-      .maybeSingle();
-
-    revalidatePath('/client/health');
-
-    return {
-      ok: true,
-      report: mapRowToReport((finalRow as HealthReportRow) ?? (row as HealthReportRow)),
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : 'Upload failed',
-    };
-  }
-}
-
-// ─── Retry extraction ───────────────────────────────────────────
-
-export type RetryExtractionResult =
-  | { ok: true; report: HealthReport }
-  | { ok: false; error: string };
-
-/**
- * Re-run Gemini extraction on a report that's currently stuck in
- * 'pending' / 'processing' / 'failed' / 'skipped'. Manual trigger
- * surfaced as a button on the report row in HealthPassportCard.
- *
- * Useful for:
- *   - Reports uploaded before the inline-extraction fix landed
- *   - Failed extractions the user wants to retry (poor scan)
- *   - Re-extracting after the AI key was added
- */
-export async function retryHealthReportExtraction(
-  reportId: string
-): Promise<RetryExtractionResult> {
-  if (!reportId || typeof reportId !== 'string') {
-    return { ok: false, error: 'Invalid report id' };
-  }
-
-  try {
-    await extractHealthReport(reportId);
-    const supabase = await createClient();
-    const { data: row } = await supabase
-      .from('client_health_reports')
-      .select('*')
-      .eq('id', reportId)
-      .maybeSingle();
-    if (!row) return { ok: false, error: 'Report not found' };
 
     revalidatePath('/client/health');
     revalidatePath('/client/dashboard');
-    revalidatePath(`/admin/clients/${(row as HealthReportRow).client_id}`);
+    revalidatePath(`/admin/clients/${clientId}`);
 
-    return { ok: true, report: mapRowToReport(row as HealthReportRow) };
+    return { ok: true, reportId: reportRow.id };
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : 'Re-extract failed',
+      error: err instanceof Error ? err.message : 'Save failed',
     };
   }
 }
 
-// ─── List ───────────────────────────────────────────────────────
-
-/**
- * List the current user's uploaded reports, newest first.
- * Returns [] on auth failure or db error (logged server-side).
- */
-export async function getMyHealthReports(): Promise<HealthReport[]> {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const { data, error } = await supabase
-      .from('client_health_reports')
-      .select('*')
-      .eq('client_id', user.id)
-      .order('uploaded_at', { ascending: false });
-
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.error('[health-reports] list failed', error);
-      return [];
-    }
-
-    return (data ?? []).map(mapRowToReport);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[health-reports] list threw', err);
-    return [];
-  }
-}
-
-// ─── Delete ─────────────────────────────────────────────────────
+// ─── Delete a report (cascade removes readings) ─────────────────
 
 export type DeleteResult = { ok: true } | { ok: false; error: string };
 
-/** Delete a report row + its storage object (auth scoped to owner). */
 export async function deleteHealthReport(
   reportId: string
 ): Promise<DeleteResult> {
@@ -301,34 +170,24 @@ export async function deleteHealthReport(
     } = await supabase.auth.getUser();
     if (!user) return { ok: false, error: 'Not signed in' };
 
-    // Fetch storage_path first (also acts as RLS-gated existence check)
-    const { data: row, error: fetchErr } = await supabase
+    const { data: row } = await supabase
       .from('client_health_reports')
-      .select('storage_path')
+      .select('client_id')
       .eq('id', reportId)
-      .eq('client_id', user.id)
       .maybeSingle();
 
-    if (fetchErr || !row) {
-      return { ok: false, error: 'Report not found' };
-    }
-
-    // Best-effort delete storage object first; if that fails we still
-    // proceed so the user can clean up the row
-    await supabase.storage.from('health-reports').remove([row.storage_path]);
+    if (!row) return { ok: false, error: 'Report not found' };
 
     const { error: deleteErr } = await supabase
       .from('client_health_reports')
       .delete()
-      .eq('id', reportId)
-      .eq('client_id', user.id);
+      .eq('id', reportId);
 
-    if (deleteErr) {
-      return { ok: false, error: deleteErr.message };
-    }
+    if (deleteErr) return { ok: false, error: deleteErr.message };
 
+    revalidatePath('/client/health');
     revalidatePath('/client/dashboard');
-    revalidatePath('/client/profile');
+    revalidatePath(`/admin/clients/${row.client_id}`);
     return { ok: true };
   } catch (err) {
     return {
@@ -338,23 +197,12 @@ export async function deleteHealthReport(
   }
 }
 
-// ─── Coach review note (admin-only) ──────────────────────────────
+// ─── Coach review note (unchanged from prior) ───────────────────
 
 export type CoachReviewResult =
   | { ok: true }
   | { ok: false; error: string };
 
-/**
- * Admin/coach writes (or updates) the review note on a report. Uses
- * the existing client_health_reports.coach_review_note column. Sets
- * coach_reviewed_at + coach_reviewed_by automatically.
- *
- * Pass `note: ''` to clear an existing review note. (We treat empty
- * string as "no note" — the column itself becomes null.)
- *
- * Auth: requires admin/super_admin role. Non-admins are rejected
- * via RLS but we add a friendly check here too for error UX.
- */
 export async function setCoachReviewNote(input: {
   reportId: string;
   note: string;
@@ -374,7 +222,6 @@ export async function setCoachReviewNote(input: {
     } = await supabase.auth.getUser();
     if (!user) return { ok: false, error: 'Not signed in' };
 
-    // Role check for friendly error (RLS also enforces)
     const { data: roleRow } = await supabase
       .from('profiles')
       .select('role')
@@ -412,120 +259,151 @@ export async function setCoachReviewNote(input: {
   }
 }
 
-/**
- * Server-side: list a specific client's reports for the admin/coach
- * view. RLS allows admins to read any client's reports.
- */
-export async function getReportsForClient(
-  clientId: string
-): Promise<HealthReport[]> {
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('client_health_reports')
-      .select('*')
-      .eq('client_id', clientId)
-      .order('uploaded_at', { ascending: false });
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.error('[getReportsForClient] failed', error);
-      return [];
-    }
-    return (data ?? []).map(mapRowToReport);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[getReportsForClient] threw', err);
-    return [];
-  }
-}
+// ─── Readers ────────────────────────────────────────────────────
 
-// ─── Signed URL for viewing ─────────────────────────────────────
-
-/**
- * Generate a short-lived signed URL for viewing a report in the
- * browser/native viewer. RLS already scopes the storage object, but
- * we re-check ownership before issuing the URL.
- *
- * Expires in 5 minutes — long enough to open the file, short enough
- * that a leaked URL doesn't become a permanent backdoor.
- */
-export async function getReportViewUrl(
-  reportId: string
-): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return { ok: false, error: 'Not signed in' };
-
-    const { data: row } = await supabase
-      .from('client_health_reports')
-      .select('storage_path')
-      .eq('id', reportId)
-      .eq('client_id', user.id)
-      .maybeSingle();
-
-    if (!row) return { ok: false, error: 'Report not found' };
-
-    const { data: signed, error } = await supabase.storage
-      .from('health-reports')
-      .createSignedUrl(row.storage_path, 5 * 60);
-
-    if (error || !signed?.signedUrl) {
-      return { ok: false, error: error?.message ?? 'Could not generate URL' };
-    }
-
-    return { ok: true, url: signed.signedUrl };
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : 'URL generation failed',
-    };
-  }
-}
-
-// ─── Internal mapper ────────────────────────────────────────────
-
-interface HealthReportRow {
+interface ReportRow {
   id: string;
   client_id: string;
-  storage_path: string;
-  original_filename: string | null;
-  mime_type: string;
-  file_size_bytes: number;
   report_label: string | null;
   report_date: string | null;
   coach_review_note: string | null;
   coach_reviewed_at: string | null;
   coach_reviewed_by: string | null;
-  uploaded_at: string;
-  extraction_status?: string | null;
-  extracted_at?: string | null;
-  extracted_data?: unknown;
-  extracted_summary?: string | null;
-  extraction_error?: string | null;
+  entered_by: string | null;
+  created_at: string;
 }
 
-function mapRowToReport(row: HealthReportRow): HealthReport {
-  const status = (row.extraction_status as HealthReport['extractionStatus']) ?? 'pending';
+interface ReadingRow {
+  id: string;
+  report_id: string;
+  marker_id: string;
+  value: string | number;
+  notes: string | null;
+  entered_by: string | null;
+  entered_at: string;
+  marker: {
+    id: string;
+    slug: string;
+    name: string;
+    short_name: string | null;
+    unit: string | null;
+    ref_low: string | number | null;
+    ref_high: string | number | null;
+    higher_is_better: boolean;
+    panel: { slug: string; name: string } | null;
+  } | null;
+}
+
+function mapReportRow(row: ReportRow): HealthReport {
   return {
     id: row.id,
     clientId: row.client_id,
-    storagePath: row.storage_path,
-    originalFilename: row.original_filename,
-    mimeType: row.mime_type,
-    fileSizeBytes: row.file_size_bytes,
     reportLabel: row.report_label,
     reportDate: row.report_date,
     coachReviewNote: row.coach_review_note,
     coachReviewedAt: row.coach_reviewed_at,
     coachReviewedBy: row.coach_reviewed_by,
-    uploadedAt: row.uploaded_at,
-    extractionStatus: status,
-    extractedAt: row.extracted_at ?? null,
-    extractedData: (row.extracted_data as HealthReport['extractedData']) ?? null,
-    extractedSummary: row.extracted_summary ?? null,
-    extractionError: row.extraction_error ?? null,
+    enteredBy: row.entered_by,
+    createdAt: row.created_at,
   };
+}
+
+function toNum(v: string | number): number {
+  return typeof v === 'number' ? v : Number(v);
+}
+
+function mapReadingRow(row: ReadingRow): MarkerReading {
+  const m = row.marker;
+  return {
+    id: row.id,
+    markerId: row.marker_id,
+    markerSlug: m?.slug ?? '',
+    markerName: m?.name ?? 'Unknown marker',
+    markerShortName: m?.short_name ?? null,
+    panelSlug: m?.panel?.slug ?? '',
+    panelName: m?.panel?.name ?? '',
+    unit: m?.unit ?? null,
+    refLow:
+      m?.ref_low != null ? toNum(m.ref_low) : null,
+    refHigh:
+      m?.ref_high != null ? toNum(m.ref_high) : null,
+    higherIsBetter: m?.higher_is_better ?? false,
+    value: toNum(row.value),
+    notes: row.notes,
+    enteredBy: row.entered_by,
+    enteredAt: row.entered_at,
+  };
+}
+
+async function loadReportsWithReadings(
+  clientId: string
+): Promise<HealthReportWithReadings[]> {
+  const supabase = await createClient();
+
+  const { data: reports, error: repErr } = await supabase
+    .from('client_health_reports')
+    .select(
+      'id, client_id, report_label, report_date, coach_review_note, coach_reviewed_at, coach_reviewed_by, entered_by, created_at'
+    )
+    .eq('client_id', clientId)
+    .order('report_date', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false });
+
+  if (repErr || !reports?.length) return [];
+
+  const ids = reports.map((r) => r.id);
+  const { data: readings } = await supabase
+    .from('client_health_marker_readings')
+    .select(
+      `id, report_id, marker_id, value, notes, entered_by, entered_at,
+       marker:lab_markers (
+         id, slug, name, short_name, unit, ref_low, ref_high, higher_is_better,
+         panel:lab_panels (slug, name)
+       )`
+    )
+    .in('report_id', ids);
+
+  const readingsByReport = new Map<string, MarkerReading[]>();
+  for (const raw of (readings ?? []) as unknown as ReadingRow[]) {
+    const m = mapReadingRow(raw);
+    const list = readingsByReport.get(raw.report_id) ?? [];
+    list.push(m);
+    readingsByReport.set(raw.report_id, list);
+  }
+
+  return reports.map((r) => ({
+    ...mapReportRow(r as ReportRow),
+    readings: readingsByReport.get(r.id) ?? [],
+  }));
+}
+
+/** Current user's own reports (client-facing). */
+export async function getMyHealthReports(): Promise<
+  HealthReportWithReadings[]
+> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+    return await loadReportsWithReadings(user.id);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[getMyHealthReports] threw', err);
+    return [];
+  }
+}
+
+/** A specific client's reports — admin view. RLS gates access. */
+export async function getReportsForClient(
+  clientId: string
+): Promise<HealthReportWithReadings[]> {
+  try {
+    return await loadReportsWithReadings(clientId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[getReportsForClient] threw', err);
+    return [];
+  }
 }

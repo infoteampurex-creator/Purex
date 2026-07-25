@@ -25,6 +25,11 @@ const lifestyleSchema = z.object({
 const itemSchema = z.object({
   foodName: z.string().min(1).max(200),
   quantity: z.string().max(80).nullable(),
+  /** kcal per portion. 0 – 4000 covers everything from a sip of water
+   *  to a calorie-dense oil-only meal; admin is expected to keep this
+   *  honest. Null means "coach hasn't set it" — client just doesn't
+   *  see a kcal label and the swap suggestions are disabled. */
+  calories: z.number().int().min(0).max(4000).nullable(),
   itemOrder: z.number().int().min(0).max(50),
   notes: z.string().max(300).nullable().optional(),
 });
@@ -170,6 +175,7 @@ export async function setClientMealPlan(
           meal_id: mealRow.id,
           food_name: it.foodName,
           quantity: it.quantity,
+          calories: it.calories,
           item_order: it.itemOrder,
           notes: it.notes ?? null,
         }));

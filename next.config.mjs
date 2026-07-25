@@ -16,6 +16,7 @@ const nextConfig = {
     // (search: undefined) means "no query string allowed"; we keep the
     // explicit v=2 entry alongside the wildcard one so both forms work.
     localPatterns: [
+      { pathname: '/brand/**' }, // wordmark, favicon, brand assets
       { pathname: '/experts/**' },
       { pathname: '/trainers/**' },
       { pathname: '/in-action/**' },
@@ -62,6 +63,14 @@ const nextConfig = {
       {
         source: '/transformations/:slug((?!.*\\.).+)',
         destination: '/transformations#:slug',
+        permanent: true,
+      },
+      // Neelima's name was originally misspelled 'nilima' in the mothers
+      // roster. Redirect the old slug to the corrected one so any link
+      // already shared with the mothers still opens the right page.
+      {
+        source: '/purex-mothers/nilima',
+        destination: '/purex-mothers/neelima',
         permanent: true,
       },
     ];

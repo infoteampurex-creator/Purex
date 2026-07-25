@@ -19,7 +19,7 @@ export default function ContactPage() {
 
     // TODO: wire to email service (Resend) or form handler
     // For now, opens WhatsApp with pre-filled message
-    const text = `Hi PURE X team,
+    const text = `Hi Team Purex team,
 
 Name: ${name}
 Email: ${email}
@@ -234,7 +234,7 @@ ${message}`;
                       Remote clients welcome
                     </div>
                     <p className="text-xs text-text-muted leading-relaxed">
-                      Pure Core delivers the full PURE X system remotely. Clients
+                      Pure Core delivers the full Team Purex system remotely. Clients
                       worldwide work with us through app tracking, weekly calls, and
                       remote specialist access.
                     </p>
