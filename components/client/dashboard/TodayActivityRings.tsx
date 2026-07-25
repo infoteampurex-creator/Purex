@@ -22,12 +22,43 @@ interface Props {
  * Apple Fitness rings on small screens.
  */
 export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
-  const stepsPct = pct(inputs.steps, inputs.stepsGoal);
-  const fuelPct = nutrition.caloriesTarget
-    ? pct(nutrition.caloriesConsumed, nutrition.caloriesTarget)
-    : 0;
-  const sleepPct = pct(inputs.sleepMinutes, inputs.sleepGoalMinutes);
-  const waterPct = pct(inputs.waterMl, inputs.waterGoalMl);
+  // Preview mode: when nothing's been logged yet today, substitute
+  // realistic sample values so the ring tiles read as "alive" instead
+  // of a row of 0%. Same "Preview" chip pattern the Score hero and
+  // Nutrition page already use. Flips back to real data the moment
+  // the user logs anything.
+  const noneLogged =
+    inputs.steps === 0 &&
+    inputs.sleepMinutes === 0 &&
+    inputs.waterMl === 0 &&
+    nutrition.caloriesConsumed === 0;
+
+  const view = noneLogged
+    ? {
+        steps: 8400,
+        stepsGoal: inputs.stepsGoal || 10000,
+        cals: 1420,
+        calsGoal: nutrition.caloriesTarget || 2000,
+        sleep: 7 * 60 + 15, // 7h 15m
+        sleepGoal: inputs.sleepGoalMinutes || 8 * 60,
+        water: 1500,
+        waterGoal: inputs.waterGoalMl || 2000,
+      }
+    : {
+        steps: inputs.steps,
+        stepsGoal: inputs.stepsGoal,
+        cals: nutrition.caloriesConsumed,
+        calsGoal: nutrition.caloriesTarget,
+        sleep: inputs.sleepMinutes,
+        sleepGoal: inputs.sleepGoalMinutes,
+        water: inputs.waterMl,
+        waterGoal: inputs.waterGoalMl,
+      };
+
+  const stepsPct = pct(view.steps, view.stepsGoal);
+  const fuelPct = view.calsGoal ? pct(view.cals, view.calsGoal) : 0;
+  const sleepPct = pct(view.sleep, view.sleepGoal);
+  const waterPct = pct(view.water, view.waterGoal);
 
   const rings = [
     {
@@ -35,8 +66,8 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       target: 'steps' as const,
       icon: <Footprints size={14} />,
       label: 'Move',
-      value: formatSteps(inputs.steps),
-      goal: `/ ${formatSteps(inputs.stepsGoal)}`,
+      value: formatSteps(view.steps),
+      goal: `/ ${formatSteps(view.stepsGoal)}`,
       pct: stepsPct,
       color: '#c6ff3d',
     },
@@ -45,8 +76,8 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       target: 'meal' as const,
       icon: <Apple size={14} />,
       label: 'Fuel',
-      value: nutrition.caloriesConsumed.toLocaleString(),
-      goal: `/ ${nutrition.caloriesTarget.toLocaleString()}`,
+      value: view.cals.toLocaleString(),
+      goal: `/ ${view.calsGoal.toLocaleString()}`,
       pct: fuelPct,
       color: '#ff8a4d',
     },
@@ -55,8 +86,8 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       target: 'sleep' as const,
       icon: <Moon size={14} />,
       label: 'Sleep',
-      value: formatSleep(inputs.sleepMinutes),
-      goal: `/ ${formatSleep(inputs.sleepGoalMinutes)}`,
+      value: formatSleep(view.sleep),
+      goal: `/ ${formatSleep(view.sleepGoal)}`,
       pct: sleepPct,
       color: '#a78bfa',
     },
@@ -65,28 +96,45 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       target: 'water' as const,
       icon: <Droplets size={14} />,
       label: 'Water',
-      value: formatWater(inputs.waterMl),
-      goal: `/ ${formatWater(inputs.waterGoalMl)}`,
+      value: formatWater(view.water),
+      goal: `/ ${formatWater(view.waterGoal)}`,
       pct: waterPct,
       color: '#7dd3ff',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {rings.map((r, i) => (
-        <RingTile
-          key={r.key}
-          icon={r.icon}
-          label={r.label}
-          value={r.value}
-          goal={r.goal}
-          pct={r.pct}
-          color={r.color}
-          delay={0.05 + i * 0.06}
-          onTap={() => onLogTap(r.target)}
-        />
-      ))}
+    <div>
+      {noneLogged && (
+        <div className="flex items-center justify-end mb-2">
+          <span
+            className="font-mono uppercase tracking-[0.16em] font-bold px-2 py-0.5 rounded-full"
+            style={{
+              fontSize: 9,
+              color: '#ffd24d',
+              background: 'rgba(255,210,77,0.10)',
+              border: '1px solid rgba(255,210,77,0.32)',
+            }}
+          >
+            Sample · tap to log real
+          </span>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        {rings.map((r, i) => (
+          <RingTile
+            key={r.key}
+            icon={r.icon}
+            label={r.label}
+            value={r.value}
+            goal={r.goal}
+            pct={r.pct}
+            color={r.color}
+            delay={0.05 + i * 0.06}
+            onTap={() => onLogTap(r.target)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
