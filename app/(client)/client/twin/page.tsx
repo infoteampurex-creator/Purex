@@ -114,7 +114,12 @@ export default async function TwinPage() {
               320 on md+ so the desktop layout is unchanged. */}
           <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-4 md:p-8 overflow-hidden">
             <div className="flex flex-col items-center">
-              <TwinAvatarResponsive src={avatarSrc} />
+              <TwinAvatarResponsive
+                src={avatarSrc}
+                proportions={proportions}
+                heightCm={bodySettings.heightCm}
+                gender={bodySettings.gender}
+              />
               <div className="mt-6 text-center">
                 <AnimatedNumber value={overall} fontSize={72} />
                 <div className="font-mono uppercase tracking-[0.22em] text-text-muted font-bold mt-1" style={{ fontSize: 11 }}>

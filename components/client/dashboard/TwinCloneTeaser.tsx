@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Telescope } from 'lucide-react';
-import { AvatarImage } from '@/components/client/twin/AvatarImage';
+import { TwinAvatarResponsive } from '@/components/client/twin/TwinAvatarResponsive';
 import { TwinStatusBadge } from '@/components/client/twin/TwinStatusBadge';
 import {
   VitalsStrip,
   type VitalsSnapshot,
 } from '@/components/client/twin/VitalsStrip';
 import type { TwinVisualState } from '@/lib/data/twin';
+import type { BodyProportions } from '@/lib/data/body-proportions';
+import type { Gender } from '@/lib/data/body-measurements';
 
 // Sample vitals for fresh accounts. Realistic resting values for a
 // mid-30s adult in decent condition — the "you could look like this"
@@ -33,6 +35,13 @@ interface Props {
   overall: number;
   /** Short one-line message from dailyTwinMessage(). */
   message: string;
+  /** From deriveBodyProportions — drives measurement-based CSS scale
+   *  on the avatar so silhouettes actually differ per user. Optional. */
+  proportions?: BodyProportions | null;
+  /** User's height in centimetres, if known. Drives vertical scale. */
+  heightCm?: number | null;
+  /** Gender — picks reference-height baseline (male/female). */
+  gender?: Gender | null;
 }
 
 /**
@@ -66,6 +75,9 @@ export function TwinCloneTeaser({
   state,
   overall,
   message,
+  proportions,
+  heightCm,
+  gender,
 }: Props) {
   return (
     <motion.section
@@ -102,7 +114,13 @@ export function TwinCloneTeaser({
         aria-label="Open your PureX Twin"
         className="relative flex items-center justify-center pt-2 pb-2"
       >
-        <AvatarImage src={avatarSrc} width={200} accent="#c6ff3d" />
+        <TwinAvatarResponsive
+          src={avatarSrc}
+          accent="#c6ff3d"
+          proportions={proportions}
+          heightCm={heightCm}
+          gender={gender}
+        />
       </Link>
 
       {/* Vitality readout */}

@@ -16,6 +16,8 @@ import {
   type FutureStageKey,
   type TwinStats,
 } from '@/lib/data/twin';
+import type { BodyProportions } from '@/lib/data/body-proportions';
+import type { Gender } from '@/lib/data/body-measurements';
 
 interface Props {
   /** Today's actual Twin stats (used as the projection baseline). */
@@ -26,6 +28,13 @@ interface Props {
   initialStage?: FutureStageKey;
   /** Projected avatar PNG src — shown as the centerpiece for all stages. */
   avatarSrc?: string;
+  /** Body proportions today — drives the measurement-based CSS
+   *  transform on the avatar so silhouettes differ per user. */
+  proportions?: BodyProportions | null;
+  /** User's height in centimetres. Drives vertical scale. */
+  heightCm?: number | null;
+  /** Gender — picks reference-height baseline. */
+  gender?: Gender | null;
 }
 
 /**
@@ -42,6 +51,9 @@ export function FutureCloneViewer({
   workoutDoneToday,
   initialStage = '30d',
   avatarSrc,
+  proportions,
+  heightCm,
+  gender,
 }: Props) {
   const initialIndex = Math.max(
     0,
@@ -86,6 +98,9 @@ export function FutureCloneViewer({
                 src={avatarSrc}
                 accent={activeStage.aura}
                 glow={stageIndex >= 2}
+                proportions={proportions}
+                heightCm={heightCm}
+                gender={gender}
               />
             ) : null}
 

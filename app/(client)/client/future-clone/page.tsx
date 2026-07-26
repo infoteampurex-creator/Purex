@@ -92,6 +92,9 @@ export default async function FutureClonePage() {
           todayStats={stats}
           workoutDoneToday={inputs.workoutCompletedToday}
           avatarSrc={avatarSrc}
+          proportions={proportions}
+          heightCm={bodySettings.heightCm}
+          gender={bodySettings.gender}
         />
       </div>
     </main>
