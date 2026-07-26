@@ -150,11 +150,7 @@ function LoadingIndicator() {
   );
 }
 
-// Preload the drei GLTF loader for the demo avatar so first render
-// on the target page doesn't wait for the network. Consumers can
-// call useGLTF.preload(url) for their own users' avatars.
-if (typeof window !== 'undefined') {
-  // Ready Player Me public demo avatar — used as the default until
-  // the user creates their own.
-  useGLTF.preload('https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb');
-}
+// NOTE: no default preload. Ready Player Me shut down Jan 31, 2026
+// (Netflix acquisition); the previous demo URL is dead. Consumers
+// pass a live glbUrl via props; the drei useGLTF cache warms
+// per-user at render time.
