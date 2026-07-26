@@ -76,15 +76,36 @@ export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
         if (err) throw err;
         if (!data?.url) throw new Error('No OAuth URL from Supabase');
         const { Browser } = await import('@capacitor/browser');
+
+        // Reset the button when the Chrome Custom Tab closes so the
+        // user can retry — otherwise, if OAuth doesn't complete the
+        // deep-link handshake (because Supabase Redirect URLs lack
+        // the custom scheme, or user cancels), the spinner sits
+        // forever and the user can't tap Google again.
+        let closeListener: { remove(): Promise<void> } | null = null;
+        try {
+          closeListener = await Browser.addListener(
+            'browserFinished',
+            () => {
+              setLoading(false);
+              // Small delay so we don't race with a successful deep-
+              // link handshake that's about to navigate away.
+              setTimeout(() => {
+                closeListener?.remove().catch(() => {
+                  // ignore
+                });
+              }, 500);
+            }
+          );
+        } catch {
+          // ignore — some Capacitor versions omit browserFinished
+        }
+
         await Browser.open({
           url: data.url,
           presentationStyle: 'popover',
           windowName: '_self',
         });
-        // Loading stays true — the NativeOAuthHandler component
-        // triggers the actual navigation into the app once the deep
-        // link fires. If the user cancels, tapping the button again
-        // starts a fresh flow.
         return;
       }
 
