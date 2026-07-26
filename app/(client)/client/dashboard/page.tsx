@@ -269,6 +269,9 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
             state={twinState}
             overall={twinOverall}
             message={twinMessage}
+            proportions={proportions}
+            heightCm={bodySettings.heightCm}
+            gender={bodySettings.gender}
           />
         </div>
       )}
