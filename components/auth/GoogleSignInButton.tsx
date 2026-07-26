@@ -31,14 +31,8 @@ import { createClient } from '@/lib/supabase/client';
 export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Google explicitly blocks OAuth from embedded WebViews (their
-  // "disallowed_useragent" policy). The Capacitor WebView triggers
-  // that block, so the button spins forever with no way forward.
-  // Hide the button in native contexts until we ship the proper
-  // @capacitor/browser + Chrome Custom Tabs flow post-demo. Users
-  // on mobile use email/password (which works); users on web get
-  // Google (which also works).
   const [isNative, setIsNative] = useState(false);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     (async () => {
@@ -50,16 +44,52 @@ export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
       }
     })();
   }, []);
-  if (isNative) return null;
 
   const handleClick = async () => {
     setLoading(true);
     setError(null);
     try {
       const supabase = createClient();
-      const origin =
-        typeof window !== 'undefined' ? window.location.origin : '';
       const redirectPath = redirectTo ?? '/client/dashboard';
+
+      if (isNative) {
+        // ── Native path — Chrome Custom Tabs + custom-scheme deep link ──
+        //
+        // Google blocks OAuth from embedded WebViews. Workaround:
+        //   1. Ask Supabase for the OAuth URL (skipBrowserRedirect so
+        //      the WebView doesn't try to redirect itself).
+        //   2. Open that URL in Chrome Custom Tabs via @capacitor/browser.
+        //      Google treats Chrome Custom Tabs as a real browser and
+        //      allows the sign-in.
+        //   3. Set Supabase's redirectTo to our custom scheme
+        //      com.teampurex.app://auth-callback — Supabase does the
+        //      second-hop redirect there, Android intercepts it, our
+        //      NativeOAuthHandler component completes the sign-in
+        //      inside the WebView.
+        const { data, error: err } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `com.teampurex.app://auth-callback?next=${encodeURIComponent(redirectPath)}`,
+            skipBrowserRedirect: true,
+          },
+        });
+        if (err) throw err;
+        if (!data?.url) throw new Error('No OAuth URL from Supabase');
+        const { Browser } = await import('@capacitor/browser');
+        await Browser.open({
+          url: data.url,
+          presentationStyle: 'popover',
+          windowName: '_self',
+        });
+        // Loading stays true — the NativeOAuthHandler component
+        // triggers the actual navigation into the app once the deep
+        // link fires. If the user cancels, tapping the button again
+        // starts a fresh flow.
+        return;
+      }
+
+      // ── Web path — normal Supabase redirect flow ──
+      const origin = window.location.origin;
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -67,7 +97,7 @@ export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
         },
       });
       if (err) throw err;
-      // OAuth flow takes over the browser; no need to reset loading.
+      // Web OAuth flow takes over the browser; no need to reset loading.
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : 'Google sign-in failed';

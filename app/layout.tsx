@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { fontDisplay, fontBody, fontMono } from '@/lib/fonts';
 import { BRAND } from '@/lib/constants';
 import { NativeSplashDismisser } from '@/components/NativeSplashDismisser';
+import { NativeOAuthHandler } from '@/components/auth/NativeOAuthHandler';
 import './globals.css';
 
 // Supabase project host — extracted at build time so <link rel="preconnect">
@@ -207,6 +208,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             launchAutoHide: false in capacitor.config.ts so the splash
             stays until React actually hydrates. */}
         <NativeSplashDismisser />
+        {/* Native OAuth deep-link handler — completes the Google
+            sign-in flow when the com.teampurex.app:// custom scheme
+            fires. Silent no-op on web. */}
+        <NativeOAuthHandler />
         {children}
       </body>
     </html>
