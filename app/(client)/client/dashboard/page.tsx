@@ -7,6 +7,7 @@ import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
 import { TwinCloneTeaser } from '@/components/client/dashboard/TwinCloneTeaser';
 import { DailyDigest } from '@/components/client/dashboard/DailyDigest';
 import { buildDailyDigest } from '@/lib/data/daily-digest';
+import { enhanceDigestWithClaude } from '@/lib/data/daily-digest-ai';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import { OnboardingTour } from '@/components/client/OnboardingTour';
 import { MoodCheckInCard } from '@/components/client/dashboard/MoodCheckInCard';
@@ -183,7 +184,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     // isn't worth the round-trip. Kept null; the digest gracefully
     // degrades on the streak signal alone.
   }
-  const digest = buildDailyDigest({
+  const ruleDigest = buildDailyDigest({
     firstName,
     todayIso: selectedDate,
     yesterday: yesterdayInputs,
@@ -191,6 +192,32 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     todayWorkoutCompleted: twinInputs.workoutCompletedToday,
     hasAnyData,
   });
+
+  // Layer Claude Haiku 4.5 on top of the rule-based digest.
+  // Server-side call, cached per user per day, hard-timeout at 3.5 s,
+  // silent fall-through to the rule-based digest on any failure — so
+  // the dashboard NEVER blocks on this. When ANTHROPIC_API_KEY is
+  // unset (e.g. local dev without the key), returns ruleDigest
+  // unchanged.
+  const digest = userId
+    ? await enhanceDigestWithClaude(
+        ruleDigest,
+        {
+          firstName,
+          todayIso: selectedDate,
+          currentStreakDays,
+          todayWorkoutCompleted: twinInputs.workoutCompletedToday,
+          hasAnyData,
+          yesterdaySteps: null,
+          yesterdayStepsGoal: null,
+          yesterdaySleepHours: null,
+          yesterdaySleepGoalHours: null,
+          weeklyAvgScore: null,
+          pureXScore: pureXScoreEmpty ? null : pureXScore.total,
+        },
+        userId
+      )
+    : ruleDigest;
 
   // 7-day delta for the hero trend chip. Average over days that have
   // ANY data (avoids burying a real number under days the client

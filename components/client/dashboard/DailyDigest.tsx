@@ -17,13 +17,15 @@ const TONE_META: Record<
 /**
  * Top-of-dashboard "AI Coach Insight" card. Whoop opens with a
  * "Recovery / Strain / Sleep" recap block, Fitbit with a personalised
- * Daily Readiness message — same idea. This card reads the client's
- * streak, sleep, steps, and workout state, and delivers a single
- * data-referencing insight + one actionable line.
+ * Daily Readiness message — same idea.
  *
- * The message body comes from lib/data/daily-digest.ts (rule-based,
- * deterministic, zero-latency). Future: layer an LLM pass on top when
- * 30-day trend data is available.
+ * Two-layer pipeline: buildDailyDigest() runs the rule-based
+ * deterministic insight first (renders instantly, always works),
+ * then enhanceDigestWithClaude() (lib/data/daily-digest-ai.ts) layers
+ * Claude Haiku 4.5 on top server-side with a hard 3.5 s timeout,
+ * per-user-per-day cache, and silent fall-through to the rule-based
+ * message on any failure. So this component just consumes the final
+ * digest — it doesn't know or care which layer produced it.
  */
 export function DailyDigest({ digest }: { digest: DigestType }) {
   const meta = TONE_META[digest.tone];
