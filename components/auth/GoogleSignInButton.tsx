@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -31,6 +31,26 @@ import { createClient } from '@/lib/supabase/client';
 export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Google explicitly blocks OAuth from embedded WebViews (their
+  // "disallowed_useragent" policy). The Capacitor WebView triggers
+  // that block, so the button spins forever with no way forward.
+  // Hide the button in native contexts until we ship the proper
+  // @capacitor/browser + Chrome Custom Tabs flow post-demo. Users
+  // on mobile use email/password (which works); users on web get
+  // Google (which also works).
+  const [isNative, setIsNative] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        setIsNative(Capacitor.isNativePlatform());
+      } catch {
+        // web bundle without Capacitor — stays false
+      }
+    })();
+  }, []);
+  if (isNative) return null;
 
   const handleClick = async () => {
     setLoading(true);
@@ -57,28 +77,40 @@ export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
   };
 
   return (
-    <div className="space-y-2">
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={loading}
-        className="w-full h-12 rounded-full bg-white text-gray-900 font-semibold text-sm hover:bg-gray-50 active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 inline-flex items-center justify-center gap-3"
-      >
-        {loading ? (
-          <>
-            <Loader2 size={16} className="animate-spin" />
-            Opening Google…
-          </>
-        ) : (
-          <>
-            <GoogleGlyph />
-            Continue with Google
-          </>
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={loading}
+          className="w-full h-12 rounded-full bg-white text-gray-900 font-semibold text-sm hover:bg-gray-50 active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 inline-flex items-center justify-center gap-3"
+        >
+          {loading ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              Opening Google…
+            </>
+          ) : (
+            <>
+              <GoogleGlyph />
+              Continue with Google
+            </>
+          )}
+        </button>
+        {error && (
+          <p className="text-xs text-danger text-center">{error}</p>
         )}
-      </button>
-      {error && (
-        <p className="text-xs text-danger text-center">{error}</p>
-      )}
+      </div>
+      {/* Divider — shown alongside the button on web. When the button
+          hides itself on native (return null above), this divider
+          goes with it and the email form sits flush at the top. */}
+      <div className="relative flex items-center gap-3 py-1">
+        <div className="flex-1 h-px bg-border-soft" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-dim font-bold">
+          or with email
+        </span>
+        <div className="flex-1 h-px bg-border-soft" />
+      </div>
     </div>
   );
 }
