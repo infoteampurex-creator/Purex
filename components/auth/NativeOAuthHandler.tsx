@@ -172,10 +172,22 @@ export function NativeOAuthHandler() {
         return;
       }
 
-      // Refresh RSC cache so server components re-fetch with new
-      // auth cookies, then navigate.
-      router.refresh();
-      router.replace(next);
+      // Hard navigation via window.location instead of router.replace.
+      // The client-side router.refresh() + router.replace() combo
+      // sometimes lost the freshly-written auth cookies to a race
+      // between the Supabase cookie set and Next.js's middleware
+      // re-check — the user's session was valid but middleware kept
+      // bouncing them back to /login. window.location.href triggers
+      // a full document navigation which reliably picks up cookies.
+      // eslint-disable-next-line no-console
+      console.log('[oauth] navigating to', next);
+      try {
+        window.location.href = next;
+      } catch {
+        // Ultra-fallback if location.href fails (unlikely)
+        router.refresh();
+        router.replace(next);
+      }
     }
 
     return () => {
