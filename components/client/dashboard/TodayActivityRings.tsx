@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion';
 import { Footprints, Apple, Moon, Droplets } from 'lucide-react';
 import type { DailyInputs, NutritionSnapshot } from '@/lib/data/twin';
+import type { RingHistory } from '@/lib/data/twin-server';
+import { Sparkline } from '@/components/client/Sparkline';
 
 interface Props {
   inputs: DailyInputs;
@@ -10,6 +12,10 @@ interface Props {
   /** Called when the user taps a ring — opens the unified log sheet
    *  scoped to that metric. */
   onLogTap: (target: 'steps' | 'meal' | 'sleep' | 'water') => void;
+  /** 7-day per-metric history for the sparkline under each ring.
+   *  Optional — when omitted the rings render without sparklines
+   *  (e.g. anonymous / preview contexts). */
+  history?: RingHistory | null;
 }
 
 /**
@@ -21,7 +27,12 @@ interface Props {
  * narrow phones for thumb reachability — easier than concentric
  * Apple Fitness rings on small screens.
  */
-export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
+export function TodayActivityRings({
+  inputs,
+  nutrition,
+  onLogTap,
+  history,
+}: Props) {
   // Preview mode: when nothing's been logged yet today, substitute
   // realistic sample values so the ring tiles read as "alive" instead
   // of a row of 0%. Same "Preview" chip pattern the Score hero and
@@ -60,6 +71,16 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
   const sleepPct = pct(view.sleep, view.sleepGoal);
   const waterPct = pct(view.water, view.waterGoal);
 
+  // Sparkline data — only rendered when the user actually has some
+  // logged history. If every value is 0 (fresh account) the sparkline
+  // would be a flat line at the bottom which reads as noise, so we
+  // hide it entirely and let the ring itself carry the visual.
+  const showSpark = (arr: number[] | undefined): number[] | null => {
+    if (!arr || arr.length < 2) return null;
+    if (arr.every((v) => v === 0)) return null;
+    return arr;
+  };
+
   const rings = [
     {
       key: 'move' as const,
@@ -70,6 +91,7 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       goal: `/ ${formatSteps(view.stepsGoal)}`,
       pct: stepsPct,
       color: '#c6ff3d',
+      spark: showSpark(history?.steps),
     },
     {
       key: 'fuel' as const,
@@ -80,6 +102,7 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       goal: `/ ${view.calsGoal.toLocaleString()}`,
       pct: fuelPct,
       color: '#ff8a4d',
+      spark: showSpark(history?.cals),
     },
     {
       key: 'sleep' as const,
@@ -90,6 +113,7 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       goal: `/ ${formatSleep(view.sleepGoal)}`,
       pct: sleepPct,
       color: '#a78bfa',
+      spark: showSpark(history?.sleepMinutes),
     },
     {
       key: 'water' as const,
@@ -100,6 +124,7 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
       goal: `/ ${formatWater(view.waterGoal)}`,
       pct: waterPct,
       color: '#7dd3ff',
+      spark: showSpark(history?.waterMl),
     },
   ];
 
@@ -132,6 +157,7 @@ export function TodayActivityRings({ inputs, nutrition, onLogTap }: Props) {
             color={r.color}
             delay={0.05 + i * 0.06}
             onTap={() => onLogTap(r.target)}
+            spark={r.spark}
           />
         ))}
       </div>
@@ -150,6 +176,7 @@ function RingTile({
   color,
   delay,
   onTap,
+  spark,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -159,6 +186,7 @@ function RingTile({
   color: string;
   delay: number;
   onTap: () => void;
+  spark: number[] | null;
 }) {
   const RADIUS = 28;
   const STROKE = 5;
@@ -235,10 +263,28 @@ function RingTile({
             </span>
           </div>
           <div
-            className="font-mono mt-0.5"
+            className="font-mono mt-0.5 flex items-center gap-1.5"
             style={{ fontSize: 9, color: 'rgba(255,255,255,0.40)' }}
           >
-            {Math.round(pct)}%
+            <span>{Math.round(pct)}%</span>
+            {spark ? (
+              <>
+                <span
+                  className="uppercase tracking-[0.14em] font-bold"
+                  style={{ fontSize: 7.5, color: 'rgba(255,255,255,0.28)' }}
+                >
+                  7d
+                </span>
+                <Sparkline
+                  data={spark}
+                  width={54}
+                  height={14}
+                  color={color}
+                  showDot={false}
+                  strokeWidth={1.25}
+                />
+              </>
+            ) : null}
           </div>
         </div>
       </div>

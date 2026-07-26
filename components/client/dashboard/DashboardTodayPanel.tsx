@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { TodayActivityRings } from './TodayActivityRings';
 import { LogTodayButton, type LogTarget } from './LogTodayButton';
 import type { DailyInputs, NutritionSnapshot } from '@/lib/data/twin';
+import type { RingHistory } from '@/lib/data/twin-server';
 import type { MealRow } from '@/lib/data/meals';
 import type { QuickLogType } from './QuickLogSheet';
 
@@ -26,6 +27,8 @@ interface Props {
   /** Today's logged weight in kg (or null). Pre-populates the weight
    *  QuickLogSheet's "current value" display. */
   todaysWeightKg: number | null;
+  /** 7-day per-metric history for the sparkline under each ring. */
+  history?: RingHistory | null;
 }
 
 /**
@@ -41,6 +44,7 @@ export function DashboardTodayPanel({
   nutrition,
   todaysMeals,
   todaysWeightKg,
+  history,
 }: Props) {
   const [target, setTarget] = useState<LogTarget | null>(null);
 
@@ -73,6 +77,7 @@ export function DashboardTodayPanel({
         inputs={inputs}
         nutrition={nutrition}
         onLogTap={setTarget}
+        history={history}
       />
       <LogTodayButton onPick={setTarget} />
 
