@@ -76,33 +76,40 @@ export function buildDailyDigest(inputs: DigestInputs): DailyDigest {
 
   const greeting = timeOfDayGreeting(todayIso, firstName || 'there');
 
+  // Every branch below returns an insight-style callToAction —
+  // specific, data-referencing, actionable — rather than a
+  // self-referential "Open your Twin" CTA. The DailyDigest UI
+  // component labels the whole card as "AI Coach Insight" so users
+  // read the message as coaching, not navigation.
+
   // ─── Empty-account path — warm invitation ─────────────────────
   if (!hasAnyData) {
     return {
       greeting,
       observation:
-        'A fresh start. Every day you log builds the picture your coaches use to guide you.',
-      callToAction: 'Log your first meal or steps to unlock your PureX Score.',
+        'Baseline mode. Your first three logs unlock personalised insights: which habits move your score most, when to push, when to rest.',
+      callToAction:
+        'Start with any one: log a meal, this morning\'s steps, or last night\'s sleep.',
       tone: 'warm',
     };
   }
 
   // ─── Streak celebration ───────────────────────────────────────
-  if (currentStreakDays >= 7 && !todayWorkoutCompleted) {
-    return {
-      greeting,
-      observation: `${currentStreakDays} days on the streak. That consistency is showing.`,
-      callToAction:
-        "Today's plan is waiting. Keep the streak alive — even a short session counts.",
-      tone: 'celebrate',
-    };
-  }
   if (currentStreakDays >= 14) {
     return {
       greeting,
-      observation: `Two-plus weeks of consistent logging. Your body is rewiring itself for this.`,
+      observation: `Signal: ${currentStreakDays} straight days of consistency. Your endurance vector should be climbing — check the Progress tab for the shift.`,
       callToAction:
-        'Ride the momentum — today is a chance to lift your baseline.',
+        'Ride the momentum. Today is a chance to lift your baseline, not just maintain.',
+      tone: 'celebrate',
+    };
+  }
+  if (currentStreakDays >= 7 && !todayWorkoutCompleted) {
+    return {
+      greeting,
+      observation: `${currentStreakDays} days on the streak — the discipline is compounding.`,
+      callToAction:
+        'Keep the streak alive today. Even a short session counts as a full input.',
       tone: 'celebrate',
     };
   }
@@ -114,9 +121,9 @@ export function buildDailyDigest(inputs: DigestInputs): DailyDigest {
     if (sleepHours > 0 && sleepHours < sleepGoalHours - 1.5) {
       return {
         greeting,
-        observation: `You slept ${sleepHours.toFixed(1)}h last night — well below your ${sleepGoalHours.toFixed(0)}h target.`,
+        observation: `Sleep flag: ${sleepHours.toFixed(1)}h last night — ${(sleepGoalHours - sleepHours).toFixed(1)}h under your target. Recovery score will read low today.`,
         callToAction:
-          'Ease into today. A lighter session or an extra walk is worth more than pushing through.',
+          'Ease in. A lighter session or an extra walk beats pushing through a deficit.',
         tone: 'recover',
       };
     }
@@ -126,9 +133,9 @@ export function buildDailyDigest(inputs: DigestInputs): DailyDigest {
       if (!todayWorkoutCompleted) {
         return {
           greeting,
-          observation: `Solid ${sleepHours.toFixed(1)}h of sleep last night. Recovery is on your side.`,
+          observation: `${sleepHours.toFixed(1)}h of sleep last night — recovery is on your side. Nervous system is primed.`,
           callToAction:
-            "Today's the day to push — you're primed for a strong session.",
+            "Today's the day to push. Load progression should feel earned, not forced.",
           tone: 'push',
         };
       }
@@ -141,17 +148,17 @@ export function buildDailyDigest(inputs: DigestInputs): DailyDigest {
     if (stepsPct < 0.5) {
       return {
         greeting,
-        observation: `Yesterday's steps were ${yesterday.steps.toLocaleString()} — under half your ${yesterday.stepsGoal.toLocaleString()} goal.`,
+        observation: `Movement flag: ${yesterday.steps.toLocaleString()} steps yesterday, ${Math.round(stepsPct * 100)}% of goal. Cardio load is trending soft this week.`,
         callToAction:
-          'A 20-minute walk today would recover the balance. No need to sprint.',
+          'A 20-minute walk today recovers the balance. Small, consistent inputs beat sprints.',
         tone: 'push',
       };
     }
     if (stepsPct >= 1) {
       return {
         greeting,
-        observation: `You hit ${yesterday.steps.toLocaleString()} steps yesterday — target cleared.`,
-        callToAction: "Keep the rhythm going. Today's plan is queued below.",
+        observation: `${yesterday.steps.toLocaleString()} steps yesterday — target cleared. Endurance vector is trending up.`,
+        callToAction: 'Keep the rhythm going. Today\'s plan is queued below.',
         tone: 'celebrate',
       };
     }
@@ -161,8 +168,9 @@ export function buildDailyDigest(inputs: DigestInputs): DailyDigest {
   return {
     greeting,
     observation:
-      "You're building a rhythm. Each log makes the next day's coaching sharper.",
-    callToAction: 'Open your Twin below to see how today reshapes your score.',
+      "You're building a rhythm. Two or three more days of logs and I'll surface specific trends — which habits move your score, which don't.",
+    callToAction:
+      'Log this morning\'s inputs when you can — steps, sleep, water, or your first meal.',
     tone: 'warm',
   };
 }
