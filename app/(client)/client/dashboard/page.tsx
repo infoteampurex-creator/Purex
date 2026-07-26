@@ -5,6 +5,7 @@ import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
 import { TwinCloneTeaser } from '@/components/client/dashboard/TwinCloneTeaser';
+import { BodyTypeMorph } from '@/components/client/twin/BodyTypeMorph';
 import { DailyDigest } from '@/components/client/dashboard/DailyDigest';
 import { buildDailyDigest } from '@/lib/data/daily-digest';
 import { enhanceDigestWithClaude } from '@/lib/data/daily-digest-ai';
@@ -234,6 +235,18 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       {/* First-launch guided tour. Silent no-op if the user already
           finished or skipped it (localStorage flag). */}
       <OnboardingTour />
+
+      {/* "You evolved" celebration — fires once when the user's
+          bodyType bucket changes since their last dashboard visit.
+          Silent no-op on first visit and on visits where the bucket
+          hasn't changed. */}
+      {userId && (
+        <BodyTypeMorph
+          userId={userId}
+          currentBodyType={proportions.bodyType}
+          currentAvatarSrc={avatarSrc}
+        />
+      )}
 
       {/* Coach daily digest — the first thing the client sees.
           Warm greeting + observation + one call to action. */}
