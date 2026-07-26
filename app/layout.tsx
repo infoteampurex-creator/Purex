@@ -3,6 +3,7 @@ import { fontDisplay, fontBody, fontMono } from '@/lib/fonts';
 import { BRAND } from '@/lib/constants';
 import { NativeSplashDismisser } from '@/components/NativeSplashDismisser';
 import { NativeOAuthHandler } from '@/components/auth/NativeOAuthHandler';
+import { OAuthDebugOverlay } from '@/components/auth/OAuthDebugOverlay';
 import './globals.css';
 
 // Supabase project host — extracted at build time so <link rel="preconnect">
@@ -212,6 +213,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             sign-in flow when the com.teampurex.app:// custom scheme
             fires. Silent no-op on web. */}
         <NativeOAuthHandler />
+        {/* Floating on-screen [oauth] log so we can debug the deep-
+            link flow without USB debugging. Only visible on native
+            AND only after the first [oauth] event fires. */}
+        <OAuthDebugOverlay />
         {children}
       </body>
     </html>
