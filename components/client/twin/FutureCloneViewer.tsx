@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { AvatarImage } from './AvatarImage';
+import { TwinAvatarResponsive } from './TwinAvatarResponsive';
 import { TwinStatsPanel } from './TwinStatsPanel';
 import { TwinStatusBadge } from './TwinStatusBadge';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -73,13 +73,17 @@ export function FutureCloneViewer({
 
       {/* ─── Silhouette + projected stats grid ─── */}
       <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 md:gap-12 items-start">
-        {/* Silhouette panel */}
-        <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-6 md:p-8">
+        {/* Silhouette panel — padding tightens on mobile so the 260 px
+            responsive avatar (via TwinAvatarResponsive) sits centred
+            inside the card content area, and the "3 · Projected
+            Vitality" readout below stays inside the card boundary
+            instead of dangling outside on 375 px viewports
+            (reported 2026-07-26). */}
+        <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-4 md:p-8 overflow-hidden">
           <div className="flex flex-col items-center">
             {avatarSrc ? (
-              <AvatarImage
+              <TwinAvatarResponsive
                 src={avatarSrc}
-                width={320}
                 accent={activeStage.aura}
                 glow={stageIndex >= 2}
               />

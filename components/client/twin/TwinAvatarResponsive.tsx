@@ -9,10 +9,21 @@ import { AvatarImage } from './AvatarImage';
  * 375px-wide iPhones — which was pushing the figure visually right
  * of centre (reported 2026-07-15).
  *
+ * Also used by FutureCloneViewer, which needs `accent` (per-stage
+ * colour) and `glow` (future-projection halo).
+ *
  * Uses matchMedia so the width flips on device rotation / window
  * resize without a full remount.
  */
-export function TwinAvatarResponsive({ src }: { src: string }) {
+export function TwinAvatarResponsive({
+  src,
+  accent = '#c6ff3d',
+  glow = false,
+}: {
+  src: string;
+  accent?: string;
+  glow?: boolean;
+}) {
   const [isMd, setIsMd] = useState(false);
 
   useEffect(() => {
@@ -23,5 +34,12 @@ export function TwinAvatarResponsive({ src }: { src: string }) {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  return <AvatarImage src={src} width={isMd ? 320 : 260} accent="#c6ff3d" />;
+  return (
+    <AvatarImage
+      src={src}
+      width={isMd ? 320 : 260}
+      accent={accent}
+      glow={glow}
+    />
+  );
 }

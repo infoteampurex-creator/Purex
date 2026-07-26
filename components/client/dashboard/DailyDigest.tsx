@@ -1,30 +1,29 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Sparkles, Sun, Moon, Trophy, Heart } from 'lucide-react';
+import { Sparkles, Sun, Moon, Trophy, Zap } from 'lucide-react';
 import type { DailyDigest as DigestType } from '@/lib/data/daily-digest';
 
 const TONE_META: Record<
   DigestType['tone'],
-  { color: string; icon: React.ComponentType<{ size?: number }> }
+  { color: string; icon: React.ComponentType<{ size?: number }>; label: string }
 > = {
-  warm: { color: '#c6ff3d', icon: Sun },
-  push: { color: '#ff8a4d', icon: Sparkles },
-  celebrate: { color: '#ffd24d', icon: Trophy },
-  recover: { color: '#7dd3ff', icon: Moon },
+  warm: { color: '#c6ff3d', icon: Sun, label: 'baseline' },
+  push: { color: '#ff8a4d', icon: Zap, label: 'push' },
+  celebrate: { color: '#ffd24d', icon: Trophy, label: 'momentum' },
+  recover: { color: '#7dd3ff', icon: Moon, label: 'recovery' },
 };
 
 /**
- * Top-of-dashboard coach greeting. Renders a compact 3-line card:
+ * Top-of-dashboard "AI Coach Insight" card. Whoop opens with a
+ * "Recovery / Strain / Sleep" recap block, Fitbit with a personalised
+ * Daily Readiness message — same idea. This card reads the client's
+ * streak, sleep, steps, and workout state, and delivers a single
+ * data-referencing insight + one actionable line.
  *
- *   [icon]  Good morning, Vishnu.
- *           You slept 6.4h last night — well below your 8h target.
- *           Ease into today.
- *
- * Whoop opens their app with this exact pattern. It's the single
- * biggest emotional hook — the client feels the app is watching for
- * them, not just recording numbers. Tone + icon are picked in
- * lib/data/daily-digest based on the actual signal.
+ * The message body comes from lib/data/daily-digest.ts (rule-based,
+ * deterministic, zero-latency). Future: layer an LLM pass on top when
+ * 30-day trend data is available.
  */
 export function DailyDigest({ digest }: { digest: DigestType }) {
   const meta = TONE_META[digest.tone];
@@ -35,14 +34,15 @@ export function DailyDigest({ digest }: { digest: DigestType }) {
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-3xl border p-5 relative overflow-hidden"
+      className="relative rounded-3xl border p-5 md:p-6 overflow-hidden"
       style={{
         background: `
-          radial-gradient(ellipse at 0% 0%, ${meta.color}18 0%, transparent 55%),
-          linear-gradient(180deg, #11150f 0%, #0a0c09 100%)
+          radial-gradient(ellipse at 0% 0%, ${meta.color}20 0%, transparent 55%),
+          radial-gradient(ellipse at 100% 100%, ${meta.color}10 0%, transparent 55%),
+          linear-gradient(180deg, #10140e 0%, #0a0c09 100%)
         `,
-        borderColor: `${meta.color}30`,
-        boxShadow: `0 0 0 1px ${meta.color}10, 0 24px 48px -12px rgba(0,0,0,0.55)`,
+        borderColor: `${meta.color}38`,
+        boxShadow: `0 0 0 1px ${meta.color}14, 0 32px 60px -18px rgba(0,0,0,0.6)`,
       }}
     >
       {/* Ambient wave underline — soft breathing pulse at bottom */}
@@ -50,41 +50,71 @@ export function DailyDigest({ digest }: { digest: DigestType }) {
         aria-hidden
         className="absolute left-0 right-0 bottom-0 h-1 pointer-events-none"
         style={{
-          background: `linear-gradient(90deg, transparent 0%, ${meta.color}55 50%, transparent 100%)`,
+          background: `linear-gradient(90deg, transparent 0%, ${meta.color}66 50%, transparent 100%)`,
           animation: 'digest-wave 4s ease-in-out infinite',
         }}
       />
 
-      <div className="flex items-start gap-3">
+      {/* Header row — small "AI Coach Insight" label + tone chip */}
+      <div className="flex items-center justify-between mb-3">
         <div
-          className="flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center"
+          className="inline-flex items-center gap-1.5 font-mono uppercase tracking-[0.24em] font-bold"
+          style={{ fontSize: 10, color: meta.color }}
+        >
+          <Sparkles size={11} strokeWidth={2.4} />
+          AI Coach Insight
+        </div>
+        <span
+          className="font-mono uppercase tracking-[0.20em] font-bold px-2 py-0.5 rounded-full"
           style={{
-            background: `${meta.color}18`,
-            border: `1px solid ${meta.color}45`,
+            fontSize: 9,
             color: meta.color,
+            background: `${meta.color}18`,
+            border: `1px solid ${meta.color}40`,
           }}
         >
-          <Icon size={20} />
-        </div>
-        <div className="min-w-0 flex-1">
+          {meta.label}
+        </span>
+      </div>
+
+      <div className="flex items-start gap-3">
+        <motion.div
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.4, ease: 'easeOut' }}
+          className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center"
+          style={{
+            background: `${meta.color}18`,
+            border: `1px solid ${meta.color}50`,
+            color: meta.color,
+            boxShadow: `0 0 24px ${meta.color}22`,
+          }}
+        >
+          <Icon size={22} />
+        </motion.div>
+        <div className="min-w-0 flex-1 pt-0.5">
           <div
             className="font-display font-semibold leading-snug"
-            style={{ fontSize: 17, color: 'rgba(245,245,240,0.98)' }}
+            style={{ fontSize: 20, color: 'rgba(245,245,240,0.98)' }}
           >
             {digest.greeting}
           </div>
           <p
-            className="mt-1 leading-relaxed"
-            style={{ fontSize: 14, color: 'rgba(245,245,240,0.75)' }}
+            className="mt-2 leading-relaxed"
+            style={{ fontSize: 14.5, color: 'rgba(245,245,240,0.82)' }}
           >
             {digest.observation}
           </p>
           <p
-            className="mt-2 leading-relaxed inline-flex items-center gap-1.5"
-            style={{ fontSize: 13, color: meta.color, fontWeight: 500 }}
+            className="mt-3 leading-relaxed"
+            style={{
+              fontSize: 13.5,
+              color: meta.color,
+              fontWeight: 500,
+              opacity: 0.95,
+            }}
           >
-            <Heart size={11} />
-            {digest.callToAction}
+            → {digest.callToAction}
           </p>
         </div>
       </div>
