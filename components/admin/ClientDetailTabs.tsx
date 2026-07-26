@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { Fragment, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Activity,
@@ -1524,6 +1524,68 @@ function AdminProgressEmpty({
         </svg>
       </div>
 
+      {/* Preview weekly habit grid — 7 days × 4 metrics, coloured
+          by adherence. When the coach demos the platform to a new
+          client, this card carries most of the "here's what your
+          weekly report will look like" story. */}
+      <div
+        className="relative rounded-2xl border p-4 overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(ellipse at 0% 100%, rgba(167,139,250,0.10), transparent 60%), rgba(255,255,255,0.02)',
+          borderColor: 'rgba(167,139,250,0.28)',
+        }}
+      >
+        <AdminPreviewChip />
+        <div
+          className="font-mono uppercase tracking-[0.20em] font-bold mb-3"
+          style={{ fontSize: 10, color: '#a78bfa' }}
+        >
+          This Week&apos;s Habits · Preview
+        </div>
+        <div className="grid grid-cols-[auto_repeat(7,1fr)] gap-1.5 items-center">
+          {/* Header row — day letters */}
+          <span />
+          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+            <span
+              key={`h-${i}`}
+              className="font-mono uppercase tracking-[0.14em] font-bold text-center"
+              style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.55)' }}
+            >
+              {d}
+            </span>
+          ))}
+          {/* Rows — one per metric */}
+          {[
+            { label: 'Move', color: '#c6ff3d', pattern: [1, 0.7, 1, 0.4, 0.9, 1, 0.5] },
+            { label: 'Fuel', color: '#ff8a4d', pattern: [0.6, 0.9, 0.5, 1, 0.7, 0.8, 0.6] },
+            { label: 'Sleep', color: '#a78bfa', pattern: [0.9, 0.4, 0.8, 0.9, 0.5, 0.7, 1] },
+            { label: 'Water', color: '#7dd3ff', pattern: [1, 0.6, 0.9, 0.5, 0.8, 1, 0.7] },
+          ].map((row) => (
+            <Fragment key={row.label}>
+              <span
+                className="font-mono uppercase tracking-[0.14em] font-bold"
+                style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.62)' }}
+              >
+                {row.label}
+              </span>
+              {row.pattern.map((v, i) => (
+                <div
+                  key={`c-${row.label}-${i}`}
+                  className="rounded-md"
+                  style={{
+                    aspectRatio: '1',
+                    background: `${row.color}${percentToHexAlpha(v)}`,
+                    border: `1px solid ${row.color}${percentToHexAlpha(Math.min(1, v + 0.15))}`,
+                    minHeight: 18,
+                  }}
+                />
+              ))}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+
       {/* Real CTAs — the empty message + how to fill it */}
       <div
         className="rounded-2xl border p-5 text-center"
@@ -1588,6 +1650,19 @@ function AdminPreviewChip() {
       Preview
     </div>
   );
+}
+
+/**
+ * Convert a 0-1 float into a 2-char hex alpha suffix for CSS colour
+ * strings like `#c6ff3d80`. Used by the habits-preview heatmap so
+ * each cell's fill opacity mirrors the mock adherence value.
+ */
+function percentToHexAlpha(v: number): string {
+  const clamped = Math.max(0.15, Math.min(1, v));
+  const hex = Math.round(clamped * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return hex;
 }
 
 function AdminPreviewTile({

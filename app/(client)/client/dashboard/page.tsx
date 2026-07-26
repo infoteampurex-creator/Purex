@@ -27,7 +27,8 @@ import {
   dailyTwinMessage,
   computeCurrentStreak,
 } from '@/lib/data/twin';
-import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
+import { getTwinDailyInputs, getStreakHistory, getRingHistory } from '@/lib/data/twin-server';
+import type { RingHistory } from '@/lib/data/twin-server';
 import { getTodaysMeals, type MealRow } from '@/lib/data/meals';
 import { getDailyWeight, type DailyWeight } from '@/lib/data/daily-weight';
 import {
@@ -94,6 +95,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
 
   let latestMeas: Awaited<ReturnType<typeof getLatestMeasurements>> = null;
   let bodySettings = EMPTY_PROFILE_BODY_SETTINGS;
+  let ringHistory: RingHistory | null = null;
 
   if (userId) {
     const [
@@ -105,6 +107,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       weight,
       meas,
       bodyProfile,
+      rings,
     ] = await Promise.all([
       getClientTasksLive(userId, selectedDate),
       getDailyPlan(userId, selectedDate),
@@ -114,6 +117,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
       getDailyWeight(userId, today),
       getLatestMeasurements(userId),
       getProfileBodySettings(userId),
+      getRingHistory(userId, 7),
     ]);
     tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
     dailyPlan = plan;
@@ -124,6 +128,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
     dailyWeight = weight;
     latestMeas = meas;
     bodySettings = bodyProfile;
+    ringHistory = rings;
   }
 
   // Twin teaser data — small derived block, no DB hits beyond the
@@ -295,6 +300,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
           nutrition={nutritionSnapshot}
           todaysMeals={todaysMeals}
           todaysWeightKg={dailyWeight.todayKg}
+          history={ringHistory}
         />
       </div>
 
