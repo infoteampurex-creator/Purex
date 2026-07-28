@@ -37,17 +37,53 @@ export function PushNotificationBootstrap() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!Capacitor.isNativePlatform()) return;
-    if (window.localStorage.getItem(STORAGE_KEY)) return;
 
-    const timer = setTimeout(() => setVisible(true), 4000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+
+    // Check the CURRENT OS-level permission state before deciding
+    // whether to show the card. Previously we only checked a local
+    // "was ever prompted" flag, which meant users who tapped Later
+    // (or whose previous install got a permission grant that was
+    // later revoked at the OS level) never saw the card again — even
+    // when they genuinely wanted to re-enable.
+    //
+    // New rule: show the card whenever the OS says permission isn't
+    // granted right now. The "was ever prompted" flag still
+    // suppresses re-showing within the same session so we don't
+    // spam the user.
+    (async () => {
+      try {
+        const mod = await import('@capacitor/push-notifications');
+        const perm = await mod.PushNotifications.checkPermissions();
+        if (cancelled) return;
+        if (perm.receive === 'granted') return; // already good; nothing to do
+        // Suppress within the same session only
+        if (window.sessionStorage.getItem(STORAGE_KEY)) return;
+
+        const timer = setTimeout(() => {
+          if (!cancelled) setVisible(true);
+        }, 4000);
+        return () => clearTimeout(timer);
+      } catch {
+        // ignore — plugin unavailable, skip silently
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const markPrompted = () => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, '1');
+      // sessionStorage (not localStorage) — suppresses the card for
+      // the current app-open only. If the user reopens the app
+      // tomorrow and permission still isn't granted, they'll see it
+      // again. This mirrors how iOS / Google Fit / Whoop handle
+      // recovery from "Later".
+      window.sessionStorage.setItem(STORAGE_KEY, '1');
     } catch {
-      // silent — localStorage can throw in private mode
+      // silent — sessionStorage can throw in private mode
     }
     setVisible(false);
   };
