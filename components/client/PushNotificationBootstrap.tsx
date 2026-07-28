@@ -64,12 +64,32 @@ export function PushNotificationBootstrap() {
       // crashed the app because FCM couldn't initialise without
       // the config file (PR #111 disabled the call).
       if (perm.receive === 'granted') {
-        // Listen for the token so we can log it on the JS console
-        // during the demo (later: POST it to Supabase so we know
-        // which device belongs to which user).
-        mod.PushNotifications.addListener('registration', (token) => {
+        // On registration, POST the FCM device token to our /api/push/register
+        // endpoint so the admin panel can send targeted nudges. Server-side
+        // upserts on the token column so a rotated token from the same
+        // device replaces the previous row instead of stacking duplicates.
+        mod.PushNotifications.addListener('registration', async (token) => {
           // eslint-disable-next-line no-console
-          console.log('[push] FCM token:', token.value);
+          console.log('[push] FCM token registered');
+          try {
+            const platform = Capacitor.getPlatform();
+            const res = await fetch('/api/push/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                token: token.value,
+                platform: platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web',
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.text();
+              // eslint-disable-next-line no-console
+              console.warn('[push] token POST failed', err);
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn('[push] token POST threw', err);
+          }
         });
         mod.PushNotifications.addListener('registrationError', (err) => {
           // eslint-disable-next-line no-console
