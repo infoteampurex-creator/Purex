@@ -12,6 +12,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { EditClientButton } from '@/components/admin/EditClientButton';
 import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
+import { SendNudgeButton } from '@/components/admin/SendNudgeButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import { HealthConditionsEditor } from '@/components/admin/HealthConditionsEditor';
 import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
@@ -246,6 +247,10 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
                 WhatsApp
               </a>
             )}
+            <SendNudgeButton
+              clientId={client.id}
+              clientFirstName={client.fullName.split(/\s+/)[0]}
+            />
             <EditClientButton
               clientId={client.id}
               initial={{
