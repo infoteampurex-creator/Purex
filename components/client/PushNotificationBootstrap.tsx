@@ -100,10 +100,20 @@ export function PushNotificationBootstrap() {
       // crashed the app because FCM couldn't initialise without
       // the config file (PR #111 disabled the call).
       if (perm.receive === 'granted') {
-        // On registration, POST the FCM device token to our /api/push/register
-        // endpoint so the admin panel can send targeted nudges. Server-side
-        // upserts on the token column so a rotated token from the same
-        // device replaces the previous row instead of stacking duplicates.
+        // Attach listeners BEFORE register() so we catch the first
+        // token / error event. register() at the native level can
+        // hard-crash the app if the APK was built without a valid
+        // google-services.json, if Google Play Services is missing
+        // (some Chinese OEM builds ship without it), or on ColorOS /
+        // MIUI when Firebase's process is killed by the aggressive
+        // battery optimiser before it registers.
+        //
+        // We now:
+        //   1. Install registrationError listener so async native
+        //      errors surface as a log line + user alert rather than
+        //      a silent crash.
+        //   2. Try/catch around register() so synchronous native
+        //      throws don't kill the JS runtime.
         mod.PushNotifications.addListener('registration', async (token) => {
           // eslint-disable-next-line no-console
           console.log('[push] FCM token registered');
@@ -130,8 +140,19 @@ export function PushNotificationBootstrap() {
         mod.PushNotifications.addListener('registrationError', (err) => {
           // eslint-disable-next-line no-console
           console.warn('[push] FCM registration error:', err);
+          alert(
+            'We couldn\'t enable notifications on this device. This can happen if the app was installed from an old link or if Google Play Services isn\'t available. Please reinstall the latest version and try again.'
+          );
         });
-        await mod.PushNotifications.register();
+        try {
+          await mod.PushNotifications.register();
+        } catch (regErr) {
+          // eslint-disable-next-line no-console
+          console.warn('[push] register() threw synchronously', regErr);
+          alert(
+            'Notifications could not be enabled on this device. The app version installed may be out of date — please reinstall from the latest link.'
+          );
+        }
       }
     } catch (err) {
       // eslint-disable-next-line no-console
