@@ -12,15 +12,19 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { EditClientButton } from '@/components/admin/EditClientButton';
 import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
+import { SendNudgeButton } from '@/components/admin/SendNudgeButton';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import { HealthConditionsEditor } from '@/components/admin/HealthConditionsEditor';
 import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
-import { HealthReportReview } from '@/components/admin/HealthReportReview';
+import { HealthReportsSection } from '@/components/client/health/HealthReportsSection';
 import { getReportsForClient } from '@/lib/actions/health-reports';
+import { getLabCatalog } from '@/lib/data/lab-catalog';
 import { AdminHealthyStreakPanel } from '@/components/admin/AdminHealthyStreakPanel';
 import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
 import { WeeklyScheduleEditor } from '@/components/admin/WeeklyScheduleEditor';
 import { getWeeklyPlanForClient } from '@/lib/data/weekly-plan-server';
+import { ClientFeedbackScheduleCard } from '@/components/admin/ClientFeedbackScheduleCard';
+import { getFeedbackSlotForClient } from '@/lib/data/feedback-schedule';
 import { ClientDietEditor } from '@/components/admin/ClientDietEditor';
 import { getMealPlanForClient } from '@/lib/data/meal-plan-server';
 import { MaterializedWorkoutsDiagnostic } from '@/components/admin/MaterializedWorkoutsDiagnostic';
@@ -103,9 +107,11 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     streakHistory,
     healthConditions,
     clientReports,
+    labCatalog,
     weeklyPlan,
     mealPlan,
     upcomingWorkouts,
+    feedbackSlot,
   ] = await Promise.all([
     getClientTasksLive(client.id),
     getClientLogsLive(client.id),
@@ -117,9 +123,11 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     getStreakHistory(client.id, 30),
     getHealthConditionsForClient(client.id),
     getReportsForClient(client.id),
+    getLabCatalog(),
     getWeeklyPlanForClient(client.id),
     getMealPlanForClient(client.id),
     getUpcomingMaterializedWorkouts(client.id, 14),
+    getFeedbackSlotForClient(client.id),
   ]);
 
   // Editor only needs id/name/category/muscle for its template dropdown
@@ -239,6 +247,10 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
                 WhatsApp
               </a>
             )}
+            <SendNudgeButton
+              clientId={client.id}
+              clientFirstName={client.fullName.split(/\s+/)[0]}
+            />
             <EditClientButton
               clientId={client.id}
               initial={{
@@ -300,6 +312,27 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         <MaterializedWorkoutsDiagnostic workouts={upcomingWorkouts} />
       </div>
 
+      {/* Weekly feedback call — recurring day-of-week + time slot the
+          client gave us. Coach sees this client's slot here; the full
+          weekly grid lives at /admin/feedback-schedule. */}
+      <div className="mt-6">
+        <ClientFeedbackScheduleCard
+          clientId={client.id}
+          clientFirstName={titleCase(client.fullName).split(/\s+/)[0] ?? 'Client'}
+          initial={
+            feedbackSlot
+              ? {
+                  dayOfWeek: feedbackSlot.dayOfWeek,
+                  timeOfDay: feedbackSlot.timeOfDay,
+                  durationMin: feedbackSlot.durationMin,
+                  notes: feedbackSlot.notes,
+                  paused: feedbackSlot.paused,
+                }
+              : null
+          }
+        />
+      </div>
+
       {/* Diet plan — recurring daily meals + macro/lifestyle targets.
           Mirrors the WhatsApp diet block coach already writes. Paste
           to extract the whole plan in one click. */}
@@ -320,10 +353,14 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         />
       </div>
 
-      {/* Lab report review — coach adds notes to client uploads.
-          Notes appear on the client's Health tab. */}
+      {/* Lab report entry — coach enters values on behalf of client;
+          same modal as client self-entry, with targetClientId set. */}
       <div className="mt-6">
-        <HealthReportReview reports={clientReports} />
+        <HealthReportsSection
+          reports={clientReports}
+          catalog={labCatalog}
+          targetClientId={client.id}
+        />
       </div>
     </>
   );

@@ -315,74 +315,56 @@ export function TodaysPlanCard({
           </Section>
         )}
 
-        {/* Mission targets — progress rings for the visual ones */}
-        {(plan.stepsTarget || plan.sleepTargetHours || plan.waterTarget) && (
-          <Section title="Mission targets" icon={<Target size={13} />}>
-            <div className="grid grid-cols-3 gap-3">
-              <RingTile
-                icon={<Footprints size={12} />}
-                label="Steps"
-                actual={plan.actuals.steps}
-                target={plan.stepsTarget}
-                format={(n) => n.toLocaleString()}
-              />
-              <RingTile
-                icon={<Moon size={12} />}
-                label="Sleep"
-                actual={plan.actuals.sleepHours}
-                target={plan.sleepTargetHours}
-                format={(n) => `${n}h`}
-              />
-              <RingTile
-                icon={<Droplets size={12} />}
-                label="Water"
-                actual={plan.actuals.waterGlasses}
-                target={plan.waterTarget}
-                format={(n) => `${n}`}
-              />
+        {/* Coach targets — Steps / Sleep / Water rings used to live
+            here, but they duplicate the dashboard's main Activity Rings
+            (Move / Fuel / Sleep / Water) which display the same metrics
+            in the same position above. Removed to fix the "I see
+            similar options of steps type two times in dashboard"
+            feedback. What's KEPT are the secondary numeric targets
+            (Calories / Protein / Cardio / Goal weight) — these are
+            unique coach-set values not shown anywhere else on the
+            dashboard. The section is only rendered when at least one
+            secondary target exists. */}
+        {(plan.caloriesTarget ||
+          plan.proteinTargetG ||
+          plan.cardioTargetMinutes ||
+          plan.targetWeightKg) && (
+          <Section title="Coach targets" icon={<Target size={13} />}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {plan.caloriesTarget != null && (
+                <SmallTile
+                  icon={<Flame size={11} />}
+                  label="Calories"
+                  actual={plan.actuals.caloriesConsumed}
+                  target={plan.caloriesTarget}
+                  unit="kcal"
+                />
+              )}
+              {plan.proteinTargetG != null && (
+                <SmallTile
+                  label="Protein"
+                  actual={plan.actuals.proteinG}
+                  target={plan.proteinTargetG}
+                  unit="g"
+                />
+              )}
+              {plan.cardioTargetMinutes != null && (
+                <SmallTile
+                  icon={<Activity size={11} />}
+                  label="Cardio"
+                  target={plan.cardioTargetMinutes}
+                  unit="min"
+                />
+              )}
+              {plan.targetWeightKg != null && (
+                <SmallTile
+                  label="Goal weight"
+                  actual={plan.actuals.weightKg}
+                  target={plan.targetWeightKg}
+                  unit="kg"
+                />
+              )}
             </div>
-
-            {/* Secondary targets — small stats */}
-            {(plan.caloriesTarget ||
-              plan.proteinTargetG ||
-              plan.cardioTargetMinutes ||
-              plan.targetWeightKg) && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-                {plan.caloriesTarget != null && (
-                  <SmallTile
-                    icon={<Flame size={11} />}
-                    label="Calories"
-                    actual={plan.actuals.caloriesConsumed}
-                    target={plan.caloriesTarget}
-                    unit="kcal"
-                  />
-                )}
-                {plan.proteinTargetG != null && (
-                  <SmallTile
-                    label="Protein"
-                    actual={plan.actuals.proteinG}
-                    target={plan.proteinTargetG}
-                    unit="g"
-                  />
-                )}
-                {plan.cardioTargetMinutes != null && (
-                  <SmallTile
-                    icon={<Activity size={11} />}
-                    label="Cardio"
-                    target={plan.cardioTargetMinutes}
-                    unit="min"
-                  />
-                )}
-                {plan.targetWeightKg != null && (
-                  <SmallTile
-                    label="Goal weight"
-                    actual={plan.actuals.weightKg}
-                    target={plan.targetWeightKg}
-                    unit="kg"
-                  />
-                )}
-              </div>
-            )}
           </Section>
         )}
 

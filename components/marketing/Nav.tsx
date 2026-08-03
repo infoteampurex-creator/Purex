@@ -38,7 +38,7 @@ export function Nav() {
       >
         <nav className="container-safe flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center">
-            <Logo className="h-7 md:h-8" />
+            <Logo className="h-10 md:h-12" />
           </Link>
 
           {/* Desktop links */}
@@ -86,7 +86,7 @@ export function Nav() {
           />
           <div className="absolute right-0 top-0 bottom-0 w-[85%] max-w-sm bg-bg-card border-l border-border p-6 flex flex-col">
             <div className="flex items-center justify-between mb-10">
-              <Logo className="h-7" />
+              <Logo className="h-10" />
               <button
                 onClick={() => setDrawerOpen(false)}
                 className="w-10 h-10 flex items-center justify-center rounded-full border border-border"

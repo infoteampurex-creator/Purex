@@ -113,7 +113,7 @@ export function ApplicationActionsPanel({ enquiry, specialists }: Props) {
         </div>
         <a
           href={`https://wa.me/91${enquiry.whatsapp}?text=${encodeURIComponent(
-            `Hi ${enquiry.fullName.split(/\s+/)[0]} — thanks for applying to PURE X. I'm reaching out about your application.`
+            `Hi ${enquiry.fullName.split(/\s+/)[0]} — thanks for applying to Team Purex. I'm reaching out about your application.`
           )}`}
           target="_blank"
           rel="noopener noreferrer"

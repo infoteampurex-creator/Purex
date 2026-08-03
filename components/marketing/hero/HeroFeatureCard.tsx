@@ -142,7 +142,7 @@ export function HeroFeatureCard() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={SINGLE_TRAINER_PHOTO}
-                alt="Siva Reddy — PT Head, PURE X"
+                alt="Siva Reddy — PT Head, Team Purex"
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{ objectPosition: 'center top' }}
               />
@@ -152,7 +152,7 @@ export function HeroFeatureCard() {
               {/* Photo carousel — crossfade between multiple photos */}
               <HeroPhotoCarousel
                 photos={HERO_PHOTOS}
-                alt="Siva Reddy — PT Head, PURE X"
+                alt="Siva Reddy — PT Head, Team Purex"
                 objectPosition="center 15%"
                 durationMs={5000}
                 fadeMs={1200}

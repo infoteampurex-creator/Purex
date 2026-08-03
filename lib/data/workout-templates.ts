@@ -98,6 +98,7 @@ export async function getWorkoutTemplates(): Promise<WorkoutTemplateSummary[]> {
         isShared: t.is_shared,
         createdBy: t.created_by,
         updatedAt: t.updated_at,
+        source: 'db' as const,
       })
     );
   } catch {

@@ -1,61 +1,43 @@
 import { WelcomeHeader } from '@/components/client/dashboard/WelcomeHeader';
-import { AppFitnessTiles } from '@/components/client/dashboard/AppFitnessTiles';
+import { PureXScoreHero } from '@/components/client/dashboard/PureXScoreHero';
+import { DashboardTodayPanel } from '@/components/client/dashboard/DashboardTodayPanel';
 import { HealthSyncCard } from '@/components/client/dashboard/HealthSyncCard';
-import { PlanFromCoachBanner } from '@/components/client/dashboard/PlanFromCoachBanner';
-import { getCoachPlanFreshness } from '@/lib/data/plan-updates-server';
-// AdminSwitcher removed — middleware now redirects admins away from
-// /client/* entirely, so the "Switch to admin panel" banner can never
-// render. Coaches use /admin for everything; they preview client data
-// from the client-detail page, not by visiting /client routes.
-import { CommitmentWidget } from '@/components/client/CommitmentWidget';
 import { TaskChecklist } from '@/components/client/dashboard/TaskChecklist';
 import { TodaysPlanCard } from '@/components/client/dashboard/TodaysPlanCard';
-import { TwinSection } from '@/components/client/twin/TwinSection';
-import { HealthyStreakCard } from '@/components/client/twin/HealthyStreakCard';
-import { PureXScoreCard } from '@/components/client/dashboard/PureXScoreCard';
-import { computePureXScore } from '@/lib/data/purex-score';
+import { TwinCloneTeaser } from '@/components/client/dashboard/TwinCloneTeaser';
+import { BodyTypeMorph } from '@/components/client/twin/BodyTypeMorph';
+import { DailyDigest } from '@/components/client/dashboard/DailyDigest';
+import { buildDailyDigest } from '@/lib/data/daily-digest';
+import { enhanceDigestWithClaude } from '@/lib/data/daily-digest-ai';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { OnboardingTour } from '@/components/client/OnboardingTour';
 import { MoodCheckInCard } from '@/components/client/dashboard/MoodCheckInCard';
 import type { MoodState } from '@/lib/data/mood';
-import { createClient as createSupabaseClient } from '@/lib/supabase/server';
-import { SmartAlertsCard } from '@/components/client/dashboard/SmartAlertsCard';
-import { computeSmartAlerts } from '@/lib/data/smart-alerts';
-import { getMockClientPact } from '@/lib/data/commitment';
+import { computePureXScore } from '@/lib/data/purex-score';
 import { getCurrentUserId, getClientTasksLive } from '@/lib/data/client-live';
 import { getDailyPlan } from '@/lib/data/daily-plan';
 import { EMPTY_DAILY_PLAN } from '@/lib/data/daily-plan-types';
 import {
-  computeHealthScore,
-  computeCurrentStreak,
-  deriveTwinStats,
-  deriveVisualState,
-  dailyTwinMessage,
   EMPTY_NUTRITION_SNAPSHOT,
   type DailyInputs,
   type NutritionSnapshot,
+  deriveTwinStats,
+  deriveVisualState,
+  twinOverallScore,
+  dailyTwinMessage,
+  computeCurrentStreak,
 } from '@/lib/data/twin';
-import {
-  deriveLevel,
-  deriveXp,
-  generateMission,
-} from '@/lib/data/twin-game';
-import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
+import { getTwinDailyInputs, getStreakHistory, getRingHistory } from '@/lib/data/twin-server';
+import type { RingHistory } from '@/lib/data/twin-server';
 import { getTodaysMeals, type MealRow } from '@/lib/data/meals';
+import { getDailyWeight, type DailyWeight } from '@/lib/data/daily-weight';
 import {
   getLatestMeasurements,
   getProfileBodySettings,
   EMPTY_PROFILE_BODY_SETTINGS,
-  type BodyMeasurements,
-  type ProfileBodySettings,
 } from '@/lib/data/body-measurements';
-import {
-  deriveBodyProportions,
-  type BodyProportions,
-} from '@/lib/data/body-proportions';
-
-// Bump serverless timeout — the dashboard can host health-report
-// uploads via HealthPassportCard, and Gemini extraction runs inline
-// inside the upload action. 60s gives multi-page PDFs room to finish.
-export const maxDuration = 60;
+import { deriveBodyProportions } from '@/lib/data/body-proportions';
+import { avatarFor } from '@/lib/data/avatar-asset';
 
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
@@ -63,9 +45,31 @@ interface PageProps {
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Redesigned client dashboard (v2 — Whoop × Google Fit hybrid).
+ *
+ * What lives here:
+ *   1. Greeting (small)
+ *   2. PureX Score hero — big circular gauge, the ONE number the
+ *      client should return to daily
+ *   3. Today panel — 4 activity rings (Move / Fuel / Sleep / Water)
+ *      + a single "Log today" button (weight / steps / sleep /
+ *      water / meal in one picker)
+ *   4. Today's workout plan
+ *   5. Today's tasks
+ *
+ * Everything else lives in its dedicated bottom-nav route:
+ *   • Mood / Smart Alerts / Twin → /client/twin
+ *   • Healthy Streak → /client/progress
+ *   • Plan from Coach banner → /client/plan
+ *   • Commitment → /client/commitment
+ *   • Health Connect auto-sync card → /client/health
+ *
+ * The dashboard is now genuinely a dashboard: a single page that
+ * answers "how am I doing today, what's next" — not a content
+ * shelf for the whole app.
+ */
 export default async function ClientDashboardPage({ searchParams }: PageProps) {
-  const pact = getMockClientPact();
-
   const userId = await getCurrentUserId();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -76,174 +80,249 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
   const selectedDate =
     requestedDate && DATE_PATTERN.test(requestedDate) ? requestedDate : today;
 
+  // ─── Data fetch (all parallel) ──────────────────────────────────
   let tasks: Awaited<ReturnType<typeof getClientTasksLive>>['rows'] = [];
   let dailyPlan = EMPTY_DAILY_PLAN;
-  let coachPlanFreshness: Awaited<
-    ReturnType<typeof getCoachPlanFreshness>
-  > = {
-    scheduleUpdatedAt: null,
-    dietUpdatedAt: null,
-    upcomingWorkouts: 0,
-    nextWorkoutDate: null,
-  };
-
-  if (userId) {
-    const [tasksRes, plan, freshness] = await Promise.all([
-      getClientTasksLive(userId, selectedDate),
-      getDailyPlan(userId, selectedDate),
-      getCoachPlanFreshness(userId),
-    ]);
-    tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
-    dailyPlan = plan;
-    coachPlanFreshness = freshness;
-  }
-
-  // ─── Twin + Future Clone + Healthy Streak (Phase 4 — live data) ───
-  // Pull real inputs from client_daily_logs + client_workouts. When the
-  // client has no logs yet we fall through to deterministic empty
-  // inputs so the Twin renders in 'depleted' state with a "no data
-  // yet" feel rather than fake numbers.
   let twinInputs: DailyInputs = emptyTwinInputs();
   let streakHistory: Awaited<ReturnType<typeof getStreakHistory>> = [];
   let nutritionSnapshot: NutritionSnapshot = EMPTY_NUTRITION_SNAPSHOT;
   let todaysMeals: MealRow[] = [];
-  let latestMeasurements: BodyMeasurements | null = null;
-  let bodySettings: ProfileBodySettings = EMPTY_PROFILE_BODY_SETTINGS;
-  let todaysMood: MoodState | null = null;
+  let dailyWeight: DailyWeight = {
+    todayKg: null,
+    previousKg: null,
+    previousDate: null,
+  };
+
+  let latestMeas: Awaited<ReturnType<typeof getLatestMeasurements>> = null;
+  let bodySettings = EMPTY_PROFILE_BODY_SETTINGS;
+  let ringHistory: RingHistory | null = null;
+
   if (userId) {
-    const [inputsResult, history, meals, meas, bodyProfile, moodRow] =
-      await Promise.all([
-        getTwinDailyInputs(userId, today),
-        getStreakHistory(userId, 7),
-        getTodaysMeals(userId, today),
-        getLatestMeasurements(userId),
-        getProfileBodySettings(userId),
-        // Fetch today's mood_state directly from client_daily_logs —
-        // small enough query that adding it to getTwinDailyInputs would
-        // bloat that function's selected columns. Returns null if no
-        // log row yet OR mood not set.
-        (async () => {
-          const sb = await createSupabaseClient();
-          const { data } = await sb
-            .from('client_daily_logs')
-            .select('mood_state')
-            .eq('client_id', userId)
-            .eq('log_date', today)
-            .maybeSingle();
-          return (data?.mood_state ?? null) as MoodState | null;
-        })(),
-      ]);
+    const [
+      tasksRes,
+      plan,
+      inputsResult,
+      history,
+      meals,
+      weight,
+      meas,
+      bodyProfile,
+      rings,
+    ] = await Promise.all([
+      getClientTasksLive(userId, selectedDate),
+      getDailyPlan(userId, selectedDate),
+      getTwinDailyInputs(userId, today),
+      getStreakHistory(userId, 7),
+      getTodaysMeals(userId, today),
+      getDailyWeight(userId, today),
+      getLatestMeasurements(userId),
+      getProfileBodySettings(userId),
+      getRingHistory(userId, 7),
+    ]);
+    tasks = tasksRes.source === 'supabase' ? tasksRes.rows : [];
+    dailyPlan = plan;
     twinInputs = inputsResult.inputs;
     streakHistory = history;
     nutritionSnapshot = inputsResult.nutrition;
     todaysMeals = meals;
-    latestMeasurements = meas;
+    dailyWeight = weight;
+    latestMeas = meas;
     bodySettings = bodyProfile;
-    todaysMood = moodRow;
+    ringHistory = rings;
   }
+
+  // Twin teaser data — small derived block, no DB hits beyond the
+  // ones already in the Promise.all above.
   const twinStats = deriveTwinStats(twinInputs);
   const twinState = deriveVisualState(twinStats, twinInputs.workoutCompletedToday);
+  const twinOverall = twinOverallScore(twinStats);
   const twinMessage = dailyTwinMessage(twinState, today);
-  const todayScore = computeHealthScore({
-    steps: twinInputs.steps,
-    stepsGoal: twinInputs.stepsGoal,
-    sleepMinutes: twinInputs.sleepMinutes,
-    sleepGoalMinutes: twinInputs.sleepGoalMinutes,
-    waterMl: twinInputs.waterMl,
-    waterGoalMl: twinInputs.waterGoalMl,
-    workoutCompletedToday: twinInputs.workoutCompletedToday,
-    nutritionAdherencePct: twinInputs.nutritionAdherencePct,
-  }).total;
+  const proportions = deriveBodyProportions(
+    latestMeas,
+    bodySettings.heightCm,
+    bodySettings.gender
+  );
+  const avatarSrc = avatarFor(bodySettings.gender, proportions.bodyType);
 
-  // ─── Phase 2 — derive live body proportions for the avatar ───
-  const proportions: BodyProportions | null = userId
-    ? deriveBodyProportions(latestMeasurements, bodySettings.heightCm, bodySettings.gender)
-    : null;
-  const hasMeasurements = latestMeasurements != null;
-
-  // ─── Gamification overlays (XP / Level / Mission) ───
-  // XP is derived from the sum of daily health scores in the history
-  // window — no DB changes. Levels are linear (500 XP each).
-  const xp = deriveXp(streakHistory);
-  const level = deriveLevel(xp);
   const currentStreakDays = computeCurrentStreak(streakHistory);
-  const mission = generateMission(twinInputs, currentStreakDays);
-
-  // ─── PureX Score — master daily metric (today's input-derived).
-  // Sits at the top of the dashboard so the first thing the user
-  // sees is their current standing. Shown on both web AND app; the
-  // breakdown sheet works in either surface.
   const pureXScore = computePureXScore(twinInputs, currentStreakDays);
   const pureXScoreEmpty = !userId || pureXScore.isEmpty;
 
-  // ─── Smart Alerts — derived from current inputs + recent history.
-  // Server-side compute so the dashboard initial render already has
-  // the alerts (no client-side flash). currentHour uses IST since
-  // the existing twin-server already keys off IST today.
-  const recentScores = streakHistory
-    .filter((h) => h.hasData)
-    .map((h) => h.score)
-    .reverse(); // oldest → newest for trend math
-  const smartAlerts = userId
-    ? computeSmartAlerts({
-        inputs: twinInputs,
-        recentScores,
-        workouts7d: twinInputs.workoutsLast7,
-        moodToday: todaysMood,
-        currentHour: new Date().getHours(),
-      })
-    : [];
+  // Coach greeting at the top of the dashboard. Uses the streak,
+  // yesterday's log, and today's workout status to produce a warm,
+  // deterministic sentence. Rule-based so it renders instantly with
+  // the initial SSR — no LLM call in the golden path.
+  //
+  // Also fetches today's mood in the same server pass so the mood
+  // check-in card below the digest renders without a second
+  // round-trip (moved from /client/twin to /client/dashboard
+  // 2026-07-25 so mothers can log mood without deep-navigating).
+  let firstName = 'there';
+  let hasAnyData = false;
+  const yesterdayInputs: DailyInputs | null = null;
+  let todaysMood: MoodState | null = null;
+  if (userId) {
+    try {
+      const sb = await createSupabaseClient();
+      const [profileRes, moodRes] = await Promise.all([
+        sb
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .maybeSingle(),
+        sb
+          .from('client_daily_logs')
+          .select('mood_state')
+          .eq('client_id', userId)
+          .eq('log_date', today)
+          .maybeSingle(),
+      ]);
+      if (profileRes.data?.full_name) {
+        firstName = profileRes.data.full_name.split(/\s+/)[0];
+      }
+      todaysMood = (moodRes.data?.mood_state ?? null) as MoodState | null;
+    } catch {
+      // ignore — fallback greeting, no mood row
+    }
+    hasAnyData = !pureXScore.isEmpty || streakHistory.some((h) => h.hasData);
+    // Yesterday's inputs — we already have last 7 days of history for
+    // scores; DailyInputs for yesterday would need a second fetch that
+    // isn't worth the round-trip. Kept null; the digest gracefully
+    // degrades on the streak signal alone.
+  }
+  const ruleDigest = buildDailyDigest({
+    firstName,
+    todayIso: selectedDate,
+    yesterday: yesterdayInputs,
+    currentStreakDays,
+    todayWorkoutCompleted: twinInputs.workoutCompletedToday,
+    hasAnyData,
+  });
+
+  // Layer Claude Haiku 4.5 on top of the rule-based digest.
+  // Server-side call, cached per user per day, hard-timeout at 3.5 s,
+  // silent fall-through to the rule-based digest on any failure — so
+  // the dashboard NEVER blocks on this. When ANTHROPIC_API_KEY is
+  // unset (e.g. local dev without the key), returns ruleDigest
+  // unchanged.
+  const digest = userId
+    ? await enhanceDigestWithClaude(
+        ruleDigest,
+        {
+          firstName,
+          todayIso: selectedDate,
+          currentStreakDays,
+          todayWorkoutCompleted: twinInputs.workoutCompletedToday,
+          hasAnyData,
+          yesterdaySteps: null,
+          yesterdayStepsGoal: null,
+          yesterdaySleepHours: null,
+          yesterdaySleepGoalHours: null,
+          weeklyAvgScore: null,
+          pureXScore: pureXScoreEmpty ? null : pureXScore.total,
+        },
+        userId
+      )
+    : ruleDigest;
+
+  // 7-day delta for the hero trend chip. Average over days that have
+  // ANY data (avoids burying a real number under days the client
+  // didn't open the app).
+  const recentScored = streakHistory.filter((h) => h.hasData);
+  const weeklyAvg =
+    recentScored.length > 0
+      ? recentScored.reduce((s, h) => s + h.score, 0) / recentScored.length
+      : null;
+  const weeklyDelta = weeklyAvg == null ? null : pureXScore.total - weeklyAvg;
 
   return (
-    <div className="space-y-6 md:space-y-7">
-      <WelcomeHeader />
+    <div className="space-y-5 md:space-y-6">
+      {/* First-launch guided tour. Silent no-op if the user already
+          finished or skipped it (localStorage flag). */}
+      <OnboardingTour />
 
-      {/* ─── PureX Score (hero) — single 0-100 number with breakdown
-          sheet on tap. Placed above all the raw-input cards because
-          this is the metric the user *should* return to daily. */}
-      <PureXScoreCard score={pureXScore} showPreview={pureXScoreEmpty} />
-
-      {/* ─── Plan from coach — surfaces "Schedule / Diet updated Xh
-          ago" + upcoming-workout count. Auto-hides when nothing is
-          set yet. Also our first-line debug signal when a client
-          reports "I can't see my workouts." */}
-      {userId && <PlanFromCoachBanner freshness={coachPlanFreshness} />}
-
-      {/* ─── Morning Mood Check-In — 8-chip "how is your body today?"
-          prompt. Sits just below PureX Score because it's a daily
-          ritual: open dashboard → see score → log mood → see
-          recommendation. Only shown when signed in (no point on a
-          signed-out preview). */}
-      {userId && <MoodCheckInCard current={todaysMood} />}
-
-      {/* ─── Smart Alerts — context-aware nudges (dehydration, low
-          sleep, missed workout, streak save, etc). Computed server-
-          side from current inputs + recent history so the first
-          render already has the alerts (no client-side flash).
-          Only shown when there's at least one active alert. */}
-      {userId && smartAlerts.length > 0 && (
-        <SmartAlertsCard alerts={smartAlerts} />
+      {/* "You evolved" celebration — fires once when the user's
+          bodyType bucket changes since their last dashboard visit.
+          Silent no-op on first visit and on visits where the bucket
+          hasn't changed. */}
+      {userId && (
+        <BodyTypeMorph
+          userId={userId}
+          currentBodyType={proportions.bodyType}
+          currentAvatarSrc={avatarSrc}
+        />
       )}
 
-      {/* Health Connect auto-sync card — app-only (returns null on
-          web, and dynamic-imported so the plugin's JS never lands in
-          the web bundle). Handles install / connect / sync flows and
-          pushes readings to client_daily_logs server-side. */}
+      {/* Coach daily digest — the first thing the client sees.
+          Warm greeting + observation + one call to action. */}
+      <div data-onboard="daily-digest">
+        <DailyDigest digest={digest} />
+      </div>
+
+      {/* "How is your body today?" mood check-in — 8 chips, one-tap
+          save. Sits right under the coach greeting so it feels like
+          answering the coach's opening. Moved from /client/twin
+          on 2026-07-25 after user reported not finding it. */}
+      {userId && <MoodCheckInCard current={todaysMood} />}
+
+      {/* Greeting (small, identity) */}
+      <WelcomeHeader />
+
+      {/* Hero — single colossal score gauge. weeklyScores oldest→newest
+          so the sparkline draws left-to-right in chronological order.
+          streakHistory is sorted newest-first by twin-server so we
+          reverse to match. */}
+      <div data-onboard="score-hero">
+        <PureXScoreHero
+          score={pureXScore}
+          weeklyDelta={weeklyDelta}
+          weeklyScores={streakHistory
+            .map((h) => h.score)
+            .reverse()}
+          showPreview={pureXScoreEmpty}
+        />
+      </div>
+
+      {/* Health Connect auto-sync banner — app-only (renders null on
+          web). When the user hasn't connected yet it surfaces a
+          "Connect Health Connect" CTA so the rings below populate
+          automatically from the phone's step / sleep / water sensors
+          instead of forcing manual logging. */}
       <HealthSyncCard />
 
-      {/* Raw fitness numbers — app-only (renders null on web). Sits
-          near the top so steps/sleep/water/nutrition are the first
-          thing visible after the greeting. */}
-      <AppFitnessTiles
-        inputs={twinInputs}
-        nutrition={nutritionSnapshot}
-        todaysMeals={todaysMeals}
-      />
+      {/* 4 activity rings + unified Log button. All log surfaces
+          (weight / steps / sleep / water / meal) live behind ONE
+          tap from here, replacing the old DailyWeightCard +
+          AppFitnessTiles + scattered chips. */}
+      <div data-onboard="today-panel">
+        <DashboardTodayPanel
+          inputs={twinInputs}
+          nutrition={nutritionSnapshot}
+          todaysMeals={todaysMeals}
+          todaysWeightKg={dailyWeight.todayKg}
+          history={ringHistory}
+        />
+      </div>
 
-      {/* BodyMeasurementsCard moved to /client/health — single source
-          of truth for body data. Still imported here only because it
-          drives twinProportions for the TwinSection below. */}
+      {/* Twin + Future Clone teaser — brings the gamified avatar
+          "feel" back to the dashboard without dragging the full
+          200+-line TwinSection into the home view. Tap → drills
+          into /client/twin (full immersive page) or /client/future-clone. */}
+      {userId && (
+        <div data-onboard="twin">
+          <TwinCloneTeaser
+            avatarSrc={avatarSrc}
+            state={twinState}
+            overall={twinOverall}
+            message={twinMessage}
+            proportions={proportions}
+            heightCm={bodySettings.heightCm}
+            gender={bodySettings.gender}
+          />
+        </div>
+      )}
 
+      {/* Today's workout — full plan card. */}
       {userId && (
         <TodaysPlanCard
           plan={dailyPlan}
@@ -252,42 +331,7 @@ export default async function ClientDashboardPage({ searchParams }: PageProps) {
         />
       )}
 
-      {/* Healthy Streak — current/best/today + 7-day calendar */}
-      <HealthyStreakCard
-        history={streakHistory}
-        todayScore={todayScore}
-      />
-
-      {/* PureX Twin + Future Clone — APP-ONLY. Web visitors see
-          nothing here (no silhouette, no skeleton) — by product
-          decision the premium gamified body twin is reserved for the
-          mobile app surface. */}
-      <TwinSection
-        stats={twinStats}
-        state={twinState}
-        message={twinMessage}
-        level={level}
-        streakDays={currentStreakDays}
-        mission={mission}
-        workoutDoneToday={twinInputs.workoutCompletedToday}
-        proportions={proportions}
-        hasMeasurements={hasMeasurements}
-        gender={bodySettings.gender}
-      />
-
-      <CommitmentWidget pact={pact} />
-
-      {/* HealthPassportCard + BodyMeasurementsCard moved to
-          /client/health (Health tab in bottom nav). The dashboard
-          now stays focused on "today's actions" while Health is
-          "your body's data." */}
-
-      {/* ScoreWidget removed — PureXScoreCard at the top of the
-          dashboard now serves as the single hero score. Keeping both
-          was redundant (two big-number cards on one screen) and the
-          old widget's "Your score will appear here" empty state was
-          confusing once the new one was present. */}
-
+      {/* Today's tasks — coach-assigned checklist. */}
       <TaskChecklist tasks={tasks} />
     </div>
   );

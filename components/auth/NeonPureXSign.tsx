@@ -7,7 +7,7 @@ interface NeonPureXSignProps {
 }
 
 /**
- * The neon PURE X sign that hangs on the gym wall.
+ * The neon Team Purex sign that hangs on the gym wall.
  * Two states:
  *   - dormant: thin gray outline, no glow
  *   - activated: bright neon green, heavy glow, subtle flicker

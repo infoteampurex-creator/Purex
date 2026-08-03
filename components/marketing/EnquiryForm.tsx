@@ -318,7 +318,7 @@ export function EnquiryForm() {
             className="text-text leading-relaxed"
             style={{ fontSize: 14 }}
           >
-            I&apos;m at least 18 years old and consent to PURE X reaching me on
+            I&apos;m at least 18 years old and consent to Team Purex reaching me on
             WhatsApp and email about my application. My details stay private.
           </span>
         </label>

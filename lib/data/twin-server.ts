@@ -361,6 +361,82 @@ export async function getStreakHistory(
   }
 }
 
+// ─── Per-metric 7-day history for the activity-ring sparklines ─────
+
+export interface RingHistory {
+  /** Oldest → newest, length === `days`. Missing logs render as 0. */
+  steps: number[];
+  cals: number[];
+  sleepMinutes: number[];
+  waterMl: number[];
+}
+
+const EMPTY_RING_HISTORY: RingHistory = {
+  steps: [],
+  cals: [],
+  sleepMinutes: [],
+  waterMl: [],
+};
+
+/**
+ * 7-day (or N-day) history of the four activity-ring metrics —
+ * feeds the sparkline under each ring on the dashboard. Same
+ * client_daily_logs query as getStreakHistory but returns raw per-
+ * metric arrays instead of composite scores. Kept as a parallel
+ * fetcher (rather than merging into the DayScoreEntry return type)
+ * so the dashboard can render even when one of the two calls
+ * fails.
+ *
+ * Missing days render as 0 in the sparkline — this is a visualisation
+ * decision that reads as "you didn't log" rather than the alternative
+ * (drop days), which would collapse a 7-day trend into a 3-day
+ * squiggle for sporadic loggers.
+ */
+export async function getRingHistory(
+  clientId: string,
+  days = 7
+): Promise<RingHistory> {
+  const targetDate = todayIsoIST();
+  const firstDate = addDaysIso(targetDate, -(days - 1));
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('client_daily_logs')
+      .select(LOG_COLS)
+      .eq('client_id', clientId)
+      .gte('log_date', firstDate)
+      .lte('log_date', targetDate)
+      .order('log_date', { ascending: true });
+    if (error) throw error;
+
+    const rows = (data ?? []) as unknown as DailyLogRow[];
+    const byDate = new Map(rows.map((r) => [r.log_date, r]));
+
+    const steps: number[] = [];
+    const cals: number[] = [];
+    const sleepMinutes: number[] = [];
+    const waterMl: number[] = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const iso = addDaysIso(targetDate, -i);
+      const log = byDate.get(iso);
+      steps.push(log?.steps ?? 0);
+      cals.push(log?.calories_consumed ?? 0);
+      sleepMinutes.push(
+        log?.sleep_hours != null ? Math.round(log.sleep_hours * 60) : 0
+      );
+      waterMl.push(
+        log?.water_glasses != null ? log.water_glasses * ML_PER_GLASS : 0
+      );
+    }
+    return { steps, cals, sleepMinutes, waterMl };
+  } catch (err) {
+    console.error('[twin-server] getRingHistory failed', err);
+    return EMPTY_RING_HISTORY;
+  }
+}
+
 // ─── Batched roster fetcher (admin /clients page) ────────────────
 
 export interface ClientStreakStatus {

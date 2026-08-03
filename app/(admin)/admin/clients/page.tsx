@@ -18,6 +18,41 @@ import { STREAK_THRESHOLD } from '@/lib/data/twin';
 
 export const metadata = { title: 'Admin · Clients' };
 
+/**
+ * Format a raw ISO timestamp like "2026-06-12T09:14:48.036882+00:00"
+ * as "12 Jun 2026". The raw ISO with microseconds + timezone was
+ * leaking to the UI, which read as amateur-hour polish in the client
+ * list (reported 2026-07-16). Copy of the same helper in
+ * app/(admin)/admin/clients/[id]/page.tsx — kept inline here to avoid
+ * cross-file churn before demo.
+ */
+function formatJoinedDate(raw: string | null | undefined): string {
+  if (!raw) return '—';
+  const dt = new Date(raw);
+  if (isNaN(dt.getTime())) return raw;
+  return dt.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Title-case a name like "mounica" → "Mounica" or "SUSHMITHA. VADNALA"
+ * → "Sushmitha. Vadnala". Defensive against DB storing signup forms
+ * in whatever case the user typed. Same helper the /clients/[id] page
+ * already has — inlined here to keep the polish PR surgical.
+ */
+function titleCase(name: string | null | undefined): string {
+  if (!name) return '';
+  return name
+    .split(/\s+/)
+    .map((part) =>
+      part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part
+    )
+    .join(' ');
+}
+
 export default async function AdminClientsPage() {
   const [{ clients }, pendingSignups] = await Promise.all([
     getAdminClients(),
@@ -105,10 +140,10 @@ export default async function AdminClientsPage() {
                 <Avatar name={c.fullName} photoUrl={c.avatarUrl} size="sm" />
                 <div className="min-w-0">
                   <div className="font-medium group-hover:text-accent transition-colors">
-                    {c.fullName}
+                    {titleCase(c.fullName)}
                   </div>
                   <div className="text-[10px] text-text-muted font-mono mt-0.5">
-                    Joined {c.joinedAt}
+                    Joined {formatJoinedDate(c.joinedAt)}
                   </div>
                 </div>
               </Link>

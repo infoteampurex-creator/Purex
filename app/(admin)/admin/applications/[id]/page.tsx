@@ -118,6 +118,14 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
               </div>
             </div>
           )}
+
+          {/* Danger zone lives in the main column (not the sticky
+              sidebar) so it's always reachable on any zoom level
+              and any sidebar height. */}
+          <DeleteEnquiryButton
+            enquiryId={enquiry.id}
+            applicantName={enquiry.fullName}
+          />
         </div>
 
         {/* Actions sidebar — sticky on md+, scrolls internally when

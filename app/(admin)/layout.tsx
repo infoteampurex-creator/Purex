@@ -1,25 +1,21 @@
-import { redirect } from 'next/navigation';
 import {
   AdminSidebar,
   AdminMobileBottomNav,
 } from '@/components/admin/AdminSidebar';
-import { requireAuth } from '@/lib/supabase/server';
 
-export default async function AdminLayout({
+/**
+ * Admin shell. Auth + role gating happens in middleware.ts
+ * (which already runs supabase.auth.getUser() and enforces
+ * profiles.role === 'admin' | 'super_admin' before this layout
+ * renders). Duplicating that check here added 2 extra Supabase
+ * round-trips per navigation — ~400-800ms of pure round-trip
+ * latency from India, which is why every admin page felt slow.
+ */
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Dev note: middleware already protects /admin/* routes. This is a backup
-  // check in case middleware is bypassed. Supabase-env guard happens in middleware too.
-  //
-  // Only run server-side auth check if Supabase is configured — otherwise
-  // allow dev browsing so the UI can be viewed without env setup.
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    const user = await requireAuth({ adminOnly: true });
-    if (!user) redirect('/login?redirect=/admin/dashboard');
-  }
-
   return (
     <div className="min-h-screen bg-bg">
       {/* Desktop only — hidden < md */}

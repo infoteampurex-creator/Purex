@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════
-// PURE X SCORE — the integrated 0-100 daily health score
+// Team Purex SCORE — the integrated 0-100 daily health score
 // ═══════════════════════════════════════════════════════════════════════
 //
 // Unlike other fitness platforms that silo data (steps, calories, sleep),
-// the PURE X Score blends 5 pillars into a single daily number that
+// the Team Purex Score blends 5 pillars into a single daily number that
 // reflects overall health progress.
 //
 // Each pillar contributes a weighted percentage:

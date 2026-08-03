@@ -16,6 +16,7 @@ const nextConfig = {
     // (search: undefined) means "no query string allowed"; we keep the
     // explicit v=2 entry alongside the wildcard one so both forms work.
     localPatterns: [
+      { pathname: '/brand/**' }, // wordmark, favicon, brand assets
       { pathname: '/experts/**' },
       { pathname: '/trainers/**' },
       { pathname: '/in-action/**' },
@@ -28,6 +29,24 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
+    },
+    // Client-side RSC navigation cache. When the user taps a bottom-nav
+    // tab, Next's client router serves the cached RSC payload for up to
+    // `dynamic` seconds instead of round-tripping to the server. Combined
+    // with prefetch={true} on the ClientNav links this is what makes tab
+    // switches feel snap on the Capacitor WebView.
+    //
+    // Reported 2026-07-16 that tab switches were taking ~5 s each (full
+    // SSR every tap). With this in place, subsequent taps to any tab
+    // within 30 s are instant; only the very first tap per tab pays the
+    // SSR cost.
+    //
+    // Safe because this is CLIENT-SIDE only — the server is not caching
+    // anything, and mutations still see fresh data because router.refresh()
+    // + revalidatePath() bypass the cache.
+    staleTimes: {
+      dynamic: 30,
+      static: 300,
     },
   },
   async redirects() {
@@ -44,6 +63,14 @@ const nextConfig = {
       {
         source: '/transformations/:slug((?!.*\\.).+)',
         destination: '/transformations#:slug',
+        permanent: true,
+      },
+      // Neelima's name was originally misspelled 'nilima' in the mothers
+      // roster. Redirect the old slug to the corrected one so any link
+      // already shared with the mothers still opens the right page.
+      {
+        source: '/purex-mothers/nilima',
+        destination: '/purex-mothers/neelima',
         permanent: true,
       },
     ];

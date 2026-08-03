@@ -1,13 +1,22 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { Ruler, Plus, Sparkles } from 'lucide-react';
-import { BodyMeasurementsSheet } from './BodyMeasurementsSheet';
 import type {
   BodyMeasurements,
   ProfileBodySettings,
 } from '@/lib/data/body-measurements';
+
+// 553-line sheet — only loads when the user taps to update measurements.
+const BodyMeasurementsSheet = dynamic(
+  () =>
+    import('./BodyMeasurementsSheet').then((m) => ({
+      default: m.BodyMeasurementsSheet,
+    })),
+  { ssr: false }
+);
 
 interface Props {
   latest: BodyMeasurements | null;
@@ -145,12 +154,14 @@ export function BodyMeasurementsCardInner({ latest, profileSettings }: Props) {
         </div>
       </motion.button>
 
-      <BodyMeasurementsSheet
-        open={open}
-        onClose={() => setOpen(false)}
-        latest={latest}
-        profileSettings={profileSettings}
-      />
+      {open && (
+        <BodyMeasurementsSheet
+          open={true}
+          onClose={() => setOpen(false)}
+          latest={latest}
+          profileSettings={profileSettings}
+        />
+      )}
     </>
   );
 }

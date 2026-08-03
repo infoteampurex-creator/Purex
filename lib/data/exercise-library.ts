@@ -69,14 +69,14 @@ export async function searchExercises(
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] searchExercises failed:', error);
+      console.error('[Team Purex] searchExercises failed:', error);
       return [];
     }
 
     return (rows ?? []).map(rowToEntry);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PURE X] searchExercises threw:', err);
+    console.error('[Team Purex] searchExercises threw:', err);
     return [];
   }
 }
@@ -135,7 +135,7 @@ export async function getExerciseBySlug(
     return { ...exercise, muscles, alternatives };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PURE X] getExerciseBySlug threw:', err);
+    console.error('[Team Purex] getExerciseBySlug threw:', err);
     return null;
   }
 }

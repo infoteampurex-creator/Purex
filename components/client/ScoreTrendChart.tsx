@@ -9,7 +9,7 @@ interface ScoreTrendChartProps {
 
 /**
  * Pure-SVG trend chart with hover interactivity.
- * No chart library dependency — fully custom for the PURE X aesthetic.
+ * No chart library dependency — fully custom for the Team Purex aesthetic.
  */
 export function ScoreTrendChart({ history }: ScoreTrendChartProps) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);

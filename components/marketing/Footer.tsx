@@ -8,7 +8,7 @@ export function Footer() {
       <div className="container-safe py-16 md:py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           <div className="col-span-2 md:col-span-1">
-            <Logo className="h-8 mb-4" />
+            <Logo className="h-12 mb-4" />
             <p className="text-sm text-text-muted max-w-xs leading-relaxed">
               Integrated health coaching. Built for transformation, not aesthetics.
             </p>
@@ -52,7 +52,7 @@ export function Footer() {
 
         <div className="mt-12 md:mt-16 pt-6 border-t border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-dim">
-            © {new Date().getFullYear()} PURE X. All rights reserved.
+            © {new Date().getFullYear()} Team Purex. All rights reserved.
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-dim">
             Train for Life. Not Just Aesthetics.

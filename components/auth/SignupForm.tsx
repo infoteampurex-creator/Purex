@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Loader2, Check } from 'lucide-react';
 import { signUp, type AuthActionState } from '@/lib/actions/auth';
 import { Input, Label, FieldError } from '@/components/ui/Input';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
 const initialState: AuthActionState = { ok: false };
 
@@ -32,6 +33,8 @@ export function SignupForm() {
   }
 
   return (
+    <div className="space-y-4">
+      <GoogleSignInButton />
     <form action={formAction} className="space-y-4">
       <div>
         <Label htmlFor="fullName" required>Full name</Label>
@@ -94,6 +97,7 @@ export function SignupForm() {
         </p>
       </div>
     </form>
+    </div>
   );
 }
 

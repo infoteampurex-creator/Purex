@@ -140,7 +140,7 @@ export async function submitBooking(
     if (error) {
       insertError = error.message;
       // eslint-disable-next-line no-console
-      console.error('[PURE X] Supabase booking insert failed:', error);
+      console.error('[Team Purex] Supabase booking insert failed:', error);
     } else if (inserted) {
       bookingRef = inserted.reference_id;
 
@@ -163,20 +163,20 @@ export async function submitBooking(
       } catch (err) {
         // Non-fatal — booking is still captured
         // eslint-disable-next-line no-console
-        console.warn('[PURE X] form_submissions insert skipped:', err);
+        console.warn('[Team Purex] form_submissions insert skipped:', err);
       }
     }
   } catch (err) {
     insertError = err instanceof Error ? err.message : 'Unknown error';
     // eslint-disable-next-line no-console
-    console.error('[PURE X] Supabase client creation failed:', err);
+    console.error('[Team Purex] Supabase client creation failed:', err);
   }
 
   // ─── Fallback: log the lead so it's not lost ───────────────────
   if (!bookingRef) {
     bookingRef = `PX-LOCAL-${Date.now().toString(36).toUpperCase()}`;
     // eslint-disable-next-line no-console
-    console.log('[PURE X] ⚠️ DATABASE UNAVAILABLE — LEAD LOGGED LOCALLY:', {
+    console.log('[Team Purex] ⚠️ DATABASE UNAVAILABLE — LEAD LOGGED LOCALLY:', {
       bookingRef,
       reason: insertError ?? 'unknown',
       client: {

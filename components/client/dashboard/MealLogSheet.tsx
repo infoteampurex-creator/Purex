@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import {
@@ -9,11 +10,26 @@ import {
 import { addMeal, deleteMeal } from '@/lib/actions/meals';
 import { analyzeMealPhoto } from '@/lib/actions/analyze-meal-photo';
 import type { MealRow } from '@/lib/data/meals';
-import { FoodSourcesSheet } from './FoodSourcesSheet';
 import type {
   FoodSource,
   MealTypeExtended,
 } from '@/lib/data/food-sources';
+import {
+  canPersistLocally,
+  saveLocalFile,
+  extFromMime,
+} from '@/lib/local/local-files';
+
+// 455-line nested sheet — only loads when the user opens the food
+// browser inside the meal log. ssr:false because the sheet itself is
+// state-driven and only renders open on the client.
+const FoodSourcesSheet = dynamic(
+  () =>
+    import('./FoodSourcesSheet').then((m) => ({
+      default: m.FoodSourcesSheet,
+    })),
+  { ssr: false }
+);
 
 interface Props {
   open: boolean;
@@ -83,6 +99,15 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
   const [aiRaw, setAiRaw] = useState<unknown>(null);
   const [aiConfidence, setAiConfidence] = useState<number | null>(null);
   const [aiDescription, setAiDescription] = useState<string>('');
+  // Captured-photo bytes kept in component state so we can save them
+  // to the device's local filesystem AFTER addMeal succeeds (we need
+  // the meal id from the DB to key the local file). Cleared on close.
+  const [capturedPhotoBase64, setCapturedPhotoBase64] = useState<
+    string | null
+  >(null);
+  const [capturedPhotoMime, setCapturedPhotoMime] = useState<string | null>(
+    null
+  );
 
   // Food sources browser state — sheet opens above the meal log form.
   // Picks sum into current macros so the user can build a meal from
@@ -105,6 +130,8 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
       setAiRaw(null);
       setAiConfidence(null);
       setAiDescription('');
+      setCapturedPhotoBase64(null);
+      setCapturedPhotoMime(null);
     }
   }, [open]);
 
@@ -151,6 +178,12 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
         setMode('choose');
         return;
       }
+      // Stash the raw bytes — we'll write them to the device's local
+      // filesystem AFTER addMeal succeeds (we need the meal id to key
+      // the local file).
+      setCapturedPhotoBase64(photo.base64String);
+      setCapturedPhotoMime(mediaType);
+
       // Populate state from AI response — user can still edit before saving
       setPhotoUrl(res.photoUrl);
       setAiRaw(res.analysis);
@@ -260,13 +293,32 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
       carbsG,
       fatsG,
       fiberG,
-      source: photoUrl ? 'ai_photo' : 'manual',
+      // Use aiRaw (not photoUrl) to detect AI-photo flow now that the
+      // photo itself is never persisted to Supabase. photoUrl is always
+      // null under the "photo stays on device" policy.
+      source: aiRaw ? 'ai_photo' : 'manual',
       photoUrl: photoUrl ?? null,
       aiRaw: aiRaw ?? null,
       aiConfidence: aiConfidence ?? null,
     });
     setSaving(false);
     if (res.ok) {
+      // Persist the original photo to the device's local filesystem
+      // now that we have the meal id from the server. The server only
+      // kept macros; the photo lives only here. No-op on web.
+      if (
+        canPersistLocally() &&
+        res.mealId &&
+        capturedPhotoBase64 &&
+        capturedPhotoMime
+      ) {
+        void saveLocalFile({
+          scope: 'meal-photos',
+          id: res.mealId,
+          base64: capturedPhotoBase64,
+          ext: extFromMime(capturedPhotoMime),
+        });
+      }
       onClose();
     } else {
       setError(res.error ?? 'Save failed');
@@ -827,13 +879,17 @@ export function MealLogSheet({ open, onClose, today, todaysMeals }: Props) {
       {/* Food sources browser — meal-type × macro picker. Opens on
           top of the meal log sheet via z-index; tapping a food sums
           its macros into the parent log's state and keeps the
-          browser open for stacking multiple items into one meal. */}
-      <FoodSourcesSheet
-        open={foodBrowserOpen}
-        onClose={() => setFoodBrowserOpen(false)}
-        initialMealType={foodSheetMealType}
-        onPickFood={handlePickFood}
-      />
+          browser open for stacking multiple items into one meal.
+          Mount-gated on `foodBrowserOpen` so the lazy chunk only
+          loads when the user actually opens the browser. */}
+      {foodBrowserOpen && (
+        <FoodSourcesSheet
+          open={true}
+          onClose={() => setFoodBrowserOpen(false)}
+          initialMealType={foodSheetMealType}
+          onPickFood={handlePickFood}
+        />
+      )}
     </AnimatePresence>
   );
 }

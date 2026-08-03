@@ -7,7 +7,7 @@ export default function SignupPage() {
   return (
     <AuthShell
       eyebrow="Get Started"
-      title="Join PURE X"
+      title="Join Team Purex"
       subtitle="Start your transformation with the integrated coaching team."
       footer={
         <p className="text-xs text-text-muted">

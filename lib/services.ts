@@ -215,7 +215,7 @@ export const FALLBACK_SERVICES: Service[] = [
     expertSlug: 'siva-reddy',
     name: '30-min Discovery Call',
     description:
-      'A free introductory call to understand your goals, training background, and recommend the right PURE X programme.',
+      'A free introductory call to understand your goals, training background, and recommend the right Team Purex programme.',
     format: 'online',
     durationMinutes: 30,
     priceDisplay: 'Free',
@@ -299,7 +299,7 @@ export const FALLBACK_SERVICES: Service[] = [
     expertSlug: 'siva-jampana',
     name: '30-min Ops & Programme Fit Call',
     description:
-      'A free chat with Siva Jampana about programme structure, logistics, and how PURE X fits your life. Ideal if you want to know how it all works before committing.',
+      'A free chat with Siva Jampana about programme structure, logistics, and how Team Purex fits your life. Ideal if you want to know how it all works before committing.',
     format: 'online',
     durationMinutes: 30,
     priceDisplay: 'Free',

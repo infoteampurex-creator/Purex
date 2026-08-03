@@ -99,7 +99,7 @@ export async function getLatestMeasurements(
       .maybeSingle();
     if (error) {
       // eslint-disable-next-line no-console
-      console.error('[PURE X] getLatestMeasurements failed:', error.message);
+      console.error('[Team Purex] getLatestMeasurements failed:', error.message);
       return null;
     }
     return data ? rawToTyped(data as unknown as RawMeas) : null;

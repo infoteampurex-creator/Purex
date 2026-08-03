@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { CURRENT_CONSENT_VERSION } from '@/lib/data/consent-text';
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -83,6 +84,30 @@ export async function middleware(request: NextRequest) {
     if (profile && profile.signup_status !== 'approved') {
       const url = request.nextUrl.clone();
       url.pathname = '/pending-approval';
+      return NextResponse.redirect(url);
+    }
+
+    // (3) Consent block — every approved client must sign the current
+    //     consent version before accessing the coaching app. This meets
+    //     UK GDPR / US state / UAE / India DPDP requirements that no
+    //     coaching data may be collected without explicit consent.
+    //     The query uses count + head to avoid pulling the whole row.
+    const { count: activeConsentCount, error: consentErr } = await supabase
+      .from('client_consent_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('consent_version', CURRENT_CONSENT_VERSION)
+      .is('withdrawn_at', null);
+
+    // Fail-open on errors (e.g. migration not yet run) — never lock a
+    // signed-in client out of the app over an infra hiccup. The error
+    // is logged for ops.
+    if (consentErr) {
+      console.error('[middleware] consent check failed', consentErr.message);
+    } else if ((activeConsentCount ?? 0) === 0) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/onboarding/consent';
+      url.searchParams.set('redirect', pathname);
       return NextResponse.redirect(url);
     }
   }

@@ -1,8 +1,15 @@
 import { redirect } from 'next/navigation';
 import { LineChart } from 'lucide-react';
-import { ProgressPageView } from '@/components/client/progress/ProgressPageView';
+import { ProgressTabs } from '@/components/client/progress/ProgressTabs';
+import { HealthyStreakCard } from '@/components/client/twin/HealthyStreakCard';
 import { getCurrentUserId } from '@/lib/data/client-live';
-import { getProgressData, getStrengthPRs } from '@/lib/data/progress-server';
+import {
+  getProgressData,
+  getStrengthPRs,
+  getYearlyProgress,
+} from '@/lib/data/progress-server';
+import { getTwinDailyInputs, getStreakHistory } from '@/lib/data/twin-server';
+import { computeHealthScore } from '@/lib/data/twin';
 
 export const metadata = {
   title: 'PureX Progress · 30/60/90-day transformation trends',
@@ -32,10 +39,26 @@ export default async function ProgressPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const [data, strengthPRs] = await Promise.all([
-    getProgressData(userId, today),
-    getStrengthPRs(userId, 8),
-  ]);
+  const [data, strengthPRs, twinInputsResult, streakHistory, yearly] =
+    await Promise.all([
+      getProgressData(userId, today),
+      getStrengthPRs(userId, 8),
+      getTwinDailyInputs(userId, today),
+      getStreakHistory(userId, 7),
+      getYearlyProgress(userId, today),
+    ]);
+
+  const twinInputs = twinInputsResult.inputs;
+  const todayScore = computeHealthScore({
+    steps: twinInputs.steps,
+    stepsGoal: twinInputs.stepsGoal,
+    sleepMinutes: twinInputs.sleepMinutes,
+    sleepGoalMinutes: twinInputs.sleepGoalMinutes,
+    waterMl: twinInputs.waterMl,
+    waterGoalMl: twinInputs.waterGoalMl,
+    workoutCompletedToday: twinInputs.workoutCompletedToday,
+    nutritionAdherencePct: twinInputs.nutritionAdherencePct,
+  }).total;
 
   return (
     <main className="relative bg-bg text-text min-h-screen">
@@ -71,7 +94,21 @@ export default async function ProgressPage() {
           </p>
         </header>
 
-        <ProgressPageView data={data} strengthPRs={strengthPRs} />
+        <ProgressTabs
+          data={data}
+          strengthPRs={strengthPRs}
+          yearly={yearly}
+        />
+
+        {/* 7-day streak calendar + today's score chip. Moved here
+            from the dashboard in PR #66; the Progress page is its
+            natural home — this IS where trend / consistency lives. */}
+        <div className="mt-6">
+          <HealthyStreakCard
+            history={streakHistory}
+            todayScore={todayScore}
+          />
+        </div>
       </div>
     </main>
   );

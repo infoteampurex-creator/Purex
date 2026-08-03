@@ -3,9 +3,9 @@ import { TransformationGallery } from '@/components/marketing/sections/Transform
 import { TransformationStoryViewer } from '@/components/marketing/sections/TransformationStoryViewer';
 
 export const metadata: Metadata = {
-  title: 'Transformations · PURE X',
+  title: 'Transformations · Team Purex',
   description:
-    'Real clients. Real journeys. Browse transformation stories from PURE X members — hybrid athletes, lifestyle changes, marathon training, and sustainable performance.',
+    'Real clients. Real journeys. Browse transformation stories from Team Purex members — hybrid athletes, lifestyle changes, marathon training, and sustainable performance.',
 };
 
 export default function TransformationsPage() {

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { signOut } from '@/lib/actions/auth';
 import { BRAND } from '@/lib/constants';
 
-export const metadata = { title: 'Application under review · PURE X' };
+export const metadata = { title: 'Application under review · Team Purex' };
 
 export default async function PendingApprovalPage() {
   const supabase = await createClient();
@@ -79,7 +79,7 @@ function PendingView({ firstName }: { firstName: string }) {
       </h1>
 
       <p className="text-sm md:text-base text-text-muted leading-relaxed mb-6">
-        We&rsquo;ve received your sign-up. A member of the PURE X team will
+        We&rsquo;ve received your sign-up. A member of the Team Purex team will
         review your application and reach out shortly.
       </p>
 
@@ -150,7 +150,7 @@ function RejectedView({
       </h1>
 
       <p className="text-sm md:text-base text-text-muted leading-relaxed mb-6">
-        Thanks for applying to PURE X. After reviewing your application, we
+        Thanks for applying to Team Purex. After reviewing your application, we
         don&rsquo;t think we&rsquo;re the right fit for you at this stage.
         This is rarely about you — it&rsquo;s usually about timing, capacity,
         or alignment with the kind of commitment our program requires.

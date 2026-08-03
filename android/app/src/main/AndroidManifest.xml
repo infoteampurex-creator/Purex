@@ -26,6 +26,22 @@
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
+
+            <!-- Custom URL scheme for the Supabase Google OAuth
+                 redirect. Google requires an https redirect URI in
+                 its OAuth client config (which points at Supabase);
+                 Supabase then does the second-hop redirect to this
+                 custom scheme so Android deep-links back into our
+                 app. NativeOAuthHandler listens for the resulting
+                 App.appUrlOpen event and completes the sign-in
+                 inside the WebView.
+                 Scheme: com.teampurex.app://auth-callback -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.teampurex.app" android:host="auth-callback" />
+            </intent-filter>
         </activity>
 
         <!-- Android 14+ alternative intent for the same purpose -->
@@ -55,8 +71,7 @@
     <!-- @capacitor/camera: capture food photos for AI meal logging -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- Health Connect read permissions. Each one prompts the user

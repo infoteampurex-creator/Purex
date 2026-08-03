@@ -26,7 +26,7 @@ export default async function AdminLeadsPage() {
       <AdminPageHeader
         eyebrow="Inbox"
         title="Leads"
-        subtitle={`${allLeads.length} bookings awaiting action. Reach out within 24 hours to maintain the PURE X promise.`}
+        subtitle={`${allLeads.length} bookings awaiting action. Reach out within 24 hours to maintain the Team Purex promise.`}
         action={
           <button className="inline-flex items-center gap-2 h-10 px-4 rounded-full border border-border text-sm font-medium hover:border-accent/50 transition-colors">
             <Download size={14} />

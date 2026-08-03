@@ -11,11 +11,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <AuthShell
       eyebrow="Welcome Back"
-      title="Sign in to PURE X"
+      title="Sign in to Team Purex"
       subtitle="Access your dashboard, plan, and team."
       footer={
         <p className="text-xs text-text-muted">
-          New to PURE X?{' '}
+          New to Team Purex?{' '}
           <Link href="/signup" className="text-accent hover:underline font-medium">
             Create an account
           </Link>

@@ -78,8 +78,8 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
   const loginUrl = `${baseUrl}/login`;
 
   const whatsappMessage = tempPassword
-    ? `Hi ${firstName || 'there'}, welcome to PURE X.\n\n` +
-      `I've set up your account on the ${selectedProgram?.name ?? 'PURE X'} plan ` +
+    ? `Hi ${firstName || 'there'}, welcome to Team Purex.\n\n` +
+      `I've set up your account on the ${selectedProgram?.name ?? 'Team Purex'} plan ` +
       `with ${selectedExpert?.name ?? 'your coach'} as your assigned coach.\n\n` +
       `Login here: ${loginUrl}\n` +
       `Email: ${email}\n` +

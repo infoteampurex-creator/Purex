@@ -23,6 +23,9 @@ export interface TemplateCardData {
   difficulty: 'beginner' | 'intermediate' | 'advanced' | null;
   exerciseCount: number;
   updatedAt: string;
+  /** 'db' = stored in Supabase (editable). 'sheet' = synced from
+   *  Google Sheets (edit happens in the Sheet itself). */
+  source?: 'db' | 'sheet';
 }
 
 interface TemplatesListProps {
@@ -130,11 +133,26 @@ export function TemplatesList({
                       </div>
                     )}
                   </div>
-                  {t.difficulty && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-bg-elevated text-[10px] text-text-muted font-mono uppercase tracking-[0.12em] border border-border flex-shrink-0">
-                      {t.difficulty}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {t.source === 'sheet' && (
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-[0.12em] border"
+                        style={{
+                          color: '#7dd3ff',
+                          background: 'rgba(125,211,255,0.10)',
+                          borderColor: 'rgba(125,211,255,0.30)',
+                        }}
+                        title="Sourced from Google Sheets — edit in the Sheet, not here"
+                      >
+                        Sheet
+                      </span>
+                    )}
+                    {t.difficulty && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-bg-elevated text-[10px] text-text-muted font-mono uppercase tracking-[0.12em] border border-border">
+                        {t.difficulty}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-text-muted font-mono pt-3 border-t border-border-soft">
@@ -152,18 +170,32 @@ export function TemplatesList({
                 </div>
 
                 <div className="mt-3">
-                  <button
-                    onClick={() => openEdit(t.id)}
-                    disabled={isLoading}
-                    className="w-full inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full border border-border text-xs font-medium hover:border-accent/50 hover:text-accent transition-colors disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <Loader2 size={11} className="animate-spin" />
-                    ) : (
-                      <Edit3 size={11} />
-                    )}
-                    {isLoading ? 'Loading…' : 'Edit template'}
-                  </button>
+                  {t.source === 'sheet' ? (
+                    <div
+                      className="w-full inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full border text-xs font-medium"
+                      style={{
+                        color: 'rgba(125,211,255,0.85)',
+                        background: 'rgba(125,211,255,0.05)',
+                        borderColor: 'rgba(125,211,255,0.20)',
+                      }}
+                      title="Edit this template directly in Google Sheets — changes appear here within 5 minutes."
+                    >
+                      Edit in Sheet
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => openEdit(t.id)}
+                      disabled={isLoading}
+                      className="w-full inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full border border-border text-xs font-medium hover:border-accent/50 hover:text-accent transition-colors disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <Loader2 size={11} className="animate-spin" />
+                      ) : (
+                        <Edit3 size={11} />
+                      )}
+                      {isLoading ? 'Loading…' : 'Edit template'}
+                    </button>
+                  )}
                 </div>
               </div>
             );

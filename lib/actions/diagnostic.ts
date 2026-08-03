@@ -104,7 +104,7 @@ export async function sendTestEmail(
 
   const result = await sendEmail({
     to: parsed.data.to,
-    subject: 'PURE X — diagnostic test send',
+    subject: 'Team Purex — diagnostic test send',
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
         <h2 style="color: #c6ff3d;">Test send from /admin/diagnostic</h2>
@@ -115,7 +115,7 @@ export async function sendTestEmail(
         </p>
       </div>
     `,
-    text: `PURE X — diagnostic test send. If you're reading this, Resend is wired up correctly on production. Sent at ${new Date().toISOString()}.`,
+    text: `Team Purex — diagnostic test send. If you're reading this, Resend is wired up correctly on production. Sent at ${new Date().toISOString()}.`,
   });
 
   if (!result.ok) {

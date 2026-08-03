@@ -11,7 +11,7 @@ interface ScoreWidgetProps {
 }
 
 /**
- * Compact daily PURE X Score widget.
+ * Compact daily PureX Score widget.
  * If no score data exists yet, shows an inviting empty state.
  */
 export function ScoreWidget({ score }: ScoreWidgetProps) {
@@ -35,7 +35,7 @@ export function ScoreWidget({ score }: ScoreWidgetProps) {
           </div>
           <div className="flex-1">
             <div className="font-mono text-[10px] uppercase tracking-[0.22em] font-bold mb-1.5" style={{ color: '#7dd3ff' }}>
-              PURE X Score
+              PureX Score
             </div>
             <h3 className="font-display font-semibold text-lg md:text-xl tracking-tight leading-tight mb-1">
               Your score will appear here
@@ -86,7 +86,7 @@ export function ScoreWidget({ score }: ScoreWidgetProps) {
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent font-bold mb-1.5">
             <Activity size={12} strokeWidth={2.5} />
-            PURE X Score
+            PureX Score
           </div>
           <div className="font-mono text-[10px] text-text-muted">
             Daily · {new Date(score.asOf).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}

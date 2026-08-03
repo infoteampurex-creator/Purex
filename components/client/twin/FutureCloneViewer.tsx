@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { AvatarImage } from './AvatarImage';
+import { TwinAvatarResponsive } from './TwinAvatarResponsive';
 import { TwinStatsPanel } from './TwinStatsPanel';
 import { TwinStatusBadge } from './TwinStatusBadge';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -16,6 +16,8 @@ import {
   type FutureStageKey,
   type TwinStats,
 } from '@/lib/data/twin';
+import type { BodyProportions } from '@/lib/data/body-proportions';
+import type { Gender } from '@/lib/data/body-measurements';
 
 interface Props {
   /** Today's actual Twin stats (used as the projection baseline). */
@@ -26,6 +28,13 @@ interface Props {
   initialStage?: FutureStageKey;
   /** Projected avatar PNG src — shown as the centerpiece for all stages. */
   avatarSrc?: string;
+  /** Body proportions today — drives the measurement-based CSS
+   *  transform on the avatar so silhouettes differ per user. */
+  proportions?: BodyProportions | null;
+  /** User's height in centimetres. Drives vertical scale. */
+  heightCm?: number | null;
+  /** Gender — picks reference-height baseline. */
+  gender?: Gender | null;
 }
 
 /**
@@ -42,6 +51,9 @@ export function FutureCloneViewer({
   workoutDoneToday,
   initialStage = '30d',
   avatarSrc,
+  proportions,
+  heightCm,
+  gender,
 }: Props) {
   const initialIndex = Math.max(
     0,
@@ -73,15 +85,22 @@ export function FutureCloneViewer({
 
       {/* ─── Silhouette + projected stats grid ─── */}
       <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 md:gap-12 items-start">
-        {/* Silhouette panel */}
-        <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-6 md:p-8">
+        {/* Silhouette panel — padding tightens on mobile so the 260 px
+            responsive avatar (via TwinAvatarResponsive) sits centred
+            inside the card content area, and the "3 · Projected
+            Vitality" readout below stays inside the card boundary
+            instead of dangling outside on 375 px viewports
+            (reported 2026-07-26). */}
+        <div className="rounded-3xl border border-border bg-bg-card/60 backdrop-blur-sm p-4 md:p-8 overflow-hidden">
           <div className="flex flex-col items-center">
             {avatarSrc ? (
-              <AvatarImage
+              <TwinAvatarResponsive
                 src={avatarSrc}
-                width={320}
                 accent={activeStage.aura}
                 glow={stageIndex >= 2}
+                proportions={proportions}
+                heightCm={heightCm}
+                gender={gender}
               />
             ) : null}
 
@@ -302,7 +321,13 @@ function StageSlider({
         })}
       </div>
 
-      {/* Inline range slider styles — premium thumb */}
+      {/* Inline range slider styles.
+          The native thumb is INVISIBLE — it's still full-size for
+          interaction (drag / tap), but we hide it visually so the
+          stage markers below (which are pixel-aligned to each notch)
+          are the single visible dot. Previously the coloured thumb
+          sat on top of the active stage marker and they overlapped
+          into an ugly blue-over-green pill (reported 2026-07-16). */}
       <style>{`
         .future-clone-slider {
           outline: none;
@@ -310,32 +335,26 @@ function StageSlider({
         .future-clone-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
-          background: ${activeStage.aura};
-          border: 3px solid #0a0c09;
-          box-shadow: 0 0 18px ${activeStage.aura}aa;
+          background: transparent;
+          border: none;
           cursor: grab;
-          transition: transform 0.15s ease;
         }
         .future-clone-slider::-webkit-slider-thumb:active {
           cursor: grabbing;
-          transform: scale(1.15);
         }
         .future-clone-slider::-moz-range-thumb {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
-          background: ${activeStage.aura};
-          border: 3px solid #0a0c09;
-          box-shadow: 0 0 18px ${activeStage.aura}aa;
+          background: transparent;
+          border: none;
           cursor: grab;
-          transition: transform 0.15s ease;
         }
         .future-clone-slider::-moz-range-thumb:active {
           cursor: grabbing;
-          transform: scale(1.15);
         }
         .future-clone-slider::-webkit-slider-runnable-track {
           height: 32px;
@@ -347,7 +366,7 @@ function StageSlider({
         }
         .future-clone-slider:focus-visible::-webkit-slider-thumb {
           outline: 2px solid ${activeStage.aura};
-          outline-offset: 2px;
+          outline-offset: 4px;
         }
       `}</style>
     </div>
