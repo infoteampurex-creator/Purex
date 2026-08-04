@@ -12,6 +12,7 @@ import {
   Bell,
   Shield,
   ExternalLink,
+  Receipt,
   ChevronRight,
 } from 'lucide-react';
 import { signOut } from '@/lib/actions/auth';
@@ -245,6 +246,12 @@ export function ProfilePageView({
             Preferences
           </h3>
         </div>
+        <LinkRow
+          icon={Receipt}
+          label="My invoices"
+          sub="Bills from Team Purex"
+          href="/client/invoices"
+        />
         <LinkRow
           icon={Bell}
           label="Notifications"
