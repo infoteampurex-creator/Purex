@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Send, CheckCircle, Printer, XCircle, Trash2 } from 'lucide-react';
+import { Send, CheckCircle, XCircle, Trash2, Edit3 } from 'lucide-react';
 import {
   sendInvoiceAction,
   markInvoicePaidAction,
@@ -10,6 +11,7 @@ import {
   deleteDraftInvoiceAction,
 } from '@/lib/actions/invoices';
 import type { InvoiceWithItems } from '@/lib/data/invoices';
+import { DownloadPdfButton } from '@/components/invoicing/DownloadPdfButton';
 
 interface Props {
   invoice: InvoiceWithItems;
@@ -50,11 +52,18 @@ export function InvoiceActions({ invoice }: Props) {
         <>
           <ActionBtn
             icon={<Send size={12} />}
-            label="Send invoice"
+            label="Send now"
             primary
             disabled={pending}
             onClick={() => run(() => sendInvoiceAction(invoice.id))}
           />
+          <Link
+            href={`/admin/invoices/${invoice.id}/edit`}
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-medium border border-border text-text-muted hover:border-accent hover:text-accent transition-colors"
+          >
+            <Edit3 size={12} />
+            Edit
+          </Link>
           <ActionBtn
             icon={<Trash2 size={12} />}
             label="Delete draft"
@@ -100,10 +109,9 @@ export function InvoiceActions({ invoice }: Props) {
           />
         </>
       )}
-      <ActionBtn
-        icon={<Printer size={12} />}
-        label="Print / Save PDF"
-        onClick={() => window.print()}
+      <DownloadPdfButton
+        invoiceNumber={invoice.invoiceNumber}
+        variant="ghost"
       />
     </div>
   );

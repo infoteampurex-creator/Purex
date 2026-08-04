@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getCurrentUserId } from '@/lib/data/client-live';
 import { getInvoiceById, getCompanySettings } from '@/lib/data/invoices';
 import { InvoiceView } from '@/components/invoicing/InvoiceView';
-import { PrintInvoiceButton } from '@/components/client/invoices/PrintInvoiceButton';
+import { DownloadPdfButton } from '@/components/invoicing/DownloadPdfButton';
 
 export const metadata = { title: 'Invoice' };
 export const dynamic = 'force-dynamic';
@@ -41,7 +41,10 @@ export default async function ClientInvoiceDetailPage({ params }: PageProps) {
           <ArrowLeft size={12} />
           Back to invoices
         </Link>
-        <PrintInvoiceButton />
+        <DownloadPdfButton
+          invoiceNumber={invoice.invoiceNumber}
+          variant="primary"
+        />
       </div>
 
       <div className="rounded-2xl overflow-hidden">

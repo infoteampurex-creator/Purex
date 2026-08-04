@@ -2,11 +2,17 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, Trash2, AlertCircle, Sparkles } from 'lucide-react';
-import { createInvoiceAction } from '@/lib/actions/invoices';
+import { Loader2, Plus, Trash2, AlertCircle, Sparkles, Send, Save } from 'lucide-react';
+import {
+  createInvoiceAction,
+  updateDraftInvoiceAction,
+  createAndSendInvoiceAction,
+  sendInvoiceAction,
+} from '@/lib/actions/invoices';
 import type {
   CompanySettings,
   InvoiceCurrency,
+  InvoiceWithItems,
 } from '@/lib/data/invoices';
 import {
   INVOICE_SERVICES,
@@ -18,6 +24,12 @@ interface Props {
   clientName: string;
   clientEmail: string | null;
   settings: CompanySettings | null;
+  /** 'create' (default) or 'edit' for a draft update. */
+  mode?: 'create' | 'edit';
+  /** Required in edit mode — the invoice ID to update. */
+  invoiceId?: string;
+  /** Existing invoice values to seed the form in edit mode. */
+  initial?: InvoiceWithItems | null;
 }
 
 interface DraftLineItem {
@@ -51,16 +63,40 @@ export function CreateInvoiceForm({
   clientName,
   clientEmail,
   settings,
+  mode = 'create',
+  invoiceId,
+  initial,
 }: Props) {
   const router = useRouter();
-  const [currency, setCurrency] = useState<InvoiceCurrency>('INR');
-  const [billToAddress, setBillToAddress] = useState('');
-  const [billToNameOverride, setBillToNameOverride] = useState('');
-  const [reference, setReference] = useState('');
-  const [paymentTermsDays, setPaymentTermsDays] = useState('14');
-  const [coachNote, setCoachNote] = useState('');
-  const [lineItems, setLineItems] = useState<DraftLineItem[]>([emptyLine()]);
+  const isEdit = mode === 'edit';
+
+  const [currency, setCurrency] = useState<InvoiceCurrency>(
+    initial?.currency ?? 'INR'
+  );
+  const [billToAddress, setBillToAddress] = useState(
+    initial?.billToAddress ?? ''
+  );
+  const [billToNameOverride, setBillToNameOverride] = useState(
+    initial && initial.billToName !== clientName ? initial.billToName : ''
+  );
+  const [reference, setReference] = useState(initial?.reference ?? '');
+  const [paymentTermsDays, setPaymentTermsDays] = useState(
+    String(initial?.paymentTermsDays ?? 14)
+  );
+  const [coachNote, setCoachNote] = useState(initial?.coachNote ?? '');
+  const [lineItems, setLineItems] = useState<DraftLineItem[]>(
+    initial && initial.lineItems.length > 0
+      ? initial.lineItems.map((li) => ({
+          key: li.id,
+          descriptionTitle: li.descriptionTitle,
+          descriptionBody: li.descriptionBody ?? '',
+          quantity: String(li.quantity),
+          unitPriceDecimal: (li.unitPrice / 100).toFixed(2),
+        }))
+      : [emptyLine()]
+  );
   const [saving, setSaving] = useState(false);
+  const [savingMode, setSavingMode] = useState<'draft' | 'send' | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const isUK = currency === 'GBP';
@@ -132,7 +168,8 @@ export function CreateInvoiceForm({
     }
 
     setSaving(true);
-    const result = await createInvoiceAction({
+    setSavingMode(thenSend ? 'send' : 'draft');
+    const payload = {
       clientId,
       currency,
       reference: reference || undefined,
@@ -142,24 +179,55 @@ export function CreateInvoiceForm({
       billToAddress: billToAddress || undefined,
       vatRate,
       lineItems: cleaned,
-    });
-    setSaving(false);
-    if (!result.ok) {
-      setErr(result.error);
-      return;
-    }
-    if (thenSend) {
-      // Router will refresh on redirect; the send step happens on the
-      // detail page. For now, land on the detail page so the coach
-      // reviews before firing send.
-      router.push(`/admin/invoices/${result.invoice.id}`);
+    };
+
+    let targetId: string | null = null;
+    if (isEdit && invoiceId) {
+      const result = await updateDraftInvoiceAction(invoiceId, payload);
+      if (!result.ok) {
+        setErr(result.error);
+        setSaving(false);
+        setSavingMode(null);
+        return;
+      }
+      targetId = invoiceId;
+      // If they asked to send after updating, fire the send too
+      if (thenSend) {
+        const sendRes = await sendInvoiceAction(invoiceId);
+        if (!sendRes.ok) {
+          setErr(sendRes.error);
+          setSaving(false);
+          setSavingMode(null);
+          return;
+        }
+      }
+    } else if (thenSend) {
+      const result = await createAndSendInvoiceAction(payload);
+      if (!result.ok) {
+        setErr(result.error);
+        setSaving(false);
+        setSavingMode(null);
+        return;
+      }
+      targetId = result.invoice.id;
     } else {
-      router.push(`/admin/invoices/${result.invoice.id}`);
+      const result = await createInvoiceAction(payload);
+      if (!result.ok) {
+        setErr(result.error);
+        setSaving(false);
+        setSavingMode(null);
+        return;
+      }
+      targetId = result.invoice.id;
     }
+
+    setSaving(false);
+    setSavingMode(null);
+    router.push(`/admin/invoices/${targetId}`);
   };
 
   return (
-    <form onSubmit={(e) => submit(e, false)} className="space-y-6">
+    <form onSubmit={(e) => submit(e, true)} className="space-y-6">
       {/* Currency + basics */}
       <Section title="Invoice basics">
         <div className="grid md:grid-cols-3 gap-4">
@@ -433,7 +501,7 @@ export function CreateInvoiceForm({
           <div className="flex items-center justify-end gap-3 flex-wrap">
             {err && (
               <div
-                className="inline-flex items-center gap-1.5 text-[#ff6b6b] font-mono uppercase tracking-[0.14em] font-bold"
+                className="inline-flex items-center gap-1.5 text-[#ff6b6b] font-mono uppercase tracking-[0.14em] font-bold w-full text-right"
                 style={{ fontSize: 10 }}
               >
                 <AlertCircle size={12} />
@@ -441,13 +509,37 @@ export function CreateInvoiceForm({
               </div>
             )}
             <button
-              type="submit"
+              type="button"
+              onClick={(e) => submit(e as unknown as FormEvent, false)}
               disabled={saving}
               className="h-11 px-6 rounded-xl font-mono uppercase tracking-[0.18em] font-bold flex items-center gap-2 border border-border text-text-muted hover:border-accent hover:text-accent transition-colors"
               style={{ fontSize: 11 }}
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : null}
-              Save as draft
+              {saving && savingMode === 'draft' ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Save size={13} />
+              )}
+              {isEdit ? 'Save changes' : 'Save as draft'}
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="h-11 px-6 rounded-xl font-mono uppercase tracking-[0.18em] font-bold flex items-center gap-2"
+              style={{
+                fontSize: 11,
+                color: '#0a0c09',
+                background:
+                  'linear-gradient(135deg, #d4ff5a 0%, #a8e60a 100%)',
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              {saving && savingMode === 'send' ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Send size={13} />
+              )}
+              {isEdit ? 'Save & send now' : 'Save & send now'}
             </button>
           </div>
         </div>

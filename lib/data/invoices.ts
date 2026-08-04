@@ -583,6 +583,138 @@ export async function voidInvoice(
   }
 }
 
+/**
+ * Update a DRAFT invoice — replaces line items, recomputes totals,
+ * and updates the mutable fields (reference, currency, dates,
+ * coach note, bill_to overrides). Guarded on status='draft' — a
+ * sent invoice cannot be edited (HMRC + India GST audit rules).
+ *
+ * Line items are fully replaced: delete-then-insert inside a single
+ * transaction (best-effort — Supabase JS doesn't expose txns from
+ * the client, so we accept the theoretical window during which the
+ * old items are gone and the new ones are not yet in. Impact is
+ * negligible — the draft is admin-only during this window).
+ */
+export async function updateDraftInvoice(
+  invoiceId: string,
+  input: CreateInvoiceInput
+): Promise<{ ok: true; invoice: Invoice } | { ok: false; error: string }> {
+  try {
+    const sb = await createSupabaseClient();
+
+    // Confirm the invoice is still a draft
+    const { data: current, error: fetchErr } = await sb
+      .from('invoices')
+      .select('id, status')
+      .eq('id', invoiceId)
+      .maybeSingle();
+    if (fetchErr || !current) {
+      return { ok: false, error: 'Invoice not found.' };
+    }
+    if ((current as { status: InvoiceStatus }).status !== 'draft') {
+      return {
+        ok: false,
+        error:
+          'Only draft invoices can be edited. Send-locked invoices are immutable — void and reissue.',
+      };
+    }
+
+    // Refresh company settings snapshot on every edit — coach may
+    // have updated their VAT / GST / bank details.
+    const settings = await getCompanySettings();
+    if (!settings) return { ok: false, error: 'Company settings missing.' };
+
+    const isUK = input.currency === 'GBP';
+    const subtotal = input.lineItems.reduce(
+      (sum, li) => sum + Math.round(li.quantity * li.unitPrice),
+      0
+    );
+    const vatRate =
+      input.vatRate ?? (isUK && settings.vatNumber ? 0.2 : 0);
+    const vatAmount = Math.round(subtotal * vatRate);
+    const total = subtotal + vatAmount;
+
+    const issueDate =
+      input.issueDate ?? new Date().toISOString().slice(0, 10);
+    const paymentTermsDays = input.paymentTermsDays ?? 14;
+    const dueDate = addDays(issueDate, paymentTermsDays);
+
+    // Refresh client snapshot
+    const { data: clientRow } = await sb
+      .from('profiles')
+      .select('id, full_name, email')
+      .eq('id', input.clientId)
+      .maybeSingle();
+    const client = clientRow as
+      | { id: string; full_name: string | null; email: string | null }
+      | null;
+
+    const billToName =
+      input.billToNameOverride ?? client?.full_name ?? '—';
+    const billFromName = settings.legalName;
+    const billFromAddress = (isUK && settings.ukAddressLines.length > 0
+      ? settings.ukAddressLines
+      : settings.indiaAddressLines
+    ).join('\n');
+
+    // Update the header
+    const { error: updErr } = await sb
+      .from('invoices')
+      .update({
+        currency: input.currency,
+        issue_date: issueDate,
+        due_date: dueDate,
+        payment_terms_days: paymentTermsDays,
+        reference: input.reference ?? null,
+        subtotal_amount: subtotal,
+        vat_rate: vatRate,
+        vat_amount: vatAmount,
+        total_amount: total,
+        bill_to_name: billToName,
+        bill_to_email: client?.email ?? null,
+        bill_to_address: input.billToAddress ?? null,
+        bill_from_name: billFromName,
+        bill_from_address: billFromAddress,
+        bill_from_vat_number: isUK ? settings.vatNumber : null,
+        bill_from_gst_number: !isUK ? settings.gstNumber : null,
+        bill_from_company_registration_number: isUK
+          ? settings.companyRegistrationNumber
+          : null,
+        coach_note: input.coachNote ?? null,
+      })
+      .eq('id', invoiceId)
+      .eq('status', 'draft');
+    if (updErr) return { ok: false, error: updErr.message };
+
+    // Replace line items
+    await sb.from('invoice_line_items').delete().eq('invoice_id', invoiceId);
+    if (input.lineItems.length > 0) {
+      const itemsPayload = input.lineItems.map((li, i) => ({
+        invoice_id: invoiceId,
+        position: i,
+        description_title: li.descriptionTitle,
+        description_body: li.descriptionBody ?? null,
+        quantity: li.quantity,
+        unit_price: li.unitPrice,
+        line_total: Math.round(li.quantity * li.unitPrice),
+      }));
+      const { error: itemsErr } = await sb
+        .from('invoice_line_items')
+        .insert(itemsPayload);
+      if (itemsErr) return { ok: false, error: itemsErr.message };
+    }
+
+    const refetched = await getInvoiceById(invoiceId);
+    if (!refetched) return { ok: false, error: 'Update succeeded but refetch failed.' };
+    return { ok: true, invoice: refetched };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    };
+  }
+}
+
 /** Delete a draft invoice. Sent invoices cannot be deleted — void them. */
 export async function deleteDraftInvoice(
   invoiceId: string

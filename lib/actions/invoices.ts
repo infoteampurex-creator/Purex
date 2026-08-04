@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import {
   createInvoice as dataCreateInvoice,
+  updateDraftInvoice as dataUpdateDraft,
   sendInvoice as dataSendInvoice,
   markInvoicePaid as dataMarkInvoicePaid,
   voidInvoice as dataVoidInvoice,
@@ -54,6 +55,38 @@ export async function createInvoiceAction(input: CreateInvoiceInput) {
     revalidatePath(`/admin/clients/${input.clientId}`);
   }
   return result;
+}
+
+/** Update an existing draft invoice with fresh data. Rejected if the
+ *  invoice is no longer a draft. */
+export async function updateDraftInvoiceAction(
+  invoiceId: string,
+  input: CreateInvoiceInput
+) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { ok: false as const, error: auth.error };
+
+  const result = await dataUpdateDraft(invoiceId, input);
+  if (result.ok) {
+    revalidatePath('/admin/invoices');
+    revalidatePath(`/admin/invoices/${invoiceId}`);
+  }
+  return result;
+}
+
+/** Create and immediately send. Skips the draft-review step for
+ *  admins who know the numbers are right and want the client to
+ *  see it now. */
+export async function createAndSendInvoiceAction(input: CreateInvoiceInput) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { ok: false as const, error: auth.error };
+
+  const created = await dataCreateInvoice(input, auth.userId);
+  if (!created.ok) return created;
+
+  const sendResult = await sendInvoiceAction(created.invoice.id);
+  if (!sendResult.ok) return sendResult;
+  return created;
 }
 
 export async function sendInvoiceAction(invoiceId: string) {
