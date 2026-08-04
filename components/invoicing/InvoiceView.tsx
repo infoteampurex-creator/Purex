@@ -22,15 +22,21 @@ interface Props {
  */
 export function InvoiceView({ invoice, settings }: Props) {
   const isUK = invoice.currency === 'GBP';
-  const statusLabel = invoice.status.toUpperCase();
+  // Customer-facing status label: "SENT" was accurate but read as
+  // "you already got this" — client-friendly is "PENDING" (i.e.
+  // pending payment). DB status stays 'sent' for admin clarity.
+  const statusLabel =
+    invoice.status === 'sent'
+      ? 'PENDING'
+      : invoice.status.toUpperCase();
   const statusColor =
     invoice.status === 'paid'
       ? '#c6ff3d'
       : invoice.status === 'sent'
-        ? '#7dd3ff'
+        ? '#ffd24d'
         : invoice.status === 'void'
           ? '#ff6b6b'
-          : '#ffd24d';
+          : '#7dd3ff';
 
   const paymentUpi = !isUK ? settings?.indiaUpiId : null;
 
@@ -213,7 +219,7 @@ export function InvoiceView({ invoice, settings }: Props) {
                 label="From"
                 name={invoice.billFromName}
                 lines={invoice.billFromAddress?.split('\n') ?? []}
-                monoLine={settings?.billingEmail ?? 'billing@teampurex.com'}
+                monoLine={settings?.billingEmail ?? 'info.teampurex@gmail.com'}
               />
             </div>
 
@@ -498,7 +504,7 @@ export function InvoiceView({ invoice, settings }: Props) {
                 <div style={{ marginTop: 6 }}>
                   Questions?{' '}
                   <strong style={{ color: 'rgba(250,244,228,0.92)' }}>
-                    {settings?.billingEmail ?? 'billing@teampurex.com'}
+                    {settings?.billingEmail ?? 'info.teampurex@gmail.com'}
                   </strong>
                 </div>
               </div>
