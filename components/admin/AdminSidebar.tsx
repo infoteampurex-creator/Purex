@@ -16,6 +16,8 @@ import {
   Footprints,
   Stethoscope,
   ClipboardList,
+  Receipt,
+  Settings,
   LogOut,
   ExternalLink,
   Menu,
@@ -34,12 +36,14 @@ const navItems = [
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { href: '/admin/feedback-schedule', label: 'Feedback calls', icon: CalendarClock },
   { href: '/admin/clients', label: 'Clients', icon: Users },
+  { href: '/admin/invoices', label: 'Invoices', icon: Receipt },
   { href: '/admin/radar', label: 'Radar', icon: Radar },
   { href: '/admin/templates', label: 'Templates', icon: Library },
   { href: '/admin/mother-strong', label: 'Mother Strong', icon: Footprints },
   { href: '/admin/specialists', label: 'Specialists', icon: UserCog },
   { href: '/admin/forms', label: 'Forms', icon: FileText },
   { href: '/admin/diagnostic', label: 'Diagnostic', icon: Stethoscope },
+  { href: '/admin/settings/company', label: 'Company settings', icon: Settings },
 ];
 
 // Mobile bottom nav — 4 most-used + "More" sheet for the rest. Order
