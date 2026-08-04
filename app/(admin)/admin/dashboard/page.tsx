@@ -18,13 +18,16 @@ import {
 import { relativeTime } from '@/lib/data/admin-mock';
 import { getAdminBookings } from '@/lib/data/admin-bookings';
 import { getAdminClients } from '@/lib/data/admin-clients';
+import { getCoachAnalytics } from '@/lib/data/coach-analytics';
+import { CoachLeaderboard } from '@/components/admin/CoachLeaderboard';
 
 export const metadata = { title: 'Admin · Overview' };
 
 export default async function AdminDashboardPage() {
-  const [{ bookings, source }, { clients }] = await Promise.all([
+  const [{ bookings, source }, { clients }, coachAnalytics] = await Promise.all([
     getAdminBookings(),
     getAdminClients(),
+    getCoachAnalytics(),
   ]);
 
   // Real-data only when source is supabase. Mock fallback = empty stats.
@@ -89,6 +92,14 @@ export default async function AdminDashboardPage() {
           trend={{ direction: 'up', value: '+5%' }}
           accent="amber"
         />
+      </div>
+
+      {/* Coach analytics leaderboard — surfaces clients who need
+          attention today. Sits above the "recent bookings" table so
+          the coach's first glance drives them into the retention
+          loop rather than the acquisition loop. */}
+      <div className="mb-10">
+        <CoachLeaderboard clients={coachAnalytics} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
