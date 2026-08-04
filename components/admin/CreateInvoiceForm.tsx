@@ -2,12 +2,16 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, AlertCircle, Sparkles } from 'lucide-react';
 import { createInvoiceAction } from '@/lib/actions/invoices';
 import type {
   CompanySettings,
   InvoiceCurrency,
 } from '@/lib/data/invoices';
+import {
+  INVOICE_SERVICES,
+  SERVICE_GROUPS,
+} from '@/lib/data/invoice-services';
 
 interface Props {
   clientId: string;
@@ -72,14 +76,44 @@ export function CreateInvoiceForm({
   const vatAmount = Math.round(subtotal * vatRate);
   const total = subtotal + vatAmount;
 
-  const addLine = () =>
-    setLineItems((ls) => [...ls, emptyLine()]);
+  const addLine = () => setLineItems((ls) => [...ls, emptyLine()]);
   const removeLine = (key: string) =>
     setLineItems((ls) => (ls.length === 1 ? ls : ls.filter((l) => l.key !== key)));
   const updateLine = (key: string, patch: Partial<DraftLineItem>) =>
     setLineItems((ls) =>
       ls.map((l) => (l.key === key ? { ...l, ...patch } : l))
     );
+
+  /** Fill a line from the service catalog. Fills every empty slot
+   *  first — if the first line is empty, use it; else append. */
+  const addFromCatalog = (serviceKey: string) => {
+    const svc = INVOICE_SERVICES.find((s) => s.key === serviceKey);
+    if (!svc) return;
+    const priceDecimal = (
+      (isUK ? svc.gbpPrice : svc.inrPrice) / 100
+    ).toFixed(2);
+
+    setLineItems((ls) => {
+      // Reuse the first empty line if there is one
+      const emptyIdx = ls.findIndex(
+        (l) =>
+          !l.descriptionTitle.trim() &&
+          !l.descriptionBody.trim() &&
+          !l.unitPriceDecimal
+      );
+      const filled: DraftLineItem = {
+        key: emptyIdx >= 0 ? ls[emptyIdx].key : Math.random().toString(36).slice(2),
+        descriptionTitle: svc.title,
+        descriptionBody: svc.description,
+        quantity: '1',
+        unitPriceDecimal: priceDecimal,
+      };
+      if (emptyIdx >= 0) {
+        return ls.map((l, i) => (i === emptyIdx ? filled : l));
+      }
+      return [...ls, filled];
+    });
+  };
 
   const submit = async (e: FormEvent, thenSend: boolean) => {
     e.preventDefault();
@@ -228,6 +262,48 @@ export function CreateInvoiceForm({
           </button>
         }
       >
+        {/* Service catalog picker — pre-fills a line from a
+            preset service (plan / diagnostic / consultation). */}
+        <div className="mb-4">
+          <div
+            className="font-mono uppercase tracking-[0.16em] font-bold text-[10px] text-text-muted mb-2 inline-flex items-center gap-1.5"
+          >
+            <Sparkles size={11} className="text-[#d4a050]" />
+            Add from Team Purex services
+          </div>
+          <div className="flex flex-col gap-2">
+            {SERVICE_GROUPS.map((group) => {
+              const options = INVOICE_SERVICES.filter(
+                (s) => s.group === group.key
+              );
+              if (options.length === 0) return null;
+              return (
+                <div
+                  key={group.key}
+                  className="flex flex-wrap items-center gap-1.5"
+                >
+                  <span
+                    className="font-mono uppercase tracking-[0.14em] font-bold text-text-muted"
+                    style={{ fontSize: 9, minWidth: 90 }}
+                  >
+                    {group.label}
+                  </span>
+                  {options.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => addFromCatalog(opt.key)}
+                      className="rounded-full px-2.5 py-1 border border-border text-[11px] hover:border-[#d4a050] hover:text-[#d4a050] transition-colors"
+                    >
+                      + {opt.title}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="space-y-3">
           {lineItems.map((li) => {
             const q = Number(li.quantity || 0);

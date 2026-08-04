@@ -12,7 +12,7 @@ const STATUS_META: Record<
   { label: string; color: string; bg: string }
 > = {
   sent: {
-    label: 'Awaiting payment',
+    label: 'Pending',
     color: '#ffd24d',
     bg: 'rgba(255,210,77,0.10)',
   },
