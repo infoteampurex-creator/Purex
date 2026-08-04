@@ -13,6 +13,7 @@ import { ClientDetailTabs } from '@/components/admin/ClientDetailTabs';
 import { EditClientButton } from '@/components/admin/EditClientButton';
 import { DeleteClientButton } from '@/components/admin/DeleteClientButton';
 import { SendNudgeButton } from '@/components/admin/SendNudgeButton';
+import { FileText } from 'lucide-react';
 import { PhotoUpload } from '@/components/admin/PhotoUpload';
 import { HealthConditionsEditor } from '@/components/admin/HealthConditionsEditor';
 import { getHealthConditionsForClient } from '@/lib/data/health-conditions-server';
@@ -251,6 +252,13 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
               clientId={client.id}
               clientFirstName={client.fullName.split(/\s+/)[0]}
             />
+            <Link
+              href={`/admin/invoices/new?clientId=${client.id}`}
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-[#d4a050]/10 text-[#d4a050] text-xs font-medium border border-[#d4a050]/30 hover:bg-[#d4a050]/20 transition-colors"
+            >
+              <FileText size={12} />
+              Create invoice
+            </Link>
             <EditClientButton
               clientId={client.id}
               initial={{
