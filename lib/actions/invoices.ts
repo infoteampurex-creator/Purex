@@ -9,9 +9,13 @@ import {
   voidInvoice as dataVoidInvoice,
   deleteDraftInvoice as dataDeleteDraft,
   updateCompanySettings as dataUpdateSettings,
+  getInvoiceById,
+  formatMoney,
   type CreateInvoiceInput,
   type CompanySettings,
 } from '@/lib/data/invoices';
+import { getPushTokensForUser } from '@/lib/data/push-tokens';
+import { sendFcmToUser } from '@/lib/data/fcm-send';
 
 async function requireAdmin(): Promise<
   { ok: true; userId: string } | { ok: false; error: string }
@@ -59,8 +63,42 @@ export async function sendInvoiceAction(invoiceId: string) {
   if (result.ok) {
     revalidatePath('/admin/invoices');
     revalidatePath(`/admin/invoices/${invoiceId}`);
+    revalidatePath('/client/invoices');
+
+    // Fire-and-forget push notification to the client. Doesn't block
+    // the send call — if push fails, the invoice is still sent.
+    (async () => {
+      try {
+        const inv = await getInvoiceById(invoiceId);
+        if (!inv) return;
+        const tokens = await getPushTokensForUser(inv.clientId);
+        if (tokens.length === 0) return;
+        const amount = formatMoney(inv.totalAmount, inv.currency);
+        await sendFcmToUser(
+          tokens.map((t) => t.token),
+          `New invoice · ${amount}`,
+          `${inv.invoiceNumber} — due ${formatDueDate(inv.dueDate)}. Tap to view and pay.`,
+          {
+            source: 'invoice_sent',
+            invoice_id: inv.id,
+            deep_link: `/client/invoices/${inv.id}`,
+          }
+        );
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[invoices] send push failed', err);
+      }
+    })();
   }
   return result;
+}
+
+function formatDueDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+  });
 }
 
 export async function markInvoicePaidAction(invoiceId: string) {
